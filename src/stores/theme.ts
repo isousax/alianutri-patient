@@ -1,8 +1,7 @@
 import { create } from 'zustand'
-import { MMKV } from 'react-native-mmkv'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { THEMES, type AppTheme, type ThemeColors } from '../theme/themes'
 
-const storage = new MMKV({ id: 'theme-storage' })
 const THEME_KEY = 'selected_theme'
 
 type ThemeId = AppTheme['id']
@@ -10,14 +9,24 @@ type ThemeId = AppTheme['id']
 interface ThemeState {
   themeId: ThemeId
   setTheme: (id: ThemeId) => void
+  hydrateTheme: () => Promise<void>
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
-  themeId: (storage.getString(THEME_KEY) as ThemeId) || 'default',
+  themeId: 'default',
 
   setTheme: (id) => {
-    storage.set(THEME_KEY, id)
+    AsyncStorage.setItem(THEME_KEY, id)
     set({ themeId: id })
+  },
+
+  hydrateTheme: async () => {
+    try {
+      const stored = await AsyncStorage.getItem(THEME_KEY)
+      if (stored && stored in THEMES) {
+        set({ themeId: stored as ThemeId })
+      }
+    } catch {}
   },
 }))
 

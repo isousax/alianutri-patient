@@ -2,7 +2,6 @@ export interface ThemeColors {
   primary: string
   primaryLight: string
   primaryMuted: string
-  primaryDark: string
   primaryText: string
 
   background: string
@@ -49,7 +48,6 @@ const DEFAULT_THEME: AppTheme = {
     primary: '#16a34a',
     primaryLight: '#f0fdf4',
     primaryMuted: '#bbf7d0',
-    primaryDark: '#15803d',
     primaryText: '#ffffff',
 
     background: '#ffffff',
@@ -89,7 +87,6 @@ const AMETHYST_THEME: AppTheme = {
     primary: '#8b5cf6',
     primaryLight: '#1e1b4b',
     primaryMuted: '#6d28d9',
-    primaryDark: '#a78bfa',
     primaryText: '#ffffff',
 
     background: '#030712',
@@ -129,7 +126,6 @@ const ROSE_THEME: AppTheme = {
     primary: '#e11d48',
     primaryLight: '#fff1f2',
     primaryMuted: '#fecdd3',
-    primaryDark: '#be123c',
     primaryText: '#ffffff',
 
     background: '#ffffff',

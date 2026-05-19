@@ -1,20 +1,30 @@
 import { useEffect, useRef } from 'react'
 import { Platform } from 'react-native'
-import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
 import Constants from 'expo-constants'
 import { portalApi } from '../services/api'
 import { useAuthStore } from '../stores/auth'
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-})
+const isExpoGo = Constants.appOwnership === 'expo'
 
 async function registerForPushNotifications(): Promise<string | null> {
+  if (isExpoGo) {
+    console.log('[Push] Push notifications are not supported in Expo Go (SDK 53+). Use a development build.')
+    return null
+  }
+
+  const Notifications = await import('expo-notifications')
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  })
+
   if (!Device.isDevice) {
     console.log('[Push] Must use physical device')
     return null

@@ -82,11 +82,24 @@ async function uploadFormData<T>(path: string, formData: FormData): Promise<T> {
   if (!accessCode) throw new ApiError(401, 'Código de acesso não encontrado')
 
   const url = `${API_BASE_URL}/p/${accessCode}${path}`
-  const res = await fetch(url, { method: 'POST', body: formData })
+
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+    // Content-Type is set automatically by fetch with multipart boundary
+  })
+
+  if (res.status === 401) {
+    useAuthStore.getState().logout()
+    throw new ApiError(401, 'Código de acesso inválido')
+  }
 
   if (!res.ok) {
     let message = 'Erro inesperado'
-    try { const data = await res.json(); message = data.message || message } catch {}
+    try {
+      const data = await res.json()
+      message = data.message || data.error || message
+    } catch {}
     throw new ApiError(res.status, message)
   }
 

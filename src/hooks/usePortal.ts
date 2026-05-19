@@ -123,9 +123,13 @@ export function useDeleteFoodDiary() {
 
 export function useUploadDiaryPhoto() {
   return useMutation({
-    mutationFn: (uri: string) => {
+    mutationFn: async (uri: string) => {
       const fd = new FormData()
-      fd.append('photo', { uri, type: 'image/jpeg', name: 'diary.jpg' } as unknown as Blob)
+      fd.append('photo', {
+        uri,
+        type: 'image/jpeg',
+        name: 'diary-photo.jpg',
+      } as unknown as Blob)
       return portalApi.upload<{ photo_url: string }>('/diary/upload-photo', fd)
     },
   })
