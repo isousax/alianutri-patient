@@ -4,6 +4,7 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated'
 import { KeyRound, ArrowRight, ShieldCheck } from 'lucide-react-native'
+import { Image } from 'expo-image'
 import { useAuthStore } from '../src/stores/auth'
 import { validateAccessCode } from '../src/services/api'
 import { colors } from '../src/theme/colors'
@@ -82,12 +83,12 @@ export default function LoginScreen() {
 
             {/* Logo */}
             <Animated.View entering={FadeInDown.duration(600).delay(200)} className="items-center">
-              <View
-                className="h-20 w-20 rounded-3xl items-center justify-center mb-5"
-                style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}
-              >
-                <Text className="text-white text-3xl font-sans-bold">A</Text>
-              </View>
+              <Image
+                source={require('../assets/logoBlack.svg')}
+                style={{ width: 160, height: 48, tintColor: '#fff' }}
+                contentFit="contain"
+                className="mb-5"
+              />
               <Text className="text-white text-2xl font-sans-bold" style={{ letterSpacing: -0.5 }}>
                 AliaNutri
               </Text>

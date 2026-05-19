@@ -12,6 +12,8 @@ import type {
   PortalFoodDiaryEntry,
   PortalAppointment,
   PortalEvolution,
+  DiaryTodayResponse,
+  DiaryStreakResponse,
 } from '../types/portal'
 
 export function usePortalHome() {
@@ -93,10 +95,43 @@ export function useLogFoodDiary() {
       carbs_g?: number
       fat_g?: number
       notes?: string
+      compliance_status?: string
+      meal_plan_id?: string
+      meal_index?: number
+      photo_url?: string
     }) => portalApi.post<{ id: string; message: string }>('/food-diary', entry),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'food-diary'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'diary-today'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'diary-streak'] })
     },
+  })
+}
+
+export function useDeleteFoodDiary() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (entryId: string) =>
+      portalApi.delete<{ message: string }>(`/food-diary/${entryId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'food-diary'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'diary-today'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'diary-streak'] })
+    },
+  })
+}
+
+export function useDiaryToday(date: string) {
+  return useQuery({
+    queryKey: ['portal', 'diary-today', date],
+    queryFn: () => portalApi.get<DiaryTodayResponse>(`/diary/today?date=${date}`),
+  })
+}
+
+export function useDiaryStreak() {
+  return useQuery({
+    queryKey: ['portal', 'diary-streak'],
+    queryFn: () => portalApi.get<DiaryStreakResponse>('/diary/streak'),
   })
 }
 

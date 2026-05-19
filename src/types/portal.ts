@@ -128,7 +128,39 @@ export interface PortalFoodDiaryEntry {
   carbs_g: number | null
   fat_g: number | null
   notes: string | null
+  compliance_status: 'followed' | 'partial' | 'skipped' | 'photo_only' | null
+  meal_plan_id: string | null
+  meal_index: number | null
+  photo_url: string | null
   created_at: string
+}
+
+// ==========================================
+// Diary Today — GET /p/:code/diary/today
+// ==========================================
+
+export interface DiaryTimelineMeal {
+  meal_index: number
+  meal_name: string
+  meal_time: string
+  foods: { name: string; quantity?: string; [key: string]: unknown }[]
+  entry: PortalFoodDiaryEntry | null
+}
+
+export interface DiaryTodayResponse {
+  meal_plan: { id: string; name: string } | null
+  meals: DiaryTimelineMeal[]
+  entries: PortalFoodDiaryEntry[]
+  date: string
+}
+
+// ==========================================
+// Diary Streak — GET /p/:code/diary/streak
+// ==========================================
+
+export interface DiaryStreakResponse {
+  streak: number
+  logged_dates: string[]
 }
 
 // ==========================================

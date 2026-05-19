@@ -80,6 +80,7 @@ export async function validateAccessCode(code: string): Promise<{
 export const portalApi = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+  delete: <T>(path: string) => request<T>('DELETE', path),
 }
 
 export { ApiError }
