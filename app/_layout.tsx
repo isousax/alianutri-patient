@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useAuthStore } from '../src/stores/auth'
 import { useNotifications } from '../src/hooks/useNotifications'
+import { useTheme } from '../src/stores/theme'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -52,13 +53,15 @@ export default function RootLayout() {
 
   useNotifications()
 
+  const theme = useTheme()
+
   if ((!fontsLoaded && !fontError) || !isHydrated) return null
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <SafeAreaProvider>
         <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-          <StatusBar style="auto" />
+          <StatusBar style={theme.dark ? 'light' : 'dark'} />
           <Stack screenOptions={{ headerShown: false }} />
         </PersistQueryClientProvider>
       </SafeAreaProvider>

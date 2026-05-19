@@ -121,6 +121,16 @@ export function useDeleteFoodDiary() {
   })
 }
 
+export function useUploadDiaryPhoto() {
+  return useMutation({
+    mutationFn: (uri: string) => {
+      const fd = new FormData()
+      fd.append('photo', { uri, type: 'image/jpeg', name: 'diary.jpg' } as unknown as Blob)
+      return portalApi.upload<{ photo_url: string }>('/diary/upload-photo', fd)
+    },
+  })
+}
+
 export function useDiaryToday(date: string) {
   return useQuery({
     queryKey: ['portal', 'diary-today', date],

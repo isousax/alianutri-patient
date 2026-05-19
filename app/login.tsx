@@ -88,10 +88,7 @@ export default function LoginScreen() {
                 style={{ width: 160, height: 48, tintColor: '#fff' }}
                 contentFit="contain"
                 className="mb-5"
-              />
-              <Text className="text-white text-2xl font-sans-bold" style={{ letterSpacing: -0.5 }}>
-                AliaNutri
-              </Text>
+              />    
               <Text className="text-brand-300 text-sm font-sans mt-1">
                 Seu acompanhamento nutricional
               </Text>

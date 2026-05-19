@@ -77,10 +77,27 @@ export async function validateAccessCode(code: string): Promise<{
   }
 }
 
+async function uploadFormData<T>(path: string, formData: FormData): Promise<T> {
+  const accessCode = useAuthStore.getState().accessCode
+  if (!accessCode) throw new ApiError(401, 'Código de acesso não encontrado')
+
+  const url = `${API_BASE_URL}/p/${accessCode}${path}`
+  const res = await fetch(url, { method: 'POST', body: formData })
+
+  if (!res.ok) {
+    let message = 'Erro inesperado'
+    try { const data = await res.json(); message = data.message || message } catch {}
+    throw new ApiError(res.status, message)
+  }
+
+  return res.json() as Promise<T>
+}
+
 export const portalApi = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
+  upload: <T>(path: string, formData: FormData) => uploadFormData<T>(path, formData),
 }
 
 export { ApiError }
