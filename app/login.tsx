@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { View, Text, TextInput, Pressable, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native'
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated'
+import { KeyRound, ArrowRight, ShieldCheck } from 'lucide-react-native'
 import { useAuthStore } from '../src/stores/auth'
 import { validateAccessCode } from '../src/services/api'
+import { colors } from '../src/theme/colors'
 
 export default function LoginScreen() {
   const [code, setCode] = useState('')
@@ -51,57 +54,120 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        <View className="flex-1 justify-center px-8">
-          {/* Logo */}
-          <View className="items-center mb-10">
-            <View className="h-20 w-20 rounded-3xl bg-brand-600 items-center justify-center mb-4">
-              <Text className="text-white text-3xl font-sans-bold">A</Text>
-            </View>
-            <Text className="text-2xl font-sans-bold text-slate-900">AliaPatient</Text>
-            <Text className="text-sm text-slate-400 mt-1 font-sans">Seu acompanhamento nutricional</Text>
-          </View>
-
-          {/* Input */}
-          <View className="mb-4">
-            <Text className="text-sm font-sans-semibold text-slate-700 mb-2">Código de acesso</Text>
-            <TextInput
-              value={code}
-              onChangeText={(t) => { setCode(t); setError('') }}
-              placeholder="Digite o código recebido"
-              placeholderTextColor="#94a3b8"
-              autoCapitalize="none"
-              autoCorrect={false}
-              className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-base text-slate-900 font-sans"
-              editable={!loading}
+    <View className="flex-1 bg-brand-900">
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+        >
+          {/* ── Dark header with decorative elements ── */}
+          <View className="items-center pt-14 pb-10 relative overflow-hidden">
+            {/* Decorative circles */}
+            <View
+              className="absolute rounded-full bg-white"
+              style={{ width: 180, height: 180, top: -60, right: -40, opacity: 0.04 }}
             />
-            {error ? (
-              <Text className="text-sm text-red-500 mt-2 font-sans">{error}</Text>
-            ) : null}
+            <View
+              className="absolute rounded-full bg-white"
+              style={{ width: 120, height: 120, top: 30, left: -30, opacity: 0.03 }}
+            />
+            <View
+              className="absolute rounded-full bg-brand-400"
+              style={{ width: 8, height: 8, top: 24, right: 60, opacity: 0.3 }}
+            />
+            <View
+              className="absolute rounded-full bg-brand-300"
+              style={{ width: 6, height: 6, bottom: 30, left: 50, opacity: 0.25 }}
+            />
+
+            {/* Logo */}
+            <Animated.View entering={FadeInDown.duration(600).delay(200)} className="items-center">
+              <View
+                className="h-20 w-20 rounded-3xl items-center justify-center mb-5"
+                style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}
+              >
+                <Text className="text-white text-3xl font-sans-bold">A</Text>
+              </View>
+              <Text className="text-white text-2xl font-sans-bold" style={{ letterSpacing: -0.5 }}>
+                AliaNutri
+              </Text>
+              <Text className="text-brand-300 text-sm font-sans mt-1">
+                Seu acompanhamento nutricional
+              </Text>
+            </Animated.View>
           </View>
 
-          {/* Button */}
-          <Pressable
-            onPress={handleLogin}
-            disabled={loading}
-            className={`rounded-2xl py-4 items-center ${loading ? 'bg-brand-400' : 'bg-brand-600 active:bg-brand-700'}`}
+          {/* ── White card form ── */}
+          <Animated.View
+            entering={FadeInUp.duration(500).delay(400)}
+            className="flex-1 bg-white px-7 pt-10"
+            style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32 }}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white text-base font-sans-semibold">Entrar</Text>
-            )}
-          </Pressable>
+            <Text className="text-xl font-sans-bold text-slate-900 mb-1">
+              Bem-vindo!
+            </Text>
+            <Text className="text-sm font-sans text-slate-400 mb-8">
+              Digite o código de acesso fornecido pelo seu nutricionista.
+            </Text>
 
-          <Text className="text-xs text-slate-400 text-center mt-6 font-sans">
-            Peça o código de acesso ao seu nutricionista
-          </Text>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            {/* Input with icon */}
+            <View className="mb-5">
+              <View
+                className="flex-row items-center bg-slate-50 rounded-2xl px-4"
+                style={{ borderWidth: 1, borderColor: error ? colors.brand[600] : '#e2e8f0' }}
+              >
+                <KeyRound size={18} color={error ? colors.brand[600] : colors.slate[400]} />
+                <TextInput
+                  value={code}
+                  onChangeText={(t) => { setCode(t); setError('') }}
+                  placeholder="Código de acesso"
+                  placeholderTextColor="#94a3b8"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  className="flex-1 ml-3 py-4 text-base text-slate-900 font-sans"
+                  editable={!loading}
+                  returnKeyType="go"
+                  onSubmitEditing={handleLogin}
+                />
+              </View>
+              {error ? (
+                <Text className="text-sm text-red-500 mt-2 ml-1 font-sans">{error}</Text>
+              ) : null}
+            </View>
+
+            {/* Button */}
+            <Pressable
+              onPress={handleLogin}
+              disabled={loading}
+              className={`rounded-2xl py-4 flex-row items-center justify-center ${loading ? 'bg-brand-400' : 'bg-brand-600 active:bg-brand-700'}`}
+              style={{
+                shadowColor: '#16a34a',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25,
+                shadowRadius: 12,
+                elevation: 6,
+              }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text className="text-white text-base font-sans-semibold mr-2">Entrar</Text>
+                  <ArrowRight size={18} color="#fff" />
+                </>
+              )}
+            </Pressable>
+
+            {/* Trust badge */}
+            <View className="flex-row items-center justify-center mt-8">
+              <ShieldCheck size={14} color={colors.slate[400]} />
+              <Text className="text-xs text-slate-400 ml-1.5 font-sans">
+                Acesso seguro e criptografado
+              </Text>
+            </View>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   )
 }
