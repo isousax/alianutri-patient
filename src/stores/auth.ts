@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
-import { MMKV } from 'react-native-mmkv'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const CODE_KEY = 'aliapatient_access_code'
 const PATIENT_KEY = 'aliapatient_patient'
@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     SecureStore.deleteItemAsync(CODE_KEY).catch(() => {})
     SecureStore.deleteItemAsync(PATIENT_KEY).catch(() => {})
     SecureStore.deleteItemAsync(NUTRI_KEY).catch(() => {})
-    try { new MMKV({ id: 'react-query-cache' }).clearAll() } catch {}
+    AsyncStorage.removeItem('REACT_QUERY_OFFLINE_CACHE').catch(() => {})
     set({ accessCode: null, patient: null, nutritionist: null })
   },
 
