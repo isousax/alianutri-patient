@@ -37,46 +37,46 @@ export interface AppTheme {
   dark: boolean
 }
 
-// ── Padrão (verde, light) ──
+// ── Natureza (emerald on warm stone — organic, calming) ──
 
 const DEFAULT_THEME: AppTheme = {
   id: 'default',
-  name: 'Padrão',
+  name: 'Natureza',
   emoji: '🌿',
   dark: false,
   colors: {
-    primary: '#16a34a',
-    primaryLight: '#f0fdf4',
-    primaryMuted: '#bbf7d0',
+    primary: '#059669',
+    primaryLight: '#ecfdf5',
+    primaryMuted: '#6ee7b7',
     primaryText: '#ffffff',
 
-    background: '#ffffff',
-    surface: '#f8fafc',
-    surfacePressed: '#f1f5f9',
+    background: '#fafaf9',
+    surface: '#f5f5f4',
+    surfacePressed: '#e7e5e4',
 
-    text: '#0f172a',
-    textSecondary: '#64748b',
-    textMuted: '#94a3b8',
+    text: '#1c1917',
+    textSecondary: '#57534e',
+    textMuted: '#a8a29e',
     textInverse: '#ffffff',
 
-    border: '#e2e8f0',
-    borderLight: '#f1f5f9',
+    border: '#e7e5e4',
+    borderLight: '#f5f5f4',
 
-    tabBar: '#ffffff',
-    tabBarBorder: '#e2e8f0',
-    tabBarInactive: '#94a3b8',
+    tabBar: '#fafaf9',
+    tabBarBorder: '#e7e5e4',
+    tabBarInactive: '#a8a29e',
 
-    accent: '#f59e0b',
+    accent: '#d97706',
     accentLight: '#fffbeb',
 
-    success: '#16a34a',
+    success: '#059669',
     warning: '#d97706',
     error: '#dc2626',
-    info: '#2563eb',
+    info: '#0284c7',
   },
 }
 
-// ── Ametista (roxo, dark) ──
+// ── Ametista (violet on deep ink — premium, immersive) ──
 
 const AMETHYST_THEME: AppTheme = {
   id: 'amethyst',
@@ -90,20 +90,20 @@ const AMETHYST_THEME: AppTheme = {
     primaryText: '#ffffff',
 
     background: '#030712',
-    surface: '#111827',
-    surfacePressed: '#1f2937',
+    surface: '#0f1628',
+    surfacePressed: '#1a2540',
 
-    text: '#f9fafb',
-    textSecondary: '#9ca3af',
-    textMuted: '#6b7280',
+    text: '#f1f0fb',
+    textSecondary: '#a0a0b8',
+    textMuted: '#6b6b80',
     textInverse: '#030712',
 
-    border: '#1f2937',
-    borderLight: '#111827',
+    border: '#1e2a44',
+    borderLight: '#141d32',
 
     tabBar: '#030712',
-    tabBarBorder: '#1f2937',
-    tabBarInactive: '#6b7280',
+    tabBarBorder: '#1e2a44',
+    tabBarInactive: '#6b6b80',
 
     accent: '#a78bfa',
     accentLight: '#1e1b4b',
@@ -115,42 +115,42 @@ const AMETHYST_THEME: AppTheme = {
   },
 }
 
-// ── Rosa (rose, light) ──
+// ── Rosé (warm pink on cream — elegant, soft) ──
 
 const ROSE_THEME: AppTheme = {
   id: 'rose',
-  name: 'Rosa',
+  name: 'Rosé',
   emoji: '🌸',
   dark: false,
   colors: {
-    primary: '#e11d48',
-    primaryLight: '#fff1f2',
-    primaryMuted: '#fecdd3',
+    primary: '#ec4899',
+    primaryLight: '#fdf2f8',
+    primaryMuted: '#f9a8d4',
     primaryText: '#ffffff',
 
-    background: '#ffffff',
-    surface: '#fef2f2',
-    surfacePressed: '#fce7e7',
+    background: '#fdfbf9',
+    surface: '#f9f5f2',
+    surfacePressed: '#f2ebe5',
 
-    text: '#0f172a',
-    textSecondary: '#64748b',
-    textMuted: '#94a3b8',
+    text: '#1c1917',
+    textSecondary: '#57534e',
+    textMuted: '#a8a29e',
     textInverse: '#ffffff',
 
-    border: '#fce7f3',
-    borderLight: '#fff1f2',
+    border: '#ede6e0',
+    borderLight: '#f5f0ec',
 
-    tabBar: '#ffffff',
-    tabBarBorder: '#fce7f3',
-    tabBarInactive: '#94a3b8',
+    tabBar: '#fdfbf9',
+    tabBarBorder: '#ede6e0',
+    tabBarInactive: '#a8a29e',
 
-    accent: '#f472b6',
-    accentLight: '#fdf2f8',
+    accent: '#a855f7',
+    accentLight: '#faf5ff',
 
-    success: '#16a34a',
+    success: '#059669',
     warning: '#d97706',
     error: '#dc2626',
-    info: '#2563eb',
+    info: '#6366f1',
   },
 }
 

@@ -1,13 +1,13 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useReducer } from 'react'
 import {
   View, Text, ScrollView, Pressable, ActivityIndicator, Alert,
-  RefreshControl,
+  RefreshControl, Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ChevronLeft, ChevronRight, Flame, Check, CircleDashed,
   Camera, Clock, Utensils, Undo2,
-  Sparkles, ChevronDown, X,
+  Sparkles, ChevronDown, X, Trophy,
 } from 'lucide-react-native'
 import { Image } from 'expo-image'
 import * as ImagePicker from 'expo-image-picker'
@@ -15,6 +15,8 @@ import * as Haptics from 'expo-haptics'
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
   LinearTransition,
+  useSharedValue, useAnimatedStyle, withTiming, withDelay,
+  withSequence, withSpring, withRepeat, interpolate, Easing,
 } from 'react-native-reanimated'
 import { useThemeColors, type ThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
@@ -132,8 +134,13 @@ export default function DiaryScreen() {
     if (totalMeals > 0 && loggedCount === totalMeals && prevLoggedCount.current < totalMeals) {
       setJustCompleted(true)
       setFocusedIndex(null)
+      // Multi-burst haptic sequence (Duolingo-inspired)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      const timer = setTimeout(() => setJustCompleted(false), 4000)
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 200)
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 400)
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 600)
+      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 900)
+      const timer = setTimeout(() => setJustCompleted(false), 6000)
       return () => clearTimeout(timer)
     }
     prevLoggedCount.current = loggedCount
@@ -373,9 +380,12 @@ export default function DiaryScreen() {
 
           {/* ── All-done celebration ── */}
           {allDone && (
-            <Animated.View entering={FadeIn.duration(500)} className="px-5 mb-2">
-              <CompletionCard t={t} justCompleted={justCompleted} />
-            </Animated.View>
+            <>
+              {justCompleted && <ConfettiBurst t={t} />}
+              <Animated.View entering={FadeIn.duration(500)} className="px-5 mb-2">
+                <CompletionCard t={t} justCompleted={justCompleted} streak={streak} />
+              </Animated.View>
+            </>
           )}
 
           {/* ── Remaining pending meals ── */}
@@ -398,6 +408,7 @@ export default function DiaryScreen() {
                     }}
                     onQuickFollow={() => handleMarkFollowed(meal)}
                     isLogging={loggingIndex === meal.meal_index}
+                    isToday={isToday}
                     canWrite={canWrite}
                     t={t}
                   />
@@ -432,23 +443,156 @@ function NoPlanState() {
 
 // ── Completion celebration ──
 
-function CompletionCard({ t, justCompleted }: { t: ThemeColors; justCompleted: boolean }) {
+const CELEBRATE_MESSAGES = [
+  'Todas as refeições registradas!',
+  'Dia 100% completo!',
+  'Mandou muito bem hoje!',
+  'Compromisso é tudo!',
+  'Consistência gera resultados!',
+]
+
+function CompletionCard({ t, justCompleted, streak }: { t: ThemeColors; justCompleted: boolean; streak: number }) {
+  const scale = useSharedValue(0)
+  const glow = useSharedValue(0)
+  const messageIdx = useMemo(() => Math.floor(Math.random() * CELEBRATE_MESSAGES.length), [])
+
+  useEffect(() => {
+    if (justCompleted) {
+      scale.value = withSequence(
+        withTiming(0, { duration: 0 }),
+        withSpring(1.15, { damping: 6, stiffness: 150 }),
+        withSpring(1, { damping: 10, stiffness: 200 }),
+      )
+      glow.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.3, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+        true,
+      )
+    } else {
+      scale.value = withTiming(1, { duration: 300 })
+      glow.value = 0
+    }
+  }, [justCompleted, scale, glow])
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }))
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(glow.value, [0, 1], [0, 0.6]),
+    transform: [{ scale: interpolate(glow.value, [0, 1], [1, 1.6]) }],
+  }))
+
   return (
     <View
-      className="rounded-2xl p-5 items-center"
-      style={{ backgroundColor: t.primaryLight, borderWidth: 1, borderColor: t.primaryMuted }}
+      className="rounded-2xl p-6 items-center overflow-hidden"
+      style={{ backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primaryMuted }}
     >
-      <View className="h-12 w-12 rounded-full items-center justify-center mb-3" style={{ backgroundColor: t.primaryMuted }}>
-        <Sparkles size={24} color={t.primary} />
+      {/* Glow ring behind icon */}
+      <View className="items-center justify-center mb-4" style={{ width: 72, height: 72 }}>
+        <Animated.View
+          style={[{
+            position: 'absolute', width: 72, height: 72, borderRadius: 36,
+            backgroundColor: t.primary,
+          }, glowStyle]}
+        />
+        <Animated.View
+          style={[{
+            width: 56, height: 56, borderRadius: 28,
+            backgroundColor: t.primaryMuted,
+            alignItems: 'center', justifyContent: 'center',
+          }, iconStyle]}
+        >
+          {justCompleted ? (
+            <Trophy size={28} color={t.primary} />
+          ) : (
+            <Sparkles size={24} color={t.primary} />
+          )}
+        </Animated.View>
       </View>
-      <Text style={{ color: t.primary }} className="text-base font-sans-bold mb-1">
-        {justCompleted ? 'Parabéns!' : 'Dia completo'}
+
+      <Text style={{ color: t.primary }} className="text-lg font-sans-bold mb-1">
+        {justCompleted ? 'Parabéns! 🎉' : 'Dia completo'}
       </Text>
-      <Text style={{ color: t.textSecondary }} className="text-xs font-sans text-center">
+
+      <Text style={{ color: t.textSecondary }} className="text-sm font-sans text-center mb-3">
         {justCompleted
-          ? 'Todas as refeições registradas. Continue assim!'
+          ? CELEBRATE_MESSAGES[messageIdx]
           : 'Você registrou todas as refeições de hoje.'}
       </Text>
+
+      {/* Streak badge */}
+      {streak > 0 && (
+        <Animated.View
+          entering={FadeInUp.duration(400).delay(300)}
+          className="flex-row items-center px-4 py-2 rounded-full"
+          style={{ backgroundColor: t.accentLight }}
+        >
+          <Flame size={16} color={t.accent} />
+          <Text style={{ color: t.accent }} className="text-sm font-sans-bold ml-1.5">
+            {streak} {streak === 1 ? 'dia' : 'dias'} seguidos
+          </Text>
+        </Animated.View>
+      )}
+    </View>
+  )
+}
+
+// ── Confetti burst (full-screen overlay) ──
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window')
+const CONFETTI_COUNT = 28
+const CONFETTI_COLORS = ['#16a34a', '#f59e0b', '#ef4444', '#3b82f6', '#a855f7', '#ec4899', '#14b8a6']
+
+function ConfettiPiece({ index, t }: { index: number; t: ThemeColors }) {
+  const progress = useSharedValue(0)
+  const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length]
+  const startX = SCREEN_W * 0.5 + (Math.random() - 0.5) * 60
+  const endX = startX + (Math.random() - 0.5) * SCREEN_W * 0.8
+  const rotation = Math.random() * 720 - 360
+  const size = 6 + Math.random() * 6
+  const isCircle = index % 3 === 0
+  const delay = Math.random() * 200
+
+  useEffect(() => {
+    progress.value = withDelay(delay, withTiming(1, { duration: 1800 + Math.random() * 600, easing: Easing.out(Easing.quad) }))
+  }, [progress, delay])
+
+  const style = useAnimatedStyle(() => {
+    const y = interpolate(progress.value, [0, 1], [-20, SCREEN_H * 0.7 + Math.random() * 100])
+    const x = interpolate(progress.value, [0, 0.3, 1], [startX, startX + (endX - startX) * 0.6, endX])
+    const rotate = interpolate(progress.value, [0, 1], [0, rotation])
+    const opacity = interpolate(progress.value, [0, 0.1, 0.7, 1], [0, 1, 1, 0])
+    const scale = interpolate(progress.value, [0, 0.15, 0.5, 1], [0, 1.2, 1, 0.6])
+
+    return {
+      position: 'absolute',
+      left: x,
+      top: y,
+      width: size,
+      height: isCircle ? size : size * 2.5,
+      borderRadius: isCircle ? size / 2 : 2,
+      backgroundColor: color,
+      opacity,
+      transform: [{ rotate: `${rotate}deg` }, { scale }],
+    }
+  })
+
+  return <Animated.View style={style} />
+}
+
+function ConfettiBurst({ t }: { t: ThemeColors }) {
+  return (
+    <View
+      pointerEvents="none"
+      style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}
+    >
+      {Array.from({ length: CONFETTI_COUNT }).map((_, i) => (
+        <ConfettiPiece key={i} index={i} t={t} />
+      ))}
     </View>
   )
 }
@@ -539,7 +683,7 @@ function HeroMealCard({
       </View>
 
       {/* Action buttons */}
-      {canWrite && (
+      {isToday && canWrite && (
         <View className="px-4 pb-4">
           <View className="flex-row gap-2">
             <Pressable
@@ -676,12 +820,13 @@ function CompactLoggedRow({
 // ── Compact row for pending meals (not the hero) ──
 
 function CompactPendingRow({
-  meal, onFocus, onQuickFollow, isLogging, canWrite, t,
+  meal, onFocus, onQuickFollow, isLogging, isToday, canWrite, t,
 }: {
   meal: DiaryTimelineMeal
   onFocus: () => void
   onQuickFollow: () => void
   isLogging: boolean
+  isToday: boolean
   canWrite: boolean
   t: ThemeColors
 }) {
@@ -699,7 +844,7 @@ function CompactPendingRow({
         </Text>
         <Text style={{ color: t.textMuted }} className="text-[11px] font-sans mr-3">{meal.meal_time}</Text>
       </Pressable>
-      {canWrite && (
+      {isToday && canWrite && (
         <Pressable
           onPress={onQuickFollow}
           disabled={isLogging}
