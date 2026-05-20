@@ -14,6 +14,9 @@ export interface PortalHome {
     type: 'online' | 'in_person'
     meeting_provider: string | null
   } | null
+  features?: {
+    can_write: boolean
+  }
 }
 
 // ==========================================
@@ -62,6 +65,7 @@ export interface PortalMealPlanDetail extends PortalMealPlanSummary {
   total_fat_g: number | null
   meals: unknown[]
   notes: string | null
+  shopping_list: string | null
   payload: unknown | null
 }
 
@@ -172,11 +176,75 @@ export interface PortalAppointment {
   starts_at: string
   ends_at: string
   type: 'online' | 'in_person'
-  status: 'scheduled' | 'completed' | 'confirmed'
+  status: 'scheduled' | 'completed' | 'confirmed' | 'pending_approval' | 'canceled'
   meeting_provider: string | null
   meeting_url: string | null
   location: string | null
   notes: string | null
+}
+
+// ==========================================
+// Booking Config — GET /p/:code/booking/config
+// ==========================================
+
+export interface BookingConfig {
+  booking_mode: 'direct' | 'approval' | 'disabled'
+  consultation_mode: 'online' | 'in_person' | 'both' | null
+  consultation_duration_minutes: number
+  consultation_price_cents: number | null
+  addresses: Record<string, string>[] | null
+  enabled_days: number[]
+}
+
+// ==========================================
+// Booking Slots — GET /p/:code/booking/slots
+// ==========================================
+
+export interface BookingSlot {
+  time: string
+  available: boolean
+}
+
+export interface BookingSlotsResponse {
+  date: string
+  duration_minutes: number
+  slots: BookingSlot[]
+}
+
+// ==========================================
+// Booking Request — POST /p/:code/booking/request
+// ==========================================
+
+export interface BookingRequestInput {
+  date: string
+  start_time: string
+  type: 'online' | 'in_person'
+  notes?: string
+}
+
+export interface BookingRequestResponse {
+  id: string
+  status: string
+  message: string
+}
+
+// ==========================================
+// Chat — GET/POST /p/:code/chat
+// ==========================================
+
+export type ChatSenderType = 'nutritionist' | 'patient'
+
+export interface ChatMessage {
+  id: string
+  sender_type: ChatSenderType
+  content: string
+  read_at: string | null
+  created_at: string
+}
+
+export interface ChatMessagesResponse {
+  messages: ChatMessage[]
+  has_more: boolean
 }
 
 // ==========================================

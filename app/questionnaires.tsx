@@ -4,11 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { ClipboardList, ChevronRight, ArrowLeft, CheckCircle2, Clock, Send } from 'lucide-react-native'
 import { colors } from '../src/theme/colors'
+import { useFeaturesStore } from '../src/stores/features'
 import { useQuestionnaires, useAnswerQuestionnaire } from '../src/hooks/usePortal'
 import type { PortalQuestionnaire } from '../src/types/portal'
 
 export default function QuestionnairesScreen() {
   const { data: questionnaires, isLoading, refetch, isRefetching } = useQuestionnaires()
+  const canWrite = useFeaturesStore((s) => s.canWrite)
   const [selected, setSelected] = useState<PortalQuestionnaire | null>(null)
 
   if (selected) {
@@ -43,7 +45,7 @@ export default function QuestionnairesScreen() {
           {questionnaires.map((q) => (
             <Pressable
               key={q.id}
-              onPress={() => q.status === 'sent' ? setSelected(q) : null}
+              onPress={() => q.status === 'sent' && canWrite ? setSelected(q) : null}
               className="mb-3 bg-white rounded-2xl border border-slate-100 p-4 flex-row items-center active:bg-slate-50"
             >
               <View className={`h-10 w-10 rounded-xl items-center justify-center mr-3 ${q.status === 'answered' ? 'bg-green-50' : 'bg-indigo-50'}`}>
@@ -64,7 +66,7 @@ export default function QuestionnairesScreen() {
                   )}
                 </View>
               </View>
-              {q.status === 'sent' && <ChevronRight size={16} color="#cbd5e1" />}
+              {q.status === 'sent' && canWrite && <ChevronRight size={16} color="#cbd5e1" />}
             </Pressable>
           ))}
         </ScrollView>

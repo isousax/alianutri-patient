@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Utensils, ChevronRight, RefreshCw, Clock } from 'lucide-react-native'
+import { Utensils, ChevronRight, RefreshCw, Clock, ShoppingCart } from 'lucide-react-native'
 import { useThemeColors } from '../../src/stores/theme'
 import { useMealPlans, useMealPlanDetail } from '../../src/hooks/usePortal'
 
@@ -83,6 +83,16 @@ export default function MealPlanScreen() {
           {meals.length === 0 && (
             <Text style={{ color: t.textMuted }} className="text-sm text-center font-sans mt-8">Sem detalhes das refeições.</Text>
           )}
+
+          {detail.shopping_list ? (
+            <View className="mt-2 mb-4 rounded-2xl p-4" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
+              <View className="flex-row items-center gap-2 mb-3">
+                <ShoppingCart size={14} color={t.accent} />
+                <Text style={{ color: t.text }} className="text-sm font-sans-semibold">Lista de compras</Text>
+              </View>
+              <Text style={{ color: t.textSecondary }} className="text-xs font-sans leading-5">{detail.shopping_list}</Text>
+            </View>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     )

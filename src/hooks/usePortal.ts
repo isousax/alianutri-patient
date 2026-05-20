@@ -1,5 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { portalApi } from '../services/api'
+import { compressImage } from '../lib/compressImage'
 import type {
   PortalHome,
   PortalProfile,
@@ -14,6 +15,12 @@ import type {
   PortalEvolution,
   DiaryTodayResponse,
   DiaryStreakResponse,
+  BookingConfig,
+  BookingSlotsResponse,
+  BookingRequestInput,
+  BookingRequestResponse,
+  ChatMessage,
+  ChatMessagesResponse,
 } from '../types/portal'
 
 export function usePortalHome() {
@@ -124,9 +131,10 @@ export function useDeleteFoodDiary() {
 export function useUploadDiaryPhoto() {
   return useMutation({
     mutationFn: async (uri: string) => {
+      const compressed = await compressImage(uri)
       const fd = new FormData()
       fd.append('photo', {
-        uri,
+        uri: compressed,
         type: 'image/jpeg',
         name: 'diary-photo.jpg',
       } as unknown as Blob)
@@ -171,5 +179,72 @@ export function useEvolution() {
   return useQuery({
     queryKey: ['portal', 'evolution'],
     queryFn: () => portalApi.get<PortalEvolution[]>('/evolution'),
+  })
+}
+
+export function useBookingConfig() {
+  return useQuery({
+    queryKey: ['portal', 'booking-config'],
+    queryFn: () => portalApi.get<BookingConfig>('/booking/config'),
+  })
+}
+
+export function useBookingSlots(date: string | null) {
+  return useQuery({
+    queryKey: ['portal', 'booking-slots', date],
+    queryFn: () => portalApi.get<BookingSlotsResponse>(`/booking/slots?date=${date}`),
+    enabled: !!date,
+  })
+}
+
+export function useRequestBooking() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: BookingRequestInput) =>
+      portalApi.post<BookingRequestResponse>('/booking/request', input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'appointments'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'home'] })
+    },
+  })
+}
+
+// ==========================================
+// Chat
+// ==========================================
+
+export function useChatMessages() {
+  return useInfiniteQuery({
+    queryKey: ['portal', 'chat'],
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams({ limit: '30' })
+      if (pageParam) params.set('cursor', pageParam as string)
+      return portalApi.get<ChatMessagesResponse>(`/chat?${params}`)
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.has_more || lastPage.messages.length === 0) return undefined
+      return lastPage.messages[lastPage.messages.length - 1].created_at
+    },
+    refetchInterval: 10_000,
+  })
+}
+
+export function useSendChatMessage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (content: string) =>
+      portalApi.post<ChatMessage>('/chat', { content }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'chat'] })
+    },
+  })
+}
+
+export function useChatUnreadCount() {
+  return useQuery({
+    queryKey: ['portal', 'chat-unread'],
+    queryFn: () => portalApi.get<{ unread: number }>('/chat/unread-count'),
+    refetchInterval: 15_000,
   })
 }

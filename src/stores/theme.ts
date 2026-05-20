@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { THEMES, type AppTheme, type ThemeColors } from '../theme/themes'
+export type { ThemeColors }
 
 const THEME_KEY = 'selected_theme'
 

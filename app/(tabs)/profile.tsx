@@ -1,7 +1,12 @@
+import { useState } from 'react'
 import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { LogOut, User as UserIcon, Ruler, Weight, Phone, Mail, TrendingDown, Palette } from 'lucide-react-native'
+import {
+  LogOut, User as UserIcon, Ruler, Weight, Phone, Mail,
+  Palette, Settings, X, Calendar, TrendingDown,
+} from 'lucide-react-native'
 import Svg, { Polyline, Circle as SvgCircle, Line, Text as SvgText } from 'react-native-svg'
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated'
 import { router } from 'expo-router'
 import { useAuthStore } from '../../src/stores/auth'
 import { usePortalProfile, useEvolution } from '../../src/hooks/usePortal'
@@ -15,6 +20,7 @@ export default function ProfileScreen() {
   const setTheme = useThemeStore((s) => s.setTheme)
   const logout = useAuthStore((s) => s.logout)
   const { data: profile, isLoading, refetch, isRefetching } = usePortalProfile()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   function handleLogout() {
     Alert.alert('Sair', 'Tem certeza que deseja sair?', [
@@ -30,106 +36,134 @@ export default function ProfileScreen() {
     ])
   }
 
+  // Build info rows from profile
+  const infoRows: { icon: React.ReactNode; label: string; value: string }[] = []
+  if (profile?.phone) infoRows.push({ icon: <Phone size={16} color={t.textSecondary} />, label: 'Telefone', value: profile.phone })
+  if (profile?.email) infoRows.push({ icon: <Mail size={16} color={t.textSecondary} />, label: 'E-mail', value: profile.email })
+  if (profile?.height_cm) infoRows.push({ icon: <Ruler size={16} color={t.textSecondary} />, label: 'Altura', value: `${(profile.height_cm / 100).toFixed(2).replace('.', ',')} m` })
+  if (profile?.weight_kg) infoRows.push({ icon: <Weight size={16} color={t.textSecondary} />, label: 'Peso', value: `${profile.weight_kg.toFixed(1).replace('.', ',')} kg` })
+  if (profile?.birth_date) infoRows.push({ icon: <Calendar size={16} color={t.textSecondary} />, label: 'Nascimento', value: new Date(profile.birth_date + 'T00:00:00').toLocaleDateString('pt-BR') })
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}>
-        {/* Header */}
-        <View className="px-5 pt-4 pb-6">
-          <Text style={{ color: t.text }} className="text-xl font-sans-bold">Perfil</Text>
-        </View>
+      {/* ── Header ── */}
+      <View className="px-5 pt-4 pb-2 flex-row items-center justify-between">
+        <Text style={{ color: t.text }} className="text-xl font-sans-bold">Perfil</Text>
+        <Pressable
+          onPress={() => setSettingsOpen(!settingsOpen)}
+          hitSlop={12}
+          className="h-9 w-9 rounded-xl items-center justify-center"
+          style={{ backgroundColor: settingsOpen ? t.primary : t.surface }}
+        >
+          {settingsOpen ? (
+            <X size={16} color={t.primaryText} />
+          ) : (
+            <Settings size={16} color={t.textSecondary} />
+          )}
+        </Pressable>
+      </View>
 
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
+      >
+        {/* ── Settings panel (collapsible) ── */}
+        {settingsOpen && (
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(150)}
+            layout={LinearTransition.duration(200)}
+            className="px-5 mb-4"
+          >
+            <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
+              {/* Theme picker */}
+              <View className="px-4 pt-4 pb-3">
+                <View className="flex-row items-center gap-2 mb-3">
+                  <Palette size={14} color={t.textSecondary} />
+                  <Text style={{ color: t.textSecondary }} className="text-xs font-sans-semibold uppercase tracking-wider">Tema</Text>
+                </View>
+                <View className="flex-row gap-2">
+                  {THEME_LIST.map((th: AppTheme) => (
+                    <Pressable
+                      key={th.id}
+                      onPress={() => setTheme(th.id)}
+                      className="flex-1 py-2.5 rounded-xl items-center"
+                      style={{
+                        backgroundColor: theme.id === th.id ? t.primary : t.surfacePressed,
+                        borderWidth: 1,
+                        borderColor: theme.id === th.id ? t.primary : t.borderLight,
+                      }}
+                    >
+                      <Text className="text-base mb-0.5">{th.emoji}</Text>
+                      <Text
+                        className="text-[10px] font-sans-medium"
+                        style={{ color: theme.id === th.id ? t.primaryText : t.textSecondary }}
+                      >
+                        {th.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Divider */}
+              <View className="mx-4" style={{ height: 1, backgroundColor: t.borderLight }} />
+
+              {/* Logout */}
+              <Pressable onPress={handleLogout} className="flex-row items-center gap-3 px-4 py-3.5">
+                <LogOut size={16} color={t.error} />
+                <Text style={{ color: t.error }} className="text-sm font-sans-medium flex-1">Sair da conta</Text>
+              </Pressable>
+            </View>
+
+            <Text style={{ color: t.textMuted }} className="text-[10px] text-center mt-2 font-sans">
+              AliaPatient v1.0.0
+            </Text>
+          </Animated.View>
+        )}
+
+        {/* ── Content ── */}
         {isLoading ? (
           <View className="items-center py-20">
             <ActivityIndicator size="large" color={t.primary} />
           </View>
-        ) : profile ? (
+        ) : (
           <>
             {/* Avatar + name */}
-            <View className="items-center mb-6">
+            <View className="items-center mb-6 mt-2">
               <View className="h-20 w-20 rounded-full items-center justify-center mb-3" style={{ backgroundColor: t.primaryLight }}>
                 <UserIcon size={36} color={t.primary} />
               </View>
               <Text style={{ color: t.text }} className="text-lg font-sans-semibold">
-                {profile.preferred_name || profile.name}
+                {profile?.preferred_name || profile?.name || 'Paciente'}
               </Text>
             </View>
 
-            {/* Info cards */}
-            <View className="px-5 gap-2">
-              {profile.phone ? (
-                <InfoRow icon={<Phone size={18} color={t.textSecondary} />} label="Telefone" value={profile.phone} t={t} />
-              ) : null}
-              {profile.email ? (
-                <InfoRow icon={<Mail size={18} color={t.textSecondary} />} label="E-mail" value={profile.email} t={t} />
-              ) : null}
-              {profile.height_cm ? (
-                <InfoRow icon={<Ruler size={18} color={t.textSecondary} />} label="Altura" value={`${(profile.height_cm / 100).toFixed(2).replace('.', ',')} m`} t={t} />
-              ) : null}
-              {profile.weight_kg ? (
-                <InfoRow icon={<Weight size={18} color={t.textSecondary} />} label="Peso" value={`${profile.weight_kg.toFixed(1).replace('.', ',')} kg`} t={t} />
-              ) : null}
-              {profile.birth_date ? (
-                <InfoRow icon={<UserIcon size={18} color={t.textSecondary} />} label="Nascimento" value={new Date(profile.birth_date + 'T00:00:00').toLocaleDateString('pt-BR')} t={t} />
-              ) : null}
-            </View>
+            {/* Info card (consolidated) */}
+            {infoRows.length > 0 && (
+              <View className="px-5 mb-4">
+                <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
+                  {infoRows.map((row, i) => (
+                    <View key={i}>
+                      {i > 0 && <View className="mx-4" style={{ height: 1, backgroundColor: t.borderLight }} />}
+                      <View className="flex-row items-center gap-3 px-4 py-3">
+                        {row.icon}
+                        <View className="flex-1">
+                          <Text style={{ color: t.textMuted }} className="text-[10px] font-sans">{row.label}</Text>
+                          <Text style={{ color: t.text }} className="text-[13px] font-sans-medium">{row.value}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Evolution chart */}
+            <WeightChart />
           </>
-        ) : (
-          <View className="items-center mb-6">
-            <View className="h-20 w-20 rounded-full items-center justify-center mb-3" style={{ backgroundColor: t.primaryLight }}>
-              <UserIcon size={36} color={t.primary} />
-            </View>
-            <Text style={{ color: t.text }} className="text-lg font-sans-semibold">Paciente</Text>
-          </View>
         )}
-
-        {/* Evolution chart */}
-        <WeightChart />
-
-        {/* Theme picker */}
-        <View className="px-5 mt-6">
-          <View className="flex-row items-center gap-2 mb-3">
-            <Palette size={16} color={t.textSecondary} />
-            <Text style={{ color: t.textSecondary }} className="text-sm font-sans-semibold">Tema</Text>
-          </View>
-          <View className="flex-row gap-2">
-            {THEME_LIST.map((th: AppTheme) => (
-              <Pressable
-                key={th.id}
-                onPress={() => setTheme(th.id)}
-                className="flex-1 py-3 rounded-xl items-center"
-                style={{
-                  backgroundColor: theme.id === th.id ? t.primary : t.surface,
-                  borderWidth: 1,
-                  borderColor: theme.id === th.id ? t.primary : t.borderLight,
-                }}
-              >
-                <Text className="text-base mb-0.5">{th.emoji}</Text>
-                <Text
-                  className="text-[11px] font-sans-medium"
-                  style={{ color: theme.id === th.id ? t.primaryText : t.textSecondary }}
-                >
-                  {th.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Logout */}
-        <View className="px-5 mt-6">
-          <Pressable
-            onPress={handleLogout}
-            className="flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
-            style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}
-          >
-            <LogOut size={18} color={t.error} />
-            <Text style={{ color: t.error }} className="text-sm font-sans-medium flex-1">Sair</Text>
-          </Pressable>
-        </View>
-
-        <Text style={{ color: t.textMuted }} className="text-[10px] text-center mt-8 font-sans">
-          AliaPatient v1.0.0
-        </Text>
       </ScrollView>
     </SafeAreaView>
   )
@@ -214,14 +248,3 @@ function fmtShort(dateStr: string) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 }
 
-function InfoRow({ icon, label, value, t }: { icon: React.ReactNode; label: string; value: string; t: ReturnType<typeof useThemeColors> }) {
-  return (
-    <View className="flex-row items-center gap-3 rounded-2xl px-4 py-3.5" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
-      {icon}
-      <View className="flex-1">
-        <Text style={{ color: t.textMuted }} className="text-[11px] font-sans">{label}</Text>
-        <Text style={{ color: t.text }} className="text-sm font-sans-medium">{value}</Text>
-      </View>
-    </View>
-  )
-}
