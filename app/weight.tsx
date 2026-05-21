@@ -9,9 +9,15 @@ import {
 } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
-import Svg, { Polyline, Circle as SvgCircle } from 'react-native-svg'
+import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { useThemeColors } from '../src/stores/theme'
 import { useLogWeight, useWeightHistory } from '../src/hooks/usePortal'
+
+const SHADOW_SM = Platform.select({
+  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
+  android: { elevation: 2 },
+  default: {},
+}) as Record<string, unknown>
 
 function todayStr() {
   const d = new Date()
@@ -69,40 +75,55 @@ export default function WeightScreen() {
     const diffStr = `${diff > 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} kg`
     const TrendIcon = diff <= 0 ? TrendingDown : TrendingUp
 
+    const fillPoints = `${padX},${padY + chartH} ${polyPoints} ${padX + chartW},${padY + chartH}`
+    const trendColor = diff <= 0 ? t.success : t.warning
+
     sparkline = (
       <Animated.View entering={FadeInDown.duration(300)} className="px-5 mb-4">
-        <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
+        <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center">
-              <TrendIcon size={14} color={diff <= 0 ? t.success : t.warning} />
-              <Text style={{ color: t.text }} className="text-xs font-sans-bold uppercase tracking-wider ml-1.5">
+              <View className="h-7 w-7 rounded-lg items-center justify-center" style={{ backgroundColor: trendColor + '18' }}>
+                <TrendIcon size={14} color={trendColor} />
+              </View>
+              <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
                 Evolução
               </Text>
             </View>
-            <Text className="text-xs font-sans-semibold" style={{ color: diff <= 0 ? t.success : t.warning }}>
+            <Text className="text-xs font-sans-bold" style={{ color: trendColor }}>
               {diffStr}
             </Text>
           </View>
-          <View className="flex-row items-center justify-between mb-1">
-            <Text style={{ color: t.textMuted }} className="text-[11px] font-sans">
-              Atual: {last.toFixed(1).replace('.', ',')} kg
+          <View className="flex-row items-baseline justify-between mb-2">
+            <Text style={{ color: t.text }} className="text-xl font-sans-bold">
+              {last.toFixed(1).replace('.', ',')}
+              <Text className="text-xs font-sans" style={{ color: t.textMuted }}> kg</Text>
             </Text>
             <Text style={{ color: t.textMuted }} className="text-[10px] font-sans">{points.length} registros</Text>
           </View>
           <Svg width={W} height={H}>
+            <Defs>
+              <LinearGradient id="weightFill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={t.primary} stopOpacity="0.15" />
+                <Stop offset="1" stopColor={t.primary} stopOpacity="0" />
+              </LinearGradient>
+            </Defs>
+            <Polyline points={fillPoints} fill="url(#weightFill)" stroke="none" />
             <Polyline
               points={polyPoints}
               fill="none"
               stroke={t.primary}
-              strokeWidth={2}
+              strokeWidth={2.5}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
             <SvgCircle
               cx={coords[coords.length - 1].x}
               cy={coords[coords.length - 1].y}
-              r={3}
-              fill={t.primary}
+              r={4}
+              fill="#ffffff"
+              stroke={t.primary}
+              strokeWidth={2.5}
             />
           </Svg>
         </View>
@@ -124,8 +145,8 @@ export default function WeightScreen() {
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
           {/* Input card */}
           <Animated.View entering={FadeIn.duration(300)} className="px-5 mt-4 mb-4">
-            <View className="rounded-2xl p-5" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
-              <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-3">
+            <View className="rounded-2xl p-5" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+              <Text style={{ color: t.textMuted }} className="text-xs font-sans-bold uppercase tracking-widest mb-3">
                 Peso de hoje
               </Text>
               <View className="flex-row items-center gap-3">
@@ -164,7 +185,7 @@ export default function WeightScreen() {
           {/* History list */}
           {entries.length > 0 && (
             <Animated.View entering={FadeInDown.duration(300).delay(100)} className="px-5">
-              <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-2">
+              <Text style={{ color: t.textMuted }} className="text-[10px] font-sans-bold uppercase tracking-widest mb-2 ml-1">
                 Histórico
               </Text>
               {entries.slice(0, 30).map((entry, i) => {
@@ -176,8 +197,8 @@ export default function WeightScreen() {
                 return (
                   <View
                     key={`${entry.entry_date}-${entry.source}`}
-                    className="flex-row items-center py-2.5 px-3 rounded-xl mb-1"
-                    style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}
+                    className="flex-row items-center py-2.5 px-3 rounded-xl mb-1.5"
+                    style={{ backgroundColor: t.surface, ...SHADOW_SM }}
                   >
                     <Scale size={14} color={t.accent} />
                     <Text style={{ color: t.text }} className="text-sm font-sans-semibold ml-2 flex-1">

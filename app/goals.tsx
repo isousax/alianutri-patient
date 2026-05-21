@@ -1,16 +1,17 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { ArrowLeft, Target, CheckCircle2, Circle, Flag } from 'lucide-react-native'
-import { colors } from '../src/theme/colors'
+import { ChevronLeft, Target, CheckCircle2, Circle, Flag } from 'lucide-react-native'
+import Animated, { FadeInDown } from 'react-native-reanimated'
+import { useThemeColors } from '../src/stores/theme'
 import { useGoals } from '../src/hooks/usePortal'
 import type { PortalGoal } from '../src/types/portal'
 
-const PRIORITY_COLORS: Record<string, { bg: string; text: string }> = {
-  high: { bg: 'bg-red-50', text: 'text-red-600' },
-  medium: { bg: 'bg-amber-50', text: 'text-amber-600' },
-  low: { bg: 'bg-slate-50', text: 'text-slate-500' },
-}
+const SHADOW_SM = Platform.select({
+  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
+  android: { elevation: 2 },
+  default: {},
+}) as Record<string, unknown>
 
 const PRIORITY_LABELS: Record<string, string> = {
   high: 'Alta',
@@ -33,46 +34,67 @@ function progressPct(goal: PortalGoal): number | null {
 }
 
 export default function GoalsScreen() {
+  const t = useThemeColors()
   const { data: goals, isLoading, refetch, isRefetching } = useGoals()
 
   const active = (goals ?? []).filter((g) => g.status === 'active')
   const completed = (goals ?? []).filter((g) => g.status === 'completed')
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
       <View className="px-5 pt-4 pb-3 flex-row items-center gap-3">
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ArrowLeft size={20} color="#64748b" />
+          <ChevronLeft size={22} color={t.textSecondary} />
         </Pressable>
-        <Text className="text-xl font-sans-bold text-slate-900">Metas</Text>
+        <View className="h-8 w-8 rounded-xl items-center justify-center" style={{ backgroundColor: t.success + '15' }}>
+          <Target size={16} color={t.success} />
+        </View>
+        <Text style={{ color: t.text }} className="text-xl font-sans-bold">Metas</Text>
       </View>
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.brand[600]} />
+          <ActivityIndicator size="large" color={t.primary} />
         </View>
       ) : !goals || goals.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <View className="h-16 w-16 rounded-2xl bg-emerald-50 items-center justify-center mb-4">
-            <Target size={28} color="#059669" />
+          <View className="h-16 w-16 rounded-3xl items-center justify-center mb-4" style={{ backgroundColor: t.primaryLight }}>
+            <Target size={28} color={t.primary} />
           </View>
-          <Text className="text-base font-sans-semibold text-slate-900 mb-1">Sem metas</Text>
-          <Text className="text-sm text-slate-400 text-center font-sans">
+          <Text style={{ color: t.text }} className="text-base font-sans-semibold mb-1">Sem metas</Text>
+          <Text style={{ color: t.textMuted }} className="text-sm text-center font-sans">
             Quando o nutricionista definir metas, elas aparecerão aqui.
           </Text>
         </View>
       ) : (
-        <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 32 }} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#059669" />}>
+        <ScrollView
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
+        >
           {active.length > 0 && (
             <>
-              <Text className="text-xs font-sans-semibold text-slate-400 uppercase tracking-wide mb-2">Ativas</Text>
-              {active.map((g) => <GoalCard key={g.id} goal={g} />)}
+              <Text style={{ color: t.textMuted }} className="text-[10px] font-sans-bold uppercase tracking-widest mb-2 ml-1">
+                Ativas ({active.length})
+              </Text>
+              {active.map((g, i) => (
+                <Animated.View key={g.id} entering={FadeInDown.duration(300).delay(i * 60)}>
+                  <GoalCard goal={g} />
+                </Animated.View>
+              ))}
             </>
           )}
           {completed.length > 0 && (
             <>
-              <Text className="text-xs font-sans-semibold text-slate-400 uppercase tracking-wide mb-2 mt-4">Concluídas</Text>
-              {completed.map((g) => <GoalCard key={g.id} goal={g} />)}
+              <Text style={{ color: t.textMuted }} className="text-[10px] font-sans-bold uppercase tracking-widest mb-2 mt-4 ml-1">
+                Concluídas ({completed.length})
+              </Text>
+              {completed.map((g, i) => (
+                <Animated.View key={g.id} entering={FadeInDown.duration(300).delay((active.length + i) * 60)}>
+                  <GoalCard goal={g} />
+                </Animated.View>
+              ))}
             </>
           )}
         </ScrollView>
@@ -82,26 +104,40 @@ export default function GoalsScreen() {
 }
 
 function GoalCard({ goal }: { goal: PortalGoal }) {
+  const t = useThemeColors()
   const pct = progressPct(goal)
-  const prio = PRIORITY_COLORS[goal.priority] || PRIORITY_COLORS.medium
+  const isCompleted = goal.status === 'completed'
+
+  const prioColor = goal.priority === 'high' ? t.error : goal.priority === 'medium' ? t.warning : t.textMuted
+  const prioLabel = PRIORITY_LABELS[goal.priority] || goal.priority
 
   return (
-    <View className="mb-3 bg-white rounded-2xl border border-slate-100 p-4">
+    <View className="mb-3 rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
       <View className="flex-row items-start gap-3">
-        {goal.status === 'completed'
-          ? <CheckCircle2 size={20} color="#16a34a" />
-          : <Circle size={20} color="#cbd5e1" />}
+        {isCompleted ? (
+          <View className="h-7 w-7 rounded-lg items-center justify-center mt-0.5" style={{ backgroundColor: t.success + '18' }}>
+            <CheckCircle2 size={16} color={t.success} />
+          </View>
+        ) : (
+          <View className="h-7 w-7 rounded-lg items-center justify-center mt-0.5" style={{ backgroundColor: t.primary + '12' }}>
+            <Circle size={16} color={t.primary} />
+          </View>
+        )}
         <View className="flex-1">
-          <Text className="text-sm font-sans-semibold text-slate-900">{goal.title}</Text>
-          <View className="flex-row items-center gap-2 mt-1">
-            <Text className="text-[11px] text-slate-400 font-sans">{TYPE_LABELS[goal.type] || goal.type}</Text>
-            <View className={`px-1.5 py-0.5 rounded ${prio.bg}`}>
-              <Text className={`text-[10px] font-sans-medium ${prio.text}`}>{PRIORITY_LABELS[goal.priority]}</Text>
+          <Text style={{ color: t.text }} className="text-[13px] font-sans-semibold">{goal.title}</Text>
+          <View className="flex-row items-center gap-2 mt-1.5">
+            <Text style={{ color: t.textMuted }} className="text-[11px] font-sans">
+              {TYPE_LABELS[goal.type] || goal.type}
+            </Text>
+            <View className="px-1.5 py-0.5 rounded-md" style={{ backgroundColor: prioColor + '15' }}>
+              <Text className="text-[10px] font-sans-medium" style={{ color: prioColor }}>
+                {prioLabel}
+              </Text>
             </View>
             {goal.due_date ? (
               <View className="flex-row items-center gap-0.5">
-                <Flag size={10} color="#94a3b8" />
-                <Text className="text-[11px] text-slate-400 font-sans">
+                <Flag size={10} color={t.textMuted} />
+                <Text style={{ color: t.textMuted }} className="text-[11px] font-sans">
                   {new Date(goal.due_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                 </Text>
               </View>
@@ -111,17 +147,25 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
       </View>
 
       {pct !== null && (
-        <View className="mt-3">
-          <View className="flex-row justify-between mb-1">
-            <Text className="text-[11px] text-slate-400 font-sans">
-              {goal.current_value}{goal.target_unit ? ` ${goal.target_unit}` : ''} / {goal.target_value}{goal.target_unit ? ` ${goal.target_unit}` : ''}
+        <View className="mt-3 ml-10">
+          <View className="flex-row justify-between mb-1.5">
+            <Text style={{ color: t.textMuted }} className="text-[11px] font-sans">
+              {goal.current_value}{goal.target_unit ? ` ${goal.target_unit}` : ''} de {goal.target_value}{goal.target_unit ? ` ${goal.target_unit}` : ''}
             </Text>
-            <Text className="text-[11px] font-sans-medium text-slate-500">{pct}%</Text>
+            <Text
+              className="text-[11px] font-sans-bold"
+              style={{ color: isCompleted ? t.success : t.primary }}
+            >
+              {pct}%
+            </Text>
           </View>
-          <View className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <View className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: t.borderLight }}>
             <View
-              className={`h-2 rounded-full ${goal.status === 'completed' ? 'bg-green-500' : 'bg-brand-500'}`}
-              style={{ width: `${pct}%` }}
+              className="h-2 rounded-full"
+              style={{
+                width: `${pct}%`,
+                backgroundColor: isCompleted ? t.success : t.primary,
+              }}
             />
           </View>
         </View>

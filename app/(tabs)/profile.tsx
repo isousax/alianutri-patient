@@ -1,85 +1,108 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Platform, Dimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
-  User as UserIcon, Ruler, Weight, Phone, Mail,
-  Settings, Calendar, TrendingDown,
+  Ruler, Weight, Phone, Mail,
+  Settings, Calendar, TrendingDown, TrendingUp,
 } from 'lucide-react-native'
-import Svg, { Polyline, Circle as SvgCircle, Line, Text as SvgText } from 'react-native-svg'
+import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
+import { LinearGradient as ExpoGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { usePortalProfile, useEvolution } from '../../src/hooks/usePortal'
 import type { PortalEvolution } from '../../src/types/portal'
 import { useThemeColors } from '../../src/stores/theme'
 
+const { width: SCREEN_W } = Dimensions.get('window')
+
+const SHADOW_SM = Platform.select({
+  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
+  android: { elevation: 2 },
+  default: {},
+}) as Record<string, unknown>
+
 export default function ProfileScreen() {
   const t = useThemeColors()
   const { data: profile, isLoading, refetch, isRefetching } = usePortalProfile()
 
-  // Build info rows from profile
   const infoRows: { icon: React.ReactNode; label: string; value: string }[] = []
-  if (profile?.phone) infoRows.push({ icon: <Phone size={16} color={t.textSecondary} />, label: 'Telefone', value: profile.phone })
-  if (profile?.email) infoRows.push({ icon: <Mail size={16} color={t.textSecondary} />, label: 'E-mail', value: profile.email })
-  if (profile?.height_cm) infoRows.push({ icon: <Ruler size={16} color={t.textSecondary} />, label: 'Altura', value: `${(profile.height_cm / 100).toFixed(2).replace('.', ',')} m` })
-  if (profile?.weight_kg) infoRows.push({ icon: <Weight size={16} color={t.textSecondary} />, label: 'Peso', value: `${profile.weight_kg.toFixed(1).replace('.', ',')} kg` })
-  if (profile?.birth_date) infoRows.push({ icon: <Calendar size={16} color={t.textSecondary} />, label: 'Nascimento', value: new Date(profile.birth_date + 'T00:00:00').toLocaleDateString('pt-BR') })
+  if (profile?.phone) infoRows.push({ icon: <Phone size={15} color={t.primary} />, label: 'Telefone', value: profile.phone })
+  if (profile?.email) infoRows.push({ icon: <Mail size={15} color={t.primary} />, label: 'E-mail', value: profile.email })
+  if (profile?.height_cm) infoRows.push({ icon: <Ruler size={15} color={t.primary} />, label: 'Altura', value: `${(profile.height_cm / 100).toFixed(2).replace('.', ',')} m` })
+  if (profile?.weight_kg) infoRows.push({ icon: <Weight size={15} color={t.primary} />, label: 'Peso', value: `${profile.weight_kg.toFixed(1).replace('.', ',')} kg` })
+  if (profile?.birth_date) infoRows.push({ icon: <Calendar size={15} color={t.primary} />, label: 'Nascimento', value: new Date(profile.birth_date + 'T00:00:00').toLocaleDateString('pt-BR') })
+
+  const displayName = profile?.preferred_name || profile?.name || 'Paciente'
+  const initials = displayName.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      {/* ── Header ── */}
-      <View className="px-5 pt-4 pb-2 flex-row items-center justify-between">
-        <Text style={{ color: t.text }} className="text-xl font-sans-bold">Perfil</Text>
-        <Pressable
-          onPress={() => router.push('/settings')}
-          hitSlop={12}
-          className="h-9 w-9 rounded-xl items-center justify-center"
-          style={{ backgroundColor: t.surface }}
-        >
-          <Settings size={16} color={t.textSecondary} />
-        </Pressable>
-      </View>
-
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
       >
-        {/* ── Content ── */}
         {isLoading ? (
           <View className="items-center py-20">
             <ActivityIndicator size="large" color={t.primary} />
           </View>
         ) : (
           <>
-            {/* Avatar + name */}
-            <View className="items-center mb-6 mt-2">
-              <View className="h-20 w-20 rounded-full items-center justify-center mb-3" style={{ backgroundColor: t.primaryLight }}>
-                <UserIcon size={36} color={t.primary} />
+            {/* ══════ HERO HEADER ══════ */}
+            <ExpoGradient
+              colors={[t.primary + '20', t.background]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={{ paddingBottom: 24 }}
+            >
+              <View className="flex-row items-center justify-end px-5 pt-3 mb-2">
+                <Pressable
+                  onPress={() => router.push('/settings')}
+                  hitSlop={12}
+                  className="h-10 w-10 rounded-2xl items-center justify-center"
+                  style={{ backgroundColor: t.surface, ...SHADOW_SM }}
+                >
+                  <Settings size={16} color={t.textSecondary} />
+                </Pressable>
               </View>
-              <Text style={{ color: t.text }} className="text-lg font-sans-semibold">
-                {profile?.preferred_name || profile?.name || 'Paciente'}
-              </Text>
-            </View>
 
-            {/* Info card (consolidated) */}
+              <Animated.View entering={FadeIn.duration(400)} className="items-center">
+                <ExpoGradient
+                  colors={[t.primary, t.primary + 'cc']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  className="h-20 w-20 rounded-3xl items-center justify-center mb-3"
+                  style={SHADOW_SM}
+                >
+                  <Text className="text-2xl font-sans-bold" style={{ color: '#ffffff' }}>{initials}</Text>
+                </ExpoGradient>
+                <Text style={{ color: t.text }} className="text-xl font-sans-bold">{displayName}</Text>
+              </Animated.View>
+            </ExpoGradient>
+
+            {/* ══════ INFO CARD ══════ */}
             {infoRows.length > 0 && (
-              <View className="px-5 mb-4">
-                <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
+              <Animated.View entering={FadeInDown.duration(350).delay(80)} className="px-5 mb-4">
+                <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
                   {infoRows.map((row, i) => (
                     <View key={i}>
                       {i > 0 && <View className="mx-4" style={{ height: 1, backgroundColor: t.borderLight }} />}
-                      <View className="flex-row items-center gap-3 px-4 py-3">
-                        {row.icon}
+                      <View className="flex-row items-center gap-3 px-4 py-3.5">
+                        <View className="h-8 w-8 rounded-xl items-center justify-center" style={{ backgroundColor: t.primary + '12' }}>
+                          {row.icon}
+                        </View>
                         <View className="flex-1">
-                          <Text style={{ color: t.textMuted }} className="text-[10px] font-sans">{row.label}</Text>
-                          <Text style={{ color: t.text }} className="text-[13px] font-sans-medium">{row.value}</Text>
+                          <Text style={{ color: t.textMuted }} className="text-[10px] font-sans uppercase tracking-wider">{row.label}</Text>
+                          <Text style={{ color: t.text }} className="text-[13px] font-sans-medium mt-0.5">{row.value}</Text>
                         </View>
                       </View>
                     </View>
                   ))}
                 </View>
-              </View>
+              </Animated.View>
             )}
 
-            {/* Evolution chart */}
+            {/* ══════ EVOLUTION CHART ══════ */}
             <WeightChart />
           </>
         )}
@@ -95,17 +118,17 @@ function WeightChart() {
   const points = (evolution ?? []).filter((e) => e.weight_kg !== null) as (PortalEvolution & { weight_kg: number })[]
   if (points.length < 2) return null
 
-  const W = 320
-  const H = 140
-  const padX = 36
-  const padTop = 16
-  const padBot = 24 // space for x-axis labels
+  const W = SCREEN_W - 40 - 32
+  const H = 100
+  const padX = 4
+  const padTop = 10
+  const padBot = 10
   const chartW = W - padX * 2
   const chartH = H - padTop - padBot
 
   const weights = points.map((p) => p.weight_kg)
-  const minW = Math.min(...weights) - 1
-  const maxW = Math.max(...weights) + 1
+  const minW = Math.min(...weights) - 0.5
+  const maxW = Math.max(...weights) + 0.5
   const rangeW = maxW - minW || 1
 
   const coords = points.map((p, i) => ({
@@ -114,51 +137,67 @@ function WeightChart() {
   }))
 
   const polyPoints = coords.map((c) => `${c.x},${c.y}`).join(' ')
+  const fillPoints = `${padX},${padTop + chartH} ${polyPoints} ${padX + chartW},${padTop + chartH}`
 
   const first = points[0].weight_kg
   const last = points[points.length - 1].weight_kg
   const diff = last - first
   const diffStr = `${diff > 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} kg`
+  const trendColor = diff <= 0 ? t.success : t.warning
+  const TrendIcon = diff <= 0 ? TrendingDown : TrendingUp
 
   return (
-    <View className="px-5 mt-6">
-      <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
-        <View className="flex-row items-center gap-2 mb-3">
-          <TrendingDown size={16} color={t.primary} />
-          <Text style={{ color: t.text }} className="text-sm font-sans-semibold">Evolução de peso</Text>
-          <Text className="text-xs font-sans-medium ml-auto" style={{ color: diff <= 0 ? t.success : t.warning }}>
-            {diffStr}
+    <Animated.View entering={FadeInDown.duration(350).delay(160)} className="px-5 mb-4">
+      <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+        <View className="flex-row items-center justify-between mb-3">
+          <View className="flex-row items-center">
+            <View className="h-7 w-7 rounded-lg items-center justify-center" style={{ backgroundColor: trendColor + '18' }}>
+              <TrendIcon size={14} color={trendColor} />
+            </View>
+            <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
+              Evolução de peso
+            </Text>
+          </View>
+          <Text className="text-xs font-sans-bold" style={{ color: trendColor }}>{diffStr}</Text>
+        </View>
+
+        <View className="flex-row items-baseline justify-between mb-2">
+          <Text style={{ color: t.text }} className="text-xl font-sans-bold">
+            {last.toFixed(1).replace('.', ',')}
+            <Text className="text-xs font-sans" style={{ color: t.textMuted }}> kg</Text>
+          </Text>
+          <Text style={{ color: t.textMuted }} className="text-[10px] font-sans">
+            {fmtShort(points[0].evaluation_date)} — {fmtShort(points[points.length - 1].evaluation_date)}
           </Text>
         </View>
-        <View style={{ alignItems: 'center' }}>
-          <Svg width={W} height={H}>
-            {/* Grid lines */}
-            {[0, 0.25, 0.5, 0.75, 1].map((frac) => {
-              const y = padTop + chartH - frac * chartH
-              return (
-                <Line key={frac} x1={padX} y1={y} x2={W - padX} y2={y} stroke={t.borderLight} strokeWidth={1} />
-              )
-            })}
-            {/* Y labels */}
-            <SvgText x={4} y={padTop + 4} fontSize={9} fill={t.textMuted}>{maxW.toFixed(0)}</SvgText>
-            <SvgText x={4} y={padTop + chartH + 4} fontSize={9} fill={t.textMuted}>{minW.toFixed(0)}</SvgText>
-            {/* Line */}
-            <Polyline points={polyPoints} fill="none" stroke={t.primary} strokeWidth={2} strokeLinejoin="round" />
-            {/* Dots */}
-            {coords.map((c, i) => (
-              <SvgCircle key={i} cx={c.x} cy={c.y} r={3} fill={t.primary} />
-            ))}
-            {/* X labels (first and last date) */}
-            <SvgText x={padX} y={H - 4} fontSize={9} fill={t.textMuted} textAnchor="start">
-              {fmtShort(points[0].evaluation_date)}
-            </SvgText>
-            <SvgText x={W - padX} y={H - 4} fontSize={9} fill={t.textMuted} textAnchor="end">
-              {fmtShort(points[points.length - 1].evaluation_date)}
-            </SvgText>
-          </Svg>
-        </View>
+
+        <Svg width={W} height={H}>
+          <Defs>
+            <LinearGradient id="profileFill" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={t.primary} stopOpacity="0.15" />
+              <Stop offset="1" stopColor={t.primary} stopOpacity="0" />
+            </LinearGradient>
+          </Defs>
+          <Polyline points={fillPoints} fill="url(#profileFill)" stroke="none" />
+          <Polyline
+            points={polyPoints}
+            fill="none"
+            stroke={t.primary}
+            strokeWidth={2.5}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <SvgCircle
+            cx={coords[coords.length - 1].x}
+            cy={coords[coords.length - 1].y}
+            r={4}
+            fill="#ffffff"
+            stroke={t.primary}
+            strokeWidth={2.5}
+          />
+        </Svg>
       </View>
-    </View>
+    </Animated.View>
   )
 }
 

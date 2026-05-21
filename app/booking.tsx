@@ -1,13 +1,19 @@
 import { useState, useMemo, useCallback } from 'react'
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { ArrowLeft, Calendar, Clock, MapPin, Video, ChevronLeft, ChevronRight, Check } from 'lucide-react-native'
+import { Calendar, Clock, MapPin, Video, ChevronLeft, ChevronRight, Check, Info } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
-import { colors } from '../src/theme/colors'
+import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { useBookingConfig, useBookingSlots, useRequestBooking } from '../src/hooks/usePortal'
 import type { BookingSlot } from '../src/types/portal'
+
+const SHADOW_SM = Platform.select({
+  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
+  android: { elevation: 2 },
+  default: {},
+}) as Record<string, unknown>
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const MONTHS = [
@@ -24,6 +30,7 @@ function addMonths(d: Date, n: number) {
 }
 
 export default function BookingScreen() {
+  const t = useThemeColors()
   const { data: config, isLoading: configLoading } = useBookingConfig()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const requestBooking = useRequestBooking()
@@ -35,7 +42,6 @@ export default function BookingScreen() {
 
   const { data: slotsData, isLoading: slotsLoading } = useBookingSlots(selectedDate)
 
-  // Calendar grid
   const calendarDays = useMemo(() => {
     const y = currentMonth.getFullYear()
     const m = currentMonth.getMonth()
@@ -45,7 +51,6 @@ export default function BookingScreen() {
 
     const days: { date: string; day: number; enabled: boolean; isToday: boolean; isPast: boolean }[] = []
 
-    // Empty slots for alignment
     for (let i = 0; i < firstDay; i++) {
       days.push({ date: '', day: 0, enabled: false, isToday: false, isPast: true })
     }
@@ -69,13 +74,12 @@ export default function BookingScreen() {
     return days
   }, [currentMonth, config])
 
-  // Auto-select type if only one mode available
   const effectiveType = useMemo(() => {
     if (selectedType) return selectedType
     if (!config?.consultation_mode) return null
     if (config.consultation_mode === 'online') return 'online'
     if (config.consultation_mode === 'in_person') return 'in_person'
-    return null // 'both' → user must choose
+    return null
   }, [selectedType, config])
 
   const canBook = canWrite && selectedDate && selectedSlot && effectiveType
@@ -106,24 +110,26 @@ export default function BookingScreen() {
 
   if (configLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50 items-center justify-center" edges={['top']}>
-        <ActivityIndicator color={colors.brand[500]} size="large" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} className="items-center justify-center" edges={['top']}>
+        <ActivityIndicator color={t.primary} size="large" />
       </SafeAreaView>
     )
   }
 
   if (!config || config.booking_mode === 'disabled') {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
         <View className="px-5 pt-4 pb-3 flex-row items-center gap-3">
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <ArrowLeft size={20} color="#64748b" />
+            <ChevronLeft size={22} color={t.textSecondary} />
           </Pressable>
-          <Text className="text-xl font-sans-bold text-slate-900">Agendar consulta</Text>
+          <Text style={{ color: t.text }} className="text-xl font-sans-bold">Agendar consulta</Text>
         </View>
         <View className="flex-1 items-center justify-center px-8">
-          <Calendar size={48} color="#94a3b8" />
-          <Text className="text-base text-slate-500 text-center mt-4">
+          <View className="h-16 w-16 rounded-3xl items-center justify-center mb-4" style={{ backgroundColor: t.primaryLight }}>
+            <Calendar size={28} color={t.primary} />
+          </View>
+          <Text style={{ color: t.textSecondary }} className="text-base text-center mt-2 font-sans">
             O agendamento online não está disponível no momento.
           </Text>
         </View>
@@ -132,28 +138,31 @@ export default function BookingScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
       {/* Header */}
       <View className="px-5 pt-4 pb-3 flex-row items-center gap-3">
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ArrowLeft size={20} color="#64748b" />
+          <ChevronLeft size={22} color={t.textSecondary} />
         </Pressable>
-        <Text className="text-xl font-sans-bold text-slate-900">Agendar consulta</Text>
+        <View className="h-8 w-8 rounded-xl items-center justify-center" style={{ backgroundColor: t.primary + '15' }}>
+          <Calendar size={16} color={t.primary} />
+        </View>
+        <Text style={{ color: t.text }} className="text-xl font-sans-bold">Agendar consulta</Text>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Calendar */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)} className="mx-5 bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <Animated.View entering={FadeInDown.delay(100).duration(400)} className="mx-5 rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
           {/* Month nav */}
           <View className="flex-row items-center justify-between mb-4">
             <Pressable onPress={() => setCurrentMonth(addMonths(currentMonth, -1))} hitSlop={12}>
-              <ChevronLeft size={20} color="#64748b" />
+              <ChevronLeft size={20} color={t.textSecondary} />
             </Pressable>
-            <Text className="text-sm font-sans-semibold text-slate-900">
+            <Text style={{ color: t.text }} className="text-sm font-sans-bold">
               {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </Text>
             <Pressable onPress={() => setCurrentMonth(addMonths(currentMonth, 1))} hitSlop={12}>
-              <ChevronRight size={20} color="#64748b" />
+              <ChevronRight size={20} color={t.textSecondary} />
             </Pressable>
           </View>
 
@@ -161,7 +170,7 @@ export default function BookingScreen() {
           <View className="flex-row mb-2">
             {WEEKDAYS.map((w) => (
               <View key={w} className="flex-1 items-center">
-                <Text className="text-[10px] font-sans-semibold text-slate-400 uppercase">{w}</Text>
+                <Text style={{ color: t.textMuted }} className="text-[10px] font-sans-bold uppercase">{w}</Text>
               </View>
             ))}
           </View>
@@ -169,27 +178,29 @@ export default function BookingScreen() {
           {/* Days grid */}
           <View className="flex-row flex-wrap">
             {calendarDays.map((d, i) => (
-              <View key={i} className="items-center justify-center" style={{ width: '14.28%', height: 40 }}>
+              <View key={i} className="items-center justify-center" style={{ width: '14.28%', height: 42 }}>
                 {d.day > 0 && (
                   <Pressable
                     onPress={() => d.enabled && handleDateSelect(d.date)}
                     disabled={!d.enabled}
-                    className={`w-8 h-8 rounded-full items-center justify-center ${
+                    className="w-9 h-9 rounded-xl items-center justify-center"
+                    style={
                       d.date === selectedDate
-                        ? 'bg-brand-500'
+                        ? { backgroundColor: t.primary }
                         : d.isToday
-                        ? 'border border-brand-400'
-                        : ''
-                    }`}
+                        ? { borderWidth: 1.5, borderColor: t.primary }
+                        : undefined
+                    }
                   >
                     <Text
-                      className={`text-xs font-sans-semibold ${
-                        d.date === selectedDate
-                          ? 'text-white'
+                      className="text-xs font-sans-semibold"
+                      style={{
+                        color: d.date === selectedDate
+                          ? t.primaryText
                           : !d.enabled
-                          ? 'text-slate-300'
-                          : 'text-slate-700'
-                      }`}
+                          ? t.borderLight
+                          : t.text,
+                      }}
                     >
                       {d.day}
                     </Text>
@@ -203,15 +214,15 @@ export default function BookingScreen() {
         {/* Time slots */}
         {selectedDate && (
           <Animated.View entering={FadeInDown.delay(200).duration(400)} className="mx-5 mt-4">
-            <View className="flex-row items-center gap-2 mb-3">
-              <Clock size={16} color={colors.brand[500]} />
-              <Text className="text-sm font-sans-semibold text-slate-900">Horários disponíveis</Text>
-              {slotsLoading && <ActivityIndicator size="small" color={colors.brand[500]} />}
+            <View className="flex-row items-center gap-2 mb-3 ml-1">
+              <Clock size={14} color={t.primary} />
+              <Text style={{ color: t.text }} className="text-sm font-sans-bold">Horários disponíveis</Text>
+              {slotsLoading && <ActivityIndicator size="small" color={t.primary} />}
             </View>
 
             {!slotsLoading && slotsData && slotsData.slots.length === 0 && (
-              <View className="bg-white rounded-xl p-4 border border-slate-100">
-                <Text className="text-sm text-slate-500 text-center">Nenhum horário disponível neste dia.</Text>
+              <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+                <Text style={{ color: t.textMuted }} className="text-sm text-center font-sans">Nenhum horário disponível neste dia.</Text>
               </View>
             )}
 
@@ -222,22 +233,24 @@ export default function BookingScreen() {
                     key={slot.time}
                     onPress={() => slot.available && setSelectedSlot(slot.time)}
                     disabled={!slot.available}
-                    className={`px-4 py-2.5 rounded-xl border ${
+                    className="px-4 py-2.5 rounded-xl"
+                    style={
                       selectedSlot === slot.time
-                        ? 'bg-brand-500 border-brand-500'
+                        ? { backgroundColor: t.primary }
                         : slot.available
-                        ? 'bg-white border-slate-200'
-                        : 'bg-slate-50 border-slate-100'
-                    }`}
+                        ? { backgroundColor: t.surface, ...SHADOW_SM }
+                        : { backgroundColor: t.borderLight }
+                    }
                   >
                     <Text
-                      className={`text-sm font-sans-semibold ${
-                        selectedSlot === slot.time
-                          ? 'text-white'
+                      className="text-sm font-sans-semibold"
+                      style={{
+                        color: selectedSlot === slot.time
+                          ? t.primaryText
                           : slot.available
-                          ? 'text-slate-700'
-                          : 'text-slate-300'
-                      }`}
+                          ? t.text
+                          : t.textMuted,
+                      }}
                     >
                       {slot.time}
                     </Text>
@@ -247,7 +260,7 @@ export default function BookingScreen() {
             )}
 
             {slotsData && (
-              <Text className="text-[10px] text-slate-400 mt-2">
+              <Text style={{ color: t.textMuted }} className="text-[10px] font-sans mt-2 ml-1">
                 Duração: {slotsData.duration_minutes} min
               </Text>
             )}
@@ -257,27 +270,33 @@ export default function BookingScreen() {
         {/* Type selector */}
         {showTypeSelector && selectedSlot && (
           <Animated.View entering={FadeInDown.delay(300).duration(400)} className="mx-5 mt-4">
-            <Text className="text-sm font-sans-semibold text-slate-900 mb-3">Tipo de consulta</Text>
+            <Text style={{ color: t.text }} className="text-sm font-sans-bold mb-3 ml-1">Tipo de consulta</Text>
             <View className="flex-row gap-3">
               <Pressable
                 onPress={() => setSelectedType('online')}
-                className={`flex-1 p-4 rounded-xl border items-center gap-2 ${
-                  selectedType === 'online' ? 'bg-brand-50 border-brand-400' : 'bg-white border-slate-200'
-                }`}
+                className="flex-1 p-4 rounded-2xl items-center gap-2"
+                style={
+                  selectedType === 'online'
+                    ? { backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primary }
+                    : { backgroundColor: t.surface, ...SHADOW_SM }
+                }
               >
-                <Video size={20} color={selectedType === 'online' ? colors.brand[600] : '#94a3b8'} />
-                <Text className={`text-sm font-sans-semibold ${selectedType === 'online' ? 'text-brand-700' : 'text-slate-600'}`}>
+                <Video size={20} color={selectedType === 'online' ? t.primary : t.textMuted} />
+                <Text className="text-sm font-sans-semibold" style={{ color: selectedType === 'online' ? t.primary : t.text }}>
                   Online
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => setSelectedType('in_person')}
-                className={`flex-1 p-4 rounded-xl border items-center gap-2 ${
-                  selectedType === 'in_person' ? 'bg-brand-50 border-brand-400' : 'bg-white border-slate-200'
-                }`}
+                className="flex-1 p-4 rounded-2xl items-center gap-2"
+                style={
+                  selectedType === 'in_person'
+                    ? { backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primary }
+                    : { backgroundColor: t.surface, ...SHADOW_SM }
+                }
               >
-                <MapPin size={20} color={selectedType === 'in_person' ? colors.brand[600] : '#94a3b8'} />
-                <Text className={`text-sm font-sans-semibold ${selectedType === 'in_person' ? 'text-brand-700' : 'text-slate-600'}`}>
+                <MapPin size={20} color={selectedType === 'in_person' ? t.primary : t.textMuted} />
+                <Text className="text-sm font-sans-semibold" style={{ color: selectedType === 'in_person' ? t.primary : t.text }}>
                   Presencial
                 </Text>
               </Pressable>
@@ -287,8 +306,13 @@ export default function BookingScreen() {
 
         {/* Info banner */}
         {config.booking_mode === 'approval' && selectedSlot && (
-          <Animated.View entering={FadeInDown.delay(350).duration(400)} className="mx-5 mt-4 bg-purple-50 rounded-xl p-3 border border-purple-100">
-            <Text className="text-xs text-purple-700">
+          <Animated.View
+            entering={FadeInDown.delay(350).duration(400)}
+            className="mx-5 mt-4 rounded-xl p-3 flex-row items-start gap-2"
+            style={{ backgroundColor: t.accent + '12' }}
+          >
+            <Info size={14} color={t.accent} style={{ marginTop: 1 }} />
+            <Text style={{ color: t.accent }} className="text-xs font-sans flex-1">
               Sua solicitação será enviada para o nutricionista aprovar antes de ser confirmada.
             </Text>
           </Animated.View>
@@ -296,8 +320,8 @@ export default function BookingScreen() {
 
         {/* Price */}
         {config.consultation_price_cents && selectedSlot && (
-          <Animated.View entering={FadeInDown.delay(360).duration(400)} className="mx-5 mt-3">
-            <Text className="text-xs text-slate-500">
+          <Animated.View entering={FadeInDown.delay(360).duration(400)} className="mx-5 mt-3 ml-6">
+            <Text style={{ color: t.textMuted }} className="text-xs font-sans">
               Valor: R$ {(config.consultation_price_cents / 100).toFixed(2).replace('.', ',')}
             </Text>
           </Animated.View>
@@ -306,20 +330,26 @@ export default function BookingScreen() {
 
       {/* Bottom CTA */}
       {canBook && (
-        <Animated.View entering={FadeInDown.duration(300)} className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-4 bg-slate-50 border-t border-slate-100">
+        <Animated.View
+          entering={FadeInDown.duration(300)}
+          className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-4"
+          style={{ backgroundColor: t.background, borderTopWidth: 1, borderTopColor: t.borderLight }}
+        >
           <Pressable
             onPress={handleBook}
             disabled={requestBooking.isPending}
-            className={`rounded-2xl py-4 flex-row items-center justify-center gap-2 ${
-              requestBooking.isPending ? 'bg-brand-300' : 'bg-brand-500'
-            }`}
+            className="rounded-2xl py-4 flex-row items-center justify-center gap-2"
+            style={{
+              backgroundColor: requestBooking.isPending ? t.primary + '80' : t.primary,
+              ...SHADOW_SM,
+            }}
           >
             {requestBooking.isPending ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={t.primaryText} size="small" />
             ) : (
-              <Check size={18} color="#fff" />
+              <Check size={18} color={t.primaryText} />
             )}
-            <Text className="text-white font-sans-bold text-base">
+            <Text style={{ color: t.primaryText }} className="font-sans-bold text-base">
               {config.booking_mode === 'approval' ? 'Solicitar agendamento' : 'Confirmar agendamento'}
             </Text>
           </Pressable>
