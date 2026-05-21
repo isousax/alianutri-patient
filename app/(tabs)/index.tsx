@@ -1,40 +1,53 @@
 import { useState, useMemo, useCallback, useReducer, useEffect } from 'react'
 import {
   View, Text, ScrollView, Pressable, ActivityIndicator,
-  RefreshControl, StyleSheet, Dimensions,
+  RefreshControl, StyleSheet, Dimensions, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import {
   Calendar, RefreshCw, AlertCircle, ClipboardList, Target,
-  Menu, X, ChevronRight, MapPin, Video, Flame,
+  Menu, X, ChevronRight, MapPin, Video, Flame, Droplets,
   TrendingDown, TrendingUp, Sparkles, CalendarPlus, MessageCircle,
+  Scale, Heart, Camera, Utensils, Sun, Moon, CloudSun,
 } from 'lucide-react-native'
-import Svg, { Polyline, Circle as SvgCircle } from 'react-native-svg'
+import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import Animated, { FadeIn, FadeInDown, FadeOut, SlideInLeft, SlideOutLeft } from 'react-native-reanimated'
+import { LinearGradient as ExpoGradient } from 'expo-linear-gradient'
 import { useThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
 import {
   usePortalHome, useDiaryStreak, useDiaryToday,
   useGoals, useEvolution, useQuestionnaires, useChatUnreadCount,
+  useWaterIntake,
 } from '../../src/hooks/usePortal'
 import type { PortalGoal, PortalEvolution } from '../../src/types/portal'
+import { getTipOfTheDay } from '../../src/data/dailyTips'
 
-const DRAWER_W = Math.min(Dimensions.get('window').width * 0.78, 320)
+const { width: SCREEN_W } = Dimensions.get('window')
+const DRAWER_W = Math.min(SCREEN_W * 0.78, 320)
 
 function todayStr() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-// Goal progress: for weight/measurement goals where lower is better, invert progress
+function getGreeting(): { text: string; icon: typeof Sun } {
+  const h = new Date().getHours()
+  if (h < 12) return { text: 'Bom dia', icon: Sun }
+  if (h < 18) return { text: 'Boa tarde', icon: CloudSun }
+  return { text: 'Boa noite', icon: Moon }
+}
+
+function fmtWater(ml: number): string {
+  return ml >= 1000 ? `${(ml / 1000).toFixed(1).replace('.', ',')}L` : `${ml}ml`
+}
+
 function goalProgress(goal: PortalGoal): number {
   if (goal.target_value == null || goal.current_value == null || goal.target_value === 0) return 0
   const lowerIsBetter = goal.type === 'weight' || goal.type === 'measurement'
   if (lowerIsBetter && goal.current_value > goal.target_value) {
-    // e.g., current 72kg → target 68kg: we need starting reference
-    // Use a simple heuristic: assume started ~20% above target as max
     const ceiling = goal.target_value * 1.3
     const total = ceiling - goal.target_value
     const done = ceiling - goal.current_value
@@ -55,7 +68,6 @@ export default function HomeScreen() {
     if (data?.features) setCanWrite(data.features.can_write)
   }, [data?.features, setCanWrite])
 
-  // Tick to refresh today string across midnight
   const [, tick] = useReducer((x: number) => x + 1, 0)
   const today = useMemo(todayStr, [tick]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -65,8 +77,8 @@ export default function HomeScreen() {
   const { data: evolution } = useEvolution()
   const { data: questionnaires } = useQuestionnaires()
   const { data: chatUnread } = useChatUnreadCount()
+  const { data: waterData } = useWaterIntake(today)
 
-  // Pull-to-refresh invalidates ALL dashboard queries
   const handleRefresh = useCallback(() => {
     refetch()
     qc.invalidateQueries({ queryKey: ['portal', 'diary-streak'] })
@@ -75,6 +87,7 @@ export default function HomeScreen() {
     qc.invalidateQueries({ queryKey: ['portal', 'evolution'] })
     qc.invalidateQueries({ queryKey: ['portal', 'questionnaires'] })
     qc.invalidateQueries({ queryKey: ['portal', 'chat-unread'] })
+    qc.invalidateQueries({ queryKey: ['portal', 'water'] })
     tick()
   }, [refetch, qc])
 
@@ -102,13 +115,19 @@ export default function HomeScreen() {
   }
 
   const displayName = data.patient.name?.split(' ')[0] || 'Paciente'
+  const greeting = getGreeting()
+  const GreetingIcon = greeting.icon
   const streak = streakData?.streak ?? 0
   const meals = diaryToday?.meals ?? []
   const loggedCount = meals.filter((m) => m.entry !== null).length
   const totalMeals = meals.length
+  const diaryPct = totalMeals > 0 ? loggedCount / totalMeals : 0
   const activeGoals = (goals ?? []).filter((g: PortalGoal) => g.status === 'active').slice(0, 2)
   const pendingQ = (questionnaires ?? []).filter((q) => q.status === 'sent')
-  const hasAnyContent = totalMeals > 0 || activeGoals.length > 0 || (evolution ?? []).length >= 2 || pendingQ.length > 0
+  const waterTotal = waterData?.total_ml ?? 0
+  const waterGoal = waterData?.goal_ml ?? 2000
+  const waterPct = waterGoal > 0 ? Math.min(waterTotal / waterGoal, 1) : 0
+  const hasAnyContent = totalMeals > 0 || activeGoals.length > 0 || (evolution ?? []).length >= 2 || pendingQ.length > 0 || waterTotal > 0
 
   function fmtAppointment(iso: string) {
     const d = new Date(iso)
@@ -127,59 +146,109 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      {/* ── Header ── */}
-      <View className="px-5 pt-4 pb-2 flex-row items-center justify-between">
-        <View className="flex-1">
-          <Text style={{ color: t.textMuted }} className="text-sm font-sans">Olá,</Text>
-          <Text style={{ color: t.text }} className="text-2xl font-sans-bold">{displayName}</Text>
-        </View>
-        <Pressable
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={12}
-          className="h-10 w-10 rounded-xl items-center justify-center"
-          style={{ backgroundColor: t.surface }}
-        >
-          <Menu size={20} color={t.textSecondary} />
-        </Pressable>
-      </View>
-
-      {/* ── Content ── */}
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor={t.primary} />}
       >
-        {/* Nutritionist badge */}
-        {data.nutritionist?.name ? (
-          <View className="px-5 mb-4">
-            <View className="flex-row items-center px-3 py-2 rounded-xl" style={{ backgroundColor: t.primaryLight }}>
-              <View className="h-7 w-7 rounded-full items-center justify-center mr-2.5" style={{ backgroundColor: t.primaryMuted }}>
-                <Text className="text-[11px] font-sans-bold" style={{ color: t.primary }}>
-                  {data.nutritionist.name.charAt(0).toUpperCase()}
+        {/* ══════ HERO HEADER ══════ */}
+        <ExpoGradient
+          colors={[t.primary + '18', t.background]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={{ paddingBottom: 20, paddingTop: 8 }}
+        >
+          <View className="px-6 pt-3 flex-row items-start justify-between">
+            <View className="flex-1">
+              <View className="flex-row items-center mb-1">
+                <GreetingIcon size={14} color={t.primary} />
+                <Text style={{ color: t.primary }} className="text-xs font-sans-semibold ml-1.5">
+                  {greeting.text}
                 </Text>
               </View>
-              <View className="flex-1">
-                <Text style={{ color: t.textMuted }} className="text-[10px] font-sans">Nutricionista</Text>
-                <Text style={{ color: t.primary }} className="text-[13px] font-sans-semibold">{data.nutritionist.name}</Text>
-              </View>
+              <Text style={{ color: t.text }} className="text-[26px] font-sans-bold leading-8">
+                {displayName}
+              </Text>
+              {data.nutritionist?.name ? (
+                <Text style={{ color: t.textMuted }} className="text-xs font-sans mt-1">
+                  Nutri: {data.nutritionist.name}
+                </Text>
+              ) : null}
             </View>
+            <Pressable
+              onPress={() => setDrawerOpen(true)}
+              hitSlop={12}
+              className="h-11 w-11 rounded-2xl items-center justify-center mt-1"
+              style={{ backgroundColor: t.surface, ...SHADOW_SM }}
+            >
+              <Menu size={20} color={t.textSecondary} />
+            </Pressable>
           </View>
-        ) : null}
 
-        {/* ── Pending questionnaires alert (urgent — first) ── */}
+          {/* ── Streak + Quick Stats Row ── */}
+          {(streak > 0 || totalMeals > 0) && (
+            <Animated.View entering={FadeInDown.duration(350).delay(50)} className="flex-row px-6 mt-4 gap-3">
+              {streak > 0 && (
+                <View
+                  className="flex-row items-center px-3.5 py-2 rounded-2xl"
+                  style={{ backgroundColor: '#fef3c7', ...SHADOW_SM }}
+                >
+                  <Flame size={16} color="#f59e0b" />
+                  <Text className="text-sm font-sans-bold ml-1.5" style={{ color: '#92400e' }}>
+                    {streak}
+                  </Text>
+                  <Text className="text-[11px] font-sans ml-1" style={{ color: '#a16207' }}>
+                    dia{streak > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
+              {totalMeals > 0 && (
+                <View
+                  className="flex-row items-center px-3.5 py-2 rounded-2xl"
+                  style={{ backgroundColor: loggedCount === totalMeals ? '#d1fae5' : t.surface, ...SHADOW_SM }}
+                >
+                  <Utensils size={14} color={loggedCount === totalMeals ? '#059669' : t.textSecondary} />
+                  <Text
+                    className="text-sm font-sans-bold ml-1.5"
+                    style={{ color: loggedCount === totalMeals ? '#065f46' : t.text }}
+                  >
+                    {loggedCount}/{totalMeals}
+                  </Text>
+                </View>
+              )}
+              {chatUnread?.unread != null && chatUnread.unread > 0 && (
+                <Pressable
+                  onPress={() => router.push('/chat')}
+                  className="flex-row items-center px-3.5 py-2 rounded-2xl"
+                  style={{ backgroundColor: t.primary + '15' }}
+                >
+                  <MessageCircle size={14} color={t.primary} />
+                  <Text className="text-sm font-sans-bold ml-1.5" style={{ color: t.primary }}>
+                    {chatUnread.unread}
+                  </Text>
+                </Pressable>
+              )}
+            </Animated.View>
+          )}
+        </ExpoGradient>
+
+        {/* ══════ URGENT: Pending questionnaires ══════ */}
         {pendingQ.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(300)} className="px-5 mb-3">
+          <Animated.View entering={FadeInDown.duration(350).delay(80)} className="px-5 mb-3">
             <Pressable onPress={() => router.push('/questionnaires')}>
               <View
-                className="rounded-2xl px-4 py-3 flex-row items-center"
-                style={{ backgroundColor: t.accentLight, borderWidth: 1, borderColor: t.accent + '30' }}
+                className="rounded-2xl px-4 py-3.5 flex-row items-center"
+                style={{ backgroundColor: t.accent + '12', borderLeftWidth: 3, borderLeftColor: t.accent }}
               >
-                <ClipboardList size={18} color={t.accent} />
-                <View className="flex-1 ml-3">
+                <View className="h-9 w-9 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: t.accentLight }}>
+                  <ClipboardList size={18} color={t.accent} />
+                </View>
+                <View className="flex-1">
                   <Text style={{ color: t.text }} className="text-[13px] font-sans-semibold">
                     {pendingQ.length} questionário{pendingQ.length > 1 ? 's' : ''} pendente{pendingQ.length > 1 ? 's' : ''}
                   </Text>
-                  <Text style={{ color: t.textMuted }} className="text-[11px] font-sans">
+                  <Text style={{ color: t.textMuted }} className="text-[11px] font-sans mt-0.5">
                     Toque para responder
                   </Text>
                 </View>
@@ -189,60 +258,65 @@ export default function HomeScreen() {
           </Animated.View>
         )}
 
-        {/* ── Diary streak + today progress ── */}
-        {totalMeals > 0 && (
-          <Animated.View entering={FadeInDown.duration(300).delay(80)} className="px-5 mb-3">
-            <Pressable onPress={() => router.push('/(tabs)/diary')}>
+        {/* ══════ DAILY PROGRESS: Diary + Water side-by-side ══════ */}
+        <Animated.View entering={FadeInDown.duration(350).delay(120)} className="px-5 mb-3">
+          <View className="flex-row gap-3">
+            {/* Diary progress ring */}
+            <Pressable onPress={() => router.push('/(tabs)/diary')} className="flex-1">
               <View
-                className="rounded-2xl p-4"
-                style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}
+                className="rounded-2xl p-4 items-center"
+                style={{ backgroundColor: t.surface, ...SHADOW_SM }}
               >
-                <View className="flex-row items-center justify-between mb-3">
-                  <View className="flex-row items-center">
-                    <Flame size={16} color={streak > 0 ? '#f59e0b' : t.textMuted} />
-                    <Text style={{ color: t.text }} className="text-sm font-sans-bold ml-1.5">
-                      {streak > 0 ? `${streak} dia${streak > 1 ? 's' : ''}` : 'Sem streak'}
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center">
-                    <Text style={{ color: loggedCount === totalMeals ? t.success : t.textSecondary }} className="text-xs font-sans-semibold mr-1">
-                      {loggedCount}/{totalMeals}
-                    </Text>
-                    <ChevronRight size={14} color={t.textMuted} />
-                  </View>
-                </View>
-                {/* Progress bar */}
-                <View className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: t.borderLight }}>
-                  <View
-                    className="h-2 rounded-full"
-                    style={{
-                      width: `${(loggedCount / totalMeals) * 100}%`,
-                      backgroundColor: loggedCount === totalMeals ? t.success : t.primary,
-                    }}
-                  />
-                </View>
-                <Text style={{ color: t.textMuted }} className="text-[11px] font-sans mt-2">
-                  {loggedCount === totalMeals
-                    ? '✓ Todas as refeições registradas'
-                    : `${totalMeals - loggedCount} refeição${totalMeals - loggedCount > 1 ? 'ões' : ''} pendente${totalMeals - loggedCount > 1 ? 's' : ''}`}
+                <ProgressRing
+                  pct={diaryPct}
+                  size={64}
+                  strokeWidth={5}
+                  color={diaryPct >= 1 ? t.success : t.primary}
+                  trackColor={t.borderLight}
+                />
+                <Text style={{ color: t.text }} className="text-sm font-sans-bold mt-3">Refeições</Text>
+                <Text style={{ color: t.textMuted }} className="text-[11px] font-sans mt-0.5">
+                  {totalMeals > 0
+                    ? loggedCount === totalMeals ? 'Completo!' : `${totalMeals - loggedCount} pendente${totalMeals - loggedCount > 1 ? 's' : ''}`
+                    : 'Sem plano'}
                 </Text>
               </View>
             </Pressable>
-          </Animated.View>
-        )}
 
-        {/* ── Active goals ── */}
-        {activeGoals.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(300).delay(160)} className="px-5 mb-3">
-            <Pressable onPress={() => router.push('/goals')}>
+            {/* Water progress ring */}
+            <Pressable onPress={() => router.push('/water' as never)} className="flex-1">
               <View
-                className="rounded-2xl p-4"
-                style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}
+                className="rounded-2xl p-4 items-center"
+                style={{ backgroundColor: t.surface, ...SHADOW_SM }}
               >
-                <View className="flex-row items-center justify-between mb-3">
+                <ProgressRing
+                  pct={waterPct}
+                  size={64}
+                  strokeWidth={5}
+                  color={waterPct >= 1 ? t.success : t.info}
+                  trackColor={t.borderLight}
+                  label={<Droplets size={18} color={waterPct >= 1 ? t.success : t.info} />}
+                />
+                <Text style={{ color: t.text }} className="text-sm font-sans-bold mt-3">Água</Text>
+                <Text style={{ color: t.textMuted }} className="text-[11px] font-sans mt-0.5">
+                  {waterTotal > 0 ? `${fmtWater(waterTotal)} / ${fmtWater(waterGoal)}` : 'Toque para registrar'}
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+        </Animated.View>
+
+        {/* ══════ ACTIVE GOALS ══════ */}
+        {activeGoals.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(350).delay(180)} className="px-5 mb-3">
+            <Pressable onPress={() => router.push('/goals')}>
+              <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+                <View className="flex-row items-center justify-between mb-3.5">
                   <View className="flex-row items-center">
-                    <Target size={14} color={t.success} />
-                    <Text style={{ color: t.text }} className="text-xs font-sans-bold uppercase tracking-wider ml-1.5">
+                    <View className="h-6 w-6 rounded-lg items-center justify-center" style={{ backgroundColor: t.success + '18' }}>
+                      <Target size={13} color={t.success} />
+                    </View>
+                    <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
                       Metas ativas
                     </Text>
                   </View>
@@ -250,24 +324,31 @@ export default function HomeScreen() {
                 </View>
                 {activeGoals.map((goal: PortalGoal, i: number) => {
                   const progress = goalProgress(goal)
+                  const pctText = `${Math.round(progress * 100)}%`
                   return (
-                    <View key={goal.id} style={i > 0 ? { marginTop: 10 } : undefined}>
-                      <View className="flex-row items-center justify-between mb-1">
+                    <View key={goal.id} style={i > 0 ? { marginTop: 12 } : undefined}>
+                      <View className="flex-row items-center justify-between mb-1.5">
                         <Text style={{ color: t.text }} className="text-[13px] font-sans-medium flex-1 mr-2" numberOfLines={1}>
                           {goal.title}
                         </Text>
-                        {goal.target_value != null && goal.current_value != null && goal.target_unit && (
-                          <Text style={{ color: t.textMuted }} className="text-[11px] font-sans">
-                            {goal.current_value}{goal.target_unit} → {goal.target_value}{goal.target_unit}
-                          </Text>
-                        )}
+                        <Text
+                          className="text-[11px] font-sans-bold"
+                          style={{ color: progress >= 1 ? t.success : t.primary }}
+                        >
+                          {pctText}
+                        </Text>
                       </View>
-                      <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: t.borderLight }}>
+                      <View className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: t.borderLight }}>
                         <View
-                          className="h-1.5 rounded-full"
+                          className="h-2 rounded-full"
                           style={{ width: `${progress * 100}%`, backgroundColor: progress >= 1 ? t.success : t.primary }}
                         />
                       </View>
+                      {goal.target_value != null && goal.current_value != null && goal.target_unit && (
+                        <Text style={{ color: t.textMuted }} className="text-[10px] font-sans mt-1">
+                          {goal.current_value}{goal.target_unit} de {goal.target_value}{goal.target_unit}
+                        </Text>
+                      )}
                     </View>
                   )
                 })}
@@ -276,62 +357,69 @@ export default function HomeScreen() {
           </Animated.View>
         )}
 
-        {/* ── Weight evolution sparkline ── */}
+        {/* ══════ WEIGHT SPARKLINE ══════ */}
         <WeightSparkline evolution={evolution ?? []} t={t} />
 
-        {/* ── Next appointment card ── */}
+        {/* ══════ NEXT APPOINTMENT ══════ */}
         {apt ? (
-          <Animated.View entering={FadeInDown.duration(300).delay(320)} className="px-5 mb-3">
-            <View
-              className="rounded-2xl overflow-hidden"
-              style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}
-            >
-              <View className="px-4 pt-3 pb-1 flex-row items-center">
-                <Calendar size={13} color={t.primary} />
-                <Text style={{ color: t.primary }} className="text-[11px] font-sans-bold uppercase tracking-wider ml-1.5">
-                  Próxima consulta
-                </Text>
-              </View>
-              <View className="px-4 pt-1 pb-4">
-                <Text style={{ color: t.text }} className="text-lg font-sans-bold">
+          <Animated.View entering={FadeInDown.duration(350).delay(320)} className="px-5 mb-3">
+            <View className="rounded-2xl overflow-hidden" style={{ ...SHADOW_SM }}>
+              <ExpoGradient
+                colors={[t.primary, t.primary + 'cc']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                className="p-4"
+              >
+                <View className="flex-row items-center mb-2">
+                  <Calendar size={13} color="#ffffffcc" />
+                  <Text className="text-[10px] font-sans-bold uppercase tracking-widest ml-1.5" style={{ color: '#ffffffcc' }}>
+                    Próxima consulta
+                  </Text>
+                </View>
+                <Text className="text-xl font-sans-bold" style={{ color: '#ffffff' }}>
                   {fmtAppointment(apt.starts_at)}
                 </Text>
-                <Text style={{ color: t.textMuted }} className="text-xs font-sans mt-0.5 capitalize">
+                <Text className="text-xs font-sans mt-0.5 capitalize" style={{ color: '#ffffffbb' }}>
                   {fmtWeekday(apt.starts_at)}
                 </Text>
-                <View className="flex-row items-center mt-2.5">
+                <View className="flex-row items-center mt-3">
                   {apt.type === 'online' ? (
-                    <View className="flex-row items-center px-2 py-1 rounded-lg" style={{ backgroundColor: t.primaryLight }}>
-                      <Video size={12} color={t.primary} />
-                      <Text style={{ color: t.primary }} className="text-[11px] font-sans-medium ml-1">Online</Text>
+                    <View className="flex-row items-center px-2.5 py-1 rounded-lg" style={{ backgroundColor: '#ffffff25' }}>
+                      <Video size={12} color="#ffffff" />
+                      <Text className="text-[11px] font-sans-medium ml-1" style={{ color: '#ffffff' }}>Online</Text>
                     </View>
                   ) : (
-                    <View className="flex-row items-center px-2 py-1 rounded-lg" style={{ backgroundColor: t.accentLight }}>
-                      <MapPin size={12} color={t.accent} />
-                      <Text style={{ color: t.accent }} className="text-[11px] font-sans-medium ml-1">Presencial</Text>
+                    <View className="flex-row items-center px-2.5 py-1 rounded-lg" style={{ backgroundColor: '#ffffff25' }}>
+                      <MapPin size={12} color="#ffffff" />
+                      <Text className="text-[11px] font-sans-medium ml-1" style={{ color: '#ffffff' }}>Presencial</Text>
                     </View>
                   )}
                 </View>
-              </View>
+              </ExpoGradient>
             </View>
           </Animated.View>
         ) : null}
 
-        {/* ── Welcome empty state (new patient with no data) ── */}
+        {/* ══════ TIP OF THE DAY ══════ */}
+        <TipOfTheDay t={t} />
+
+        {/* ══════ EMPTY STATE ══════ */}
         {!hasAnyContent && !apt && (
-          <Animated.View entering={FadeIn.duration(400)} className="px-5 mt-4 items-center">
-            <Sparkles size={36} color={t.primaryMuted} />
-            <Text style={{ color: t.text }} className="text-base font-sans-semibold mt-3 text-center">
+          <Animated.View entering={FadeIn.duration(400)} className="px-5 mt-6 items-center">
+            <View className="h-16 w-16 rounded-3xl items-center justify-center mb-4" style={{ backgroundColor: t.primaryLight }}>
+              <Sparkles size={28} color={t.primary} />
+            </View>
+            <Text style={{ color: t.text }} className="text-lg font-sans-bold text-center">
               Bem-vindo ao AliaNutri!
             </Text>
-            <Text style={{ color: t.textMuted }} className="text-sm font-sans text-center mt-1.5 leading-5">
+            <Text style={{ color: t.textMuted }} className="text-sm font-sans text-center mt-2 leading-5 px-4">
               Seus dados aparecerão aqui conforme{'\n'}seu nutricionista atualizar seu plano.
             </Text>
           </Animated.View>
         )}
       </ScrollView>
 
-      {/* ── Drawer overlay ── */}
+      {/* ══════ DRAWER ══════ */}
       {drawerOpen && (
         <>
           <Animated.View
@@ -341,73 +429,181 @@ export default function HomeScreen() {
           >
             <Pressable
               onPress={() => setDrawerOpen(false)}
-              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]}
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
             />
           </Animated.View>
 
           <Animated.View
             entering={SlideInLeft.duration(250)}
             exiting={SlideOutLeft.duration(200)}
-            style={[
-              StyleSheet.absoluteFill,
-              { width: DRAWER_W },
-            ]}
+            style={[StyleSheet.absoluteFill, { width: DRAWER_W }]}
           >
             <SafeAreaView
               style={{ flex: 1, backgroundColor: t.background }}
               edges={['top', 'bottom']}
             >
-              {/* Drawer header */}
-              <View className="px-5 pt-4 pb-6 flex-row items-center justify-between">
-                <Text style={{ color: t.text }} className="text-lg font-sans-bold">Menu</Text>
-                <Pressable onPress={() => setDrawerOpen(false)} hitSlop={12}>
-                  <X size={20} color={t.textSecondary} />
+              <View className="px-5 pt-4 pb-2 flex-row items-center justify-between">
+                <View>
+                  <Text style={{ color: t.textMuted }} className="text-[11px] font-sans uppercase tracking-widest">Menu</Text>
+                  <Text style={{ color: t.text }} className="text-lg font-sans-bold">{displayName}</Text>
+                </View>
+                <Pressable
+                  onPress={() => setDrawerOpen(false)}
+                  hitSlop={12}
+                  className="h-9 w-9 rounded-xl items-center justify-center"
+                  style={{ backgroundColor: t.surface }}
+                >
+                  <X size={18} color={t.textSecondary} />
                 </Pressable>
               </View>
 
-              {/* Drawer items */}
-              <View className="px-4 gap-1">
-                <DrawerItem
-                  icon={<ClipboardList size={20} color={t.accent} />}
-                  iconBg={t.accentLight}
-                  title="Questionários"
-                  subtitle="Responda os pendentes"
-                  t={t}
-                  onPress={() => { setDrawerOpen(false); router.push('/questionnaires') }}
-                />
-                <DrawerItem
-                  icon={<Target size={20} color={t.success} />}
-                  iconBg={t.primaryLight}
-                  title="Metas"
-                  subtitle="Acompanhe seu progresso"
-                  t={t}
-                  onPress={() => { setDrawerOpen(false); router.push('/goals') }}
-                />
-                <DrawerItem
-                  icon={<MessageCircle size={20} color={t.primary} />}
-                  iconBg={t.primaryLight}
-                  title="Chat"
-                  subtitle="Fale com seu nutricionista"
-                  badge={chatUnread?.unread}
-                  t={t}
-                  onPress={() => { setDrawerOpen(false); router.push('/chat') }}
-                />
-                {canWrite && (
+              <View className="h-px mx-5 my-2" style={{ backgroundColor: t.borderLight }} />
+
+              <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
+                <DrawerSection label="Diário">
                   <DrawerItem
-                    icon={<CalendarPlus size={20} color={t.primary} />}
-                    iconBg={t.primaryLight}
-                    title="Agendar consulta"
-                    subtitle="Marque um hor\u00e1rio"
+                    icon={<ClipboardList size={18} color={t.accent} />}
+                    iconBg={t.accentLight}
+                    title="Questionários"
+                    badge={pendingQ.length > 0 ? pendingQ.length : undefined}
                     t={t}
-                    onPress={() => { setDrawerOpen(false); router.push('/booking') }}
+                    onPress={() => { setDrawerOpen(false); router.push('/questionnaires') }}
                   />
-                )}
-              </View>
+                  <DrawerItem
+                    icon={<Droplets size={18} color={t.info} />}
+                    iconBg="#e0f2fe"
+                    title="Hidratação"
+                    t={t}
+                    onPress={() => { setDrawerOpen(false); router.push('/water' as never) }}
+                  />
+                  <DrawerItem
+                    icon={<Heart size={18} color="#ec4899" />}
+                    iconBg="#fce7f3"
+                    title="Bem-estar"
+                    t={t}
+                    onPress={() => { setDrawerOpen(false); router.push('/wellness' as never) }}
+                  />
+                </DrawerSection>
+
+                <DrawerSection label="Progresso">
+                  <DrawerItem
+                    icon={<Target size={18} color={t.success} />}
+                    iconBg={t.success + '15'}
+                    title="Metas"
+                    t={t}
+                    onPress={() => { setDrawerOpen(false); router.push('/goals') }}
+                  />
+                  <DrawerItem
+                    icon={<Scale size={18} color={t.accent} />}
+                    iconBg={t.accentLight}
+                    title="Peso"
+                    t={t}
+                    onPress={() => { setDrawerOpen(false); router.push('/weight' as never) }}
+                  />
+                  <DrawerItem
+                    icon={<Camera size={18} color={t.primary} />}
+                    iconBg={t.primaryLight}
+                    title="Fotos de progresso"
+                    t={t}
+                    onPress={() => { setDrawerOpen(false); router.push('/progress-photos' as never) }}
+                  />
+                </DrawerSection>
+
+                <DrawerSection label="Comunicação">
+                  <DrawerItem
+                    icon={<MessageCircle size={18} color={t.primary} />}
+                    iconBg={t.primaryLight}
+                    title="Chat"
+                    badge={chatUnread?.unread}
+                    t={t}
+                    onPress={() => { setDrawerOpen(false); router.push('/chat') }}
+                  />
+                  {canWrite && (
+                    <DrawerItem
+                      icon={<CalendarPlus size={18} color={t.primary} />}
+                      iconBg={t.primaryLight}
+                      title="Agendar consulta"
+                      t={t}
+                      onPress={() => { setDrawerOpen(false); router.push('/booking') }}
+                    />
+                  )}
+                </DrawerSection>
+              </ScrollView>
             </SafeAreaView>
           </Animated.View>
         </>
       )}
     </SafeAreaView>
+  )
+}
+
+// ── Shadow helper ──
+
+const SHADOW_SM = Platform.select({
+  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
+  android: { elevation: 2 },
+  default: {},
+}) as Record<string, unknown>
+
+// ── Progress ring (SVG) ──
+
+function ProgressRing({ pct, size, strokeWidth, color, trackColor, label }: {
+  pct: number; size: number; strokeWidth: number; color: string; trackColor: string; label?: React.ReactNode
+}) {
+  const r = (size - strokeWidth) / 2
+  const circ = 2 * Math.PI * r
+  const dash = circ * Math.min(pct, 1)
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute' }}>
+        <SvgCircle
+          cx={size / 2} cy={size / 2} r={r}
+          fill="none" stroke={trackColor} strokeWidth={strokeWidth}
+        />
+        <SvgCircle
+          cx={size / 2} cy={size / 2} r={r}
+          fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={`${dash} ${circ - dash}`}
+          strokeLinecap="round"
+          rotation={-90} origin={`${size / 2}, ${size / 2}`}
+        />
+      </Svg>
+      {label ?? (
+        <Text className="text-sm font-sans-bold" style={{ color }}>
+          {Math.round(pct * 100)}%
+        </Text>
+      )}
+    </View>
+  )
+}
+
+// ── Tip of the day ──
+
+function TipOfTheDay({ t }: { t: ReturnType<typeof useThemeColors> }) {
+  const tip = useMemo(() => getTipOfTheDay(), [])
+  return (
+    <Animated.View entering={FadeInDown.duration(350).delay(400)} className="px-5 mb-3">
+      <View
+        className="rounded-2xl px-4 py-4 flex-row items-start"
+        style={{ backgroundColor: t.primaryLight, ...SHADOW_SM }}
+      >
+        <View
+          className="h-9 w-9 rounded-xl items-center justify-center mr-3"
+          style={{ backgroundColor: t.primary + '18' }}
+        >
+          <Text className="text-base">{tip.emoji}</Text>
+        </View>
+        <View className="flex-1">
+          <Text style={{ color: t.primary }} className="text-[10px] font-sans-bold uppercase tracking-wider mb-1">
+            Dica do dia
+          </Text>
+          <Text style={{ color: t.text }} className="text-[13px] font-sans leading-[19px]">
+            {tip.text}
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
   )
 }
 
@@ -420,10 +616,10 @@ function WeightSparkline({ evolution, t }: {
   const points = evolution.filter((e) => e.weight_kg !== null) as (PortalEvolution & { weight_kg: number })[]
   if (points.length < 2) return null
 
-  const W = Dimensions.get('window').width - 40 - 32 // px-5 padding + card padding
-  const H = 60
+  const W = SCREEN_W - 40 - 32
+  const H = 72
   const padX = 4
-  const padY = 8
+  const padY = 10
   const chartW = W - padX * 2
   const chartH = H - padY * 2
 
@@ -438,58 +634,66 @@ function WeightSparkline({ evolution, t }: {
   }))
 
   const polyPoints = coords.map((c) => `${c.x},${c.y}`).join(' ')
+  const fillPoints = `${padX},${padY + chartH} ${polyPoints} ${padX + chartW},${padY + chartH}`
   const first = points[0].weight_kg
   const last = points[points.length - 1].weight_kg
   const diff = last - first
   const diffStr = `${diff > 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} kg`
+  const trendColor = diff <= 0 ? t.success : t.warning
   const TrendIcon = diff <= 0 ? TrendingDown : TrendingUp
 
   return (
-    <Animated.View entering={FadeInDown.duration(300).delay(240)} className="px-5 mb-3">
+    <Animated.View entering={FadeInDown.duration(350).delay(240)} className="px-5 mb-3">
       <Pressable onPress={() => router.push('/(tabs)/profile')}>
-        <View
-          className="rounded-2xl p-4"
-          style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}
-        >
-          <View className="flex-row items-center justify-between mb-2">
+        <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+          <View className="flex-row items-center justify-between mb-3">
             <View className="flex-row items-center">
-              <TrendIcon size={14} color={diff <= 0 ? t.success : t.warning} />
-              <Text style={{ color: t.text }} className="text-xs font-sans-bold uppercase tracking-wider ml-1.5">
+              <View className="h-6 w-6 rounded-lg items-center justify-center" style={{ backgroundColor: trendColor + '18' }}>
+                <TrendIcon size={13} color={trendColor} />
+              </View>
+              <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
                 Evolução
               </Text>
             </View>
             <View className="flex-row items-center">
-              <Text
-                className="text-xs font-sans-semibold mr-1"
-                style={{ color: diff <= 0 ? t.success : t.warning }}
-              >
+              <Text className="text-xs font-sans-bold mr-1" style={{ color: trendColor }}>
                 {diffStr}
               </Text>
               <ChevronRight size={14} color={t.textMuted} />
             </View>
           </View>
-          <View className="flex-row items-center justify-between mb-1">
-            <Text style={{ color: t.textMuted }} className="text-[11px] font-sans">
-              {last.toFixed(1).replace('.', ',')} kg
+          <View className="flex-row items-baseline justify-between mb-1">
+            <Text style={{ color: t.text }} className="text-lg font-sans-bold">
+              {last.toFixed(1).replace('.', ',')}
+              <Text className="text-xs font-sans" style={{ color: t.textMuted }}> kg</Text>
             </Text>
             <Text style={{ color: t.textMuted }} className="text-[10px] font-sans">
               {points.length} medições
             </Text>
           </View>
           <Svg width={W} height={H}>
+            <Defs>
+              <LinearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={t.primary} stopOpacity="0.15" />
+                <Stop offset="1" stopColor={t.primary} stopOpacity="0" />
+              </LinearGradient>
+            </Defs>
+            <Polyline points={fillPoints} fill="url(#fill)" stroke="none" />
             <Polyline
               points={polyPoints}
               fill="none"
               stroke={t.primary}
-              strokeWidth={2}
+              strokeWidth={2.5}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
             <SvgCircle
               cx={coords[coords.length - 1].x}
               cy={coords[coords.length - 1].y}
-              r={3}
-              fill={t.primary}
+              r={4}
+              fill="#ffffff"
+              stroke={t.primary}
+              strokeWidth={2.5}
             />
           </Svg>
         </View>
@@ -498,13 +702,25 @@ function WeightSparkline({ evolution, t }: {
   )
 }
 
+// ── Drawer section ──
+
+function DrawerSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <View className="mb-3">
+      <Text className="text-[10px] font-sans-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#a8a29e' }}>
+        {label}
+      </Text>
+      {children}
+    </View>
+  )
+}
+
 // ── Drawer item ──
 
-function DrawerItem({ icon, iconBg, title, subtitle, badge, t, onPress }: {
+function DrawerItem({ icon, iconBg, title, badge, t, onPress }: {
   icon: React.ReactNode
   iconBg: string
   title: string
-  subtitle: string
   badge?: number
   t: ReturnType<typeof useThemeColors>
   onPress: () => void
@@ -512,16 +728,13 @@ function DrawerItem({ icon, iconBg, title, subtitle, badge, t, onPress }: {
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center gap-3 px-3 py-3 rounded-xl"
+      className="flex-row items-center gap-3 px-3 py-2.5 rounded-xl"
       style={({ pressed }) => ({ backgroundColor: pressed ? t.surfacePressed : 'transparent' })}
     >
-      <View className="h-10 w-10 rounded-xl items-center justify-center" style={{ backgroundColor: iconBg }}>
+      <View className="h-9 w-9 rounded-xl items-center justify-center" style={{ backgroundColor: iconBg }}>
         {icon}
       </View>
-      <View className="flex-1">
-        <Text style={{ color: t.text }} className="text-[13px] font-sans-semibold">{title}</Text>
-        <Text style={{ color: t.textMuted }} className="text-[11px] font-sans mt-0.5">{subtitle}</Text>
-      </View>
+      <Text style={{ color: t.text }} className="text-[13px] font-sans-medium flex-1">{title}</Text>
       {badge != null && badge > 0 ? (
         <View
           className="min-w-[20px] h-5 rounded-full items-center justify-center px-1.5"
@@ -532,7 +745,7 @@ function DrawerItem({ icon, iconBg, title, subtitle, badge, t, onPress }: {
           </Text>
         </View>
       ) : (
-        <ChevronRight size={16} color={t.textMuted} />
+        <ChevronRight size={14} color={t.textMuted} />
       )}
     </Pressable>
   )

@@ -248,6 +248,71 @@ export interface ChatMessagesResponse {
 }
 
 // ==========================================
+// Water Intake — GET/POST /p/:code/water
+// ==========================================
+
+export interface WaterIntakeResponse {
+  date: string
+  goal_ml: number
+  total_ml: number
+  entries: { id: string; amount_ml: number; created_at: string }[]
+}
+
+// ==========================================
+// Weight Log — POST /p/:code/weight
+// ==========================================
+
+export interface WeightLogEntry {
+  entry_date: string
+  weight_kg: number
+  source: string
+}
+
+export interface WeightHistoryResponse {
+  entries: WeightLogEntry[]
+}
+
+// ==========================================
+// Symptoms — GET/POST /p/:code/symptoms
+// ==========================================
+
+export interface SymptomLog {
+  entry_date: string
+  energy_level: number | null
+  digestion: number | null
+  bloating: number | null
+  mood: number | null
+  sleep_quality: number | null
+  notes: string | null
+}
+
+export interface SymptomLogInput {
+  date: string
+  energy_level?: number
+  digestion?: number
+  bloating?: number
+  mood?: number
+  sleep_quality?: number
+  notes?: string
+}
+
+// ==========================================
+// Progress Photos — GET/POST /p/:code/progress-photos
+// ==========================================
+
+export interface ProgressPhoto {
+  id: string
+  photo_date: string
+  category: 'front' | 'side' | 'back' | 'other'
+  notes: string | null
+  created_at: string
+}
+
+export interface ProgressPhotosResponse {
+  photos: ProgressPhoto[]
+}
+
+// ==========================================
 // Evolution — GET /p/:code/evolution
 // ==========================================
 

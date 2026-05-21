@@ -21,6 +21,11 @@ import type {
   BookingRequestResponse,
   ChatMessage,
   ChatMessagesResponse,
+  WaterIntakeResponse,
+  WeightHistoryResponse,
+  SymptomLog,
+  SymptomLogInput,
+  ProgressPhotosResponse,
 } from '../types/portal'
 
 export function usePortalHome() {
@@ -246,5 +251,119 @@ export function useChatUnreadCount() {
     queryKey: ['portal', 'chat-unread'],
     queryFn: () => portalApi.get<{ unread: number }>('/chat/unread-count'),
     refetchInterval: 15_000,
+  })
+}
+
+// ==========================================
+// Water Intake
+// ==========================================
+
+export function useWaterIntake(date: string) {
+  return useQuery({
+    queryKey: ['portal', 'water', date],
+    queryFn: () => portalApi.get<WaterIntakeResponse>(`/water?date=${date}`),
+  })
+}
+
+export function useLogWater() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { date: string; amount_ml: number }) =>
+      portalApi.post<{ id: string; total_ml: number }>('/water', input),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['portal', 'water', vars.date] })
+      qc.invalidateQueries({ queryKey: ['portal', 'home'] })
+    },
+  })
+}
+
+export function useDeleteWater() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (entryId: string) =>
+      portalApi.delete<{ message: string }>(`/water/${entryId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'water'] })
+    },
+  })
+}
+
+// ==========================================
+// Weight Log
+// ==========================================
+
+export function useLogWeight() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { date: string; weight_kg: number }) =>
+      portalApi.post<{ id: string; message: string }>('/weight', input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'weight-history'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'evolution'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'home'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'profile'] })
+    },
+  })
+}
+
+export function useWeightHistory() {
+  return useQuery({
+    queryKey: ['portal', 'weight-history'],
+    queryFn: () => portalApi.get<WeightHistoryResponse>('/weight/history'),
+  })
+}
+
+// ==========================================
+// Symptoms
+// ==========================================
+
+export function useSymptoms(date: string) {
+  return useQuery({
+    queryKey: ['portal', 'symptoms', date],
+    queryFn: () => portalApi.get<SymptomLog | null>(`/symptoms?date=${date}`),
+  })
+}
+
+export function useLogSymptoms() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SymptomLogInput) =>
+      portalApi.post<{ id: string; message: string }>('/symptoms', input),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['portal', 'symptoms', vars.date] })
+    },
+  })
+}
+
+// ==========================================
+// Progress Photos
+// ==========================================
+
+export function useProgressPhotos() {
+  return useQuery({
+    queryKey: ['portal', 'progress-photos'],
+    queryFn: () => portalApi.get<ProgressPhotosResponse>('/progress-photos'),
+  })
+}
+
+export function useUploadProgressPhoto() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { uri: string; category: string; notes?: string; photo_date?: string }) => {
+      const compressed = await compressImage(input.uri)
+      const fd = new FormData()
+      fd.append('photo', {
+        uri: compressed,
+        type: 'image/jpeg',
+        name: 'progress-photo.jpg',
+      } as unknown as Blob)
+      fd.append('category', input.category)
+      if (input.notes) fd.append('notes', input.notes)
+      if (input.photo_date) fd.append('photo_date', input.photo_date)
+      return portalApi.upload<{ id: string; message: string }>('/progress-photos', fd)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'progress-photos'] })
+    },
   })
 }

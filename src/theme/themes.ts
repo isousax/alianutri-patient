@@ -115,7 +115,7 @@ const AMETHYST_THEME: AppTheme = {
   },
 }
 
-// ── Rosé (warm pink on cream — elegant, soft) ──
+// ── Rosé (blush pink on petal — garden, feminine, warm) ──
 
 const ROSE_THEME: AppTheme = {
   id: 'rose',
@@ -123,34 +123,34 @@ const ROSE_THEME: AppTheme = {
   emoji: '🌸',
   dark: false,
   colors: {
-    primary: '#ec4899',
-    primaryLight: '#fdf2f8',
-    primaryMuted: '#f9a8d4',
+    primary: '#db2777',
+    primaryLight: '#fce7f3',
+    primaryMuted: '#f472b6',
     primaryText: '#ffffff',
 
-    background: '#fdfbf9',
-    surface: '#f9f5f2',
-    surfacePressed: '#f2ebe5',
+    background: '#fdf2f8',
+    surface: '#fce7f3',
+    surfacePressed: '#fbcfe8',
 
-    text: '#1c1917',
-    textSecondary: '#57534e',
-    textMuted: '#a8a29e',
+    text: '#1e0a1b',
+    textSecondary: '#764360',
+    textMuted: '#c09ab2',
     textInverse: '#ffffff',
 
-    border: '#ede6e0',
-    borderLight: '#f5f0ec',
+    border: '#f5c2db',
+    borderLight: '#fce7f3',
 
-    tabBar: '#fdfbf9',
-    tabBarBorder: '#ede6e0',
-    tabBarInactive: '#a8a29e',
+    tabBar: '#fdf2f8',
+    tabBarBorder: '#f5c2db',
+    tabBarInactive: '#c09ab2',
 
-    accent: '#a855f7',
-    accentLight: '#faf5ff',
+    accent: '#d97706',
+    accentLight: '#fef3c7',
 
-    success: '#059669',
-    warning: '#d97706',
-    error: '#dc2626',
-    info: '#6366f1',
+    success: '#0d9488',
+    warning: '#ea580c',
+    error: '#e11d48',
+    info: '#7c3aed',
   },
 }
 

@@ -43,7 +43,29 @@ export default function GuidelinesScreen() {
   }
 
   if (selectedId && detail) {
-    const sections = Array.isArray(detail.content) ? detail.content : []
+    // Normalize content: may be array of sections, { text: string }, or plain string
+    let sections: { heading?: string; text?: string; body?: string }[] = []
+    if (Array.isArray(detail.content)) {
+      sections = detail.content
+    } else {
+      const rawText = typeof detail.content === 'string'
+        ? detail.content
+        : (detail.content as Record<string, unknown>)?.text
+          ? String((detail.content as Record<string, unknown>).text)
+          : null
+      if (rawText) {
+        // Parse "## heading\nbody" format into sections
+        const parts = rawText.split(/^## /m).filter(Boolean)
+        sections = parts.map((part: string) => {
+          const newline = part.indexOf('\n')
+          if (newline > 0) {
+            return { heading: part.slice(0, newline).trim(), body: part.slice(newline + 1).trim() }
+          }
+          return { body: part.trim() }
+        })
+      }
+    }
+
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
         <View className="px-5 pt-4 pb-3 flex-row items-center gap-3">
@@ -66,8 +88,8 @@ export default function GuidelinesScreen() {
               ) : null}
             </View>
           ))}
-          {sections.length === 0 && typeof detail.content === 'string' && (
-            <Text style={{ color: t.textSecondary }} className="text-sm font-sans leading-5">{detail.content as string}</Text>
+          {sections.length === 0 && (
+            <Text style={{ color: t.textMuted }} className="text-sm font-sans text-center mt-8">Nenhum conteúdo disponível.</Text>
           )}
         </ScrollView>
       </SafeAreaView>

@@ -1,12 +1,12 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useReducer } from 'react'
 import {
   View, Text, ScrollView, Pressable, ActivityIndicator, Alert,
-  RefreshControl, Dimensions,
+  RefreshControl, Dimensions, TextInput, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ChevronLeft, ChevronRight, Flame, Check, CircleDashed,
-  Camera, Clock, Utensils, Undo2,
+  Camera, Clock, Utensils, Undo2, Plus,
   Sparkles, ChevronDown, X, Trophy,
 } from 'lucide-react-native'
 import { Image } from 'expo-image'
@@ -20,7 +20,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useThemeColors, type ThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
-import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useUploadDiaryPhoto } from '../../src/hooks/usePortal'
+import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useUploadDiaryPhoto, useFoodDiary } from '../../src/hooks/usePortal'
 import type { DiaryTimelineMeal } from '../../src/types/portal'
 
 // ── helpers ──
@@ -325,7 +325,7 @@ export default function DiaryScreen() {
           <ActivityIndicator size="large" color={t.primary} />
         </View>
       ) : !mealPlan || meals.length === 0 ? (
-        <NoPlanState />
+        <FreeDiary date={date} isToday={isToday} canWrite={canWrite} logEntry={logEntry} />
       ) : (
         <ScrollView
           className="flex-1"
@@ -422,22 +422,215 @@ export default function DiaryScreen() {
   )
 }
 
-// ── Empty state ──
+// ── Free diary (no plan) ──
 
-function NoPlanState() {
+const FREE_MEAL_TYPES = [
+  { value: 'breakfast', label: 'Café da manhã', emoji: '☕' },
+  { value: 'morning_snack', label: 'Lanche da manhã', emoji: '🍎' },
+  { value: 'lunch', label: 'Almoço', emoji: '🍽️' },
+  { value: 'afternoon_snack', label: 'Lanche da tarde', emoji: '🥪' },
+  { value: 'dinner', label: 'Jantar', emoji: '🌙' },
+  { value: 'supper', label: 'Ceia', emoji: '🍵' },
+  { value: 'other', label: 'Outro', emoji: '📝' },
+]
+
+function FreeDiary({
+  date, isToday, canWrite, logEntry,
+}: {
+  date: string; isToday: boolean; canWrite: boolean;
+  logEntry: (entry: {
+    meal_type: string; entry_date: string; food_description: string;
+    compliance_status?: string;
+  }) => Promise<unknown>
+}) {
   const t = useThemeColors()
+  const [showModal, setShowModal] = useState(false)
+  const [mealType, setMealType] = useState('lunch')
+  const [description, setDescription] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const { data: entries, refetch } = useFoodDiary(date)
+  const { mutateAsync: deleteEntry } = useDeleteFoodDiary()
+
+  const dayEntries = entries ?? []
+
+  const handleSave = useCallback(async () => {
+    if (!description.trim()) {
+      Alert.alert('Descrição obrigatória', 'Descreva o que você comeu.')
+      return
+    }
+    setIsSaving(true)
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      await logEntry({
+        meal_type: mealType,
+        entry_date: date,
+        food_description: description.trim(),
+      })
+      setDescription('')
+      setShowModal(false)
+      refetch()
+    } catch {
+      Alert.alert('Erro', 'Não foi possível salvar.')
+    } finally {
+      setIsSaving(false)
+    }
+  }, [description, mealType, date, logEntry, refetch])
+
+  const handleDelete = useCallback(async (id: string) => {
+    Alert.alert('Remover', 'Remover este registro?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Remover', style: 'destructive', onPress: async () => {
+          try { await deleteEntry(id); refetch() } catch { Alert.alert('Erro', 'Falha ao remover.') }
+        },
+      },
+    ])
+  }, [deleteEntry, refetch])
+
   return (
-    <View className="flex-1 items-center justify-center px-8">
-      <View className="h-16 w-16 rounded-2xl items-center justify-center mb-4" style={{ backgroundColor: t.surface }}>
-        <Utensils size={28} color={t.textMuted} />
-      </View>
-      <Text style={{ color: t.text }} className="text-base font-sans-semibold mb-1">
-        Nenhum plano ativo
-      </Text>
-      <Text style={{ color: t.textMuted }} className="text-sm text-center font-sans">
-        Aguarde seu nutricionista publicar um plano alimentar para começar a registrar.
-      </Text>
-    </View>
+    <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
+      {/* Prompt to log */}
+      <Animated.View entering={FadeIn.duration(300)} className="px-5 mt-4 mb-4 items-center">
+        <View className="h-14 w-14 rounded-2xl items-center justify-center mb-3" style={{ backgroundColor: t.primaryLight }}>
+          <Utensils size={26} color={t.primary} />
+        </View>
+        <Text style={{ color: t.text }} className="text-base font-sans-semibold mb-1 text-center">
+          Registre suas refeições
+        </Text>
+        <Text style={{ color: t.textMuted }} className="text-sm font-sans text-center leading-5">
+          Mesmo sem plano alimentar, registrar o que você come ajuda seu nutricionista a te orientar melhor.
+        </Text>
+      </Animated.View>
+
+      {isToday && (
+        <Animated.View entering={FadeInDown.duration(300).delay(100)} className="px-5 mb-4">
+          <Pressable
+            onPress={() => setShowModal(true)}
+            className="flex-row items-center justify-center py-3.5 rounded-xl"
+            style={{ backgroundColor: t.primary }}
+          >
+            <Plus size={18} color={t.primaryText} />
+            <Text style={{ color: t.primaryText }} className="text-sm font-sans-bold ml-2">Registrar refeição</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {/* Day entries */}
+      {dayEntries.length > 0 && (
+        <Animated.View entering={FadeInDown.duration(300).delay(200)} className="px-5">
+          <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-2">
+            Refeições do dia ({dayEntries.length})
+          </Text>
+          {dayEntries.map((entry: any) => {
+            const type = FREE_MEAL_TYPES.find((m) => m.value === entry.meal_type)
+            return (
+              <View
+                key={entry.id}
+                className="rounded-xl p-3 mb-1.5 flex-row items-start"
+                style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}
+              >
+                <Text className="text-lg mr-2">{type?.emoji ?? '🍽️'}</Text>
+                <View className="flex-1">
+                  <Text style={{ color: t.text }} className="text-sm font-sans-semibold">
+                    {type?.label ?? entry.meal_type}
+                  </Text>
+                  <Text style={{ color: t.textSecondary }} className="text-[12px] font-sans mt-0.5 leading-4">
+                    {entry.food_description}
+                  </Text>
+                </View>
+                {isToday && (
+                  <Pressable onPress={() => handleDelete(entry.id)} hitSlop={8} className="ml-2 mt-0.5">
+                    <X size={14} color={t.textMuted} />
+                  </Pressable>
+                )}
+              </View>
+            )
+          })}
+        </Animated.View>
+      )}
+
+      {/* Modal for adding entry */}
+      <Modal visible={showModal} transparent animationType="slide">
+        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View className="rounded-t-3xl px-5 pt-5 pb-8" style={{ backgroundColor: t.background }}>
+              <View className="flex-row items-center justify-between mb-4">
+                <Text style={{ color: t.text }} className="text-lg font-sans-bold">Nova refeição</Text>
+                <Pressable onPress={() => setShowModal(false)} hitSlop={12}>
+                  <X size={20} color={t.textSecondary} />
+                </Pressable>
+              </View>
+
+              {/* Meal type picker */}
+              <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-2">
+                Tipo de refeição
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+                <View className="flex-row gap-2">
+                  {FREE_MEAL_TYPES.map((mt) => (
+                    <Pressable
+                      key={mt.value}
+                      onPress={() => { setMealType(mt.value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+                      className="px-3 py-2 rounded-xl items-center"
+                      style={{
+                        backgroundColor: mealType === mt.value ? t.primaryLight : t.surface,
+                        borderWidth: mealType === mt.value ? 1.5 : 1,
+                        borderColor: mealType === mt.value ? t.primary : t.borderLight,
+                      }}
+                    >
+                      <Text className="text-base">{mt.emoji}</Text>
+                      <Text
+                        style={{ color: mealType === mt.value ? t.primary : t.textSecondary }}
+                        className="text-[10px] font-sans-medium mt-0.5"
+                      >
+                        {mt.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {/* Description */}
+              <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-2">
+                O que você comeu?
+              </Text>
+              <TextInput
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Ex: Arroz, feijão, frango grelhado e salada"
+                placeholderTextColor={t.textMuted}
+                multiline
+                numberOfLines={3}
+                className="rounded-xl p-3 text-sm font-sans mb-4"
+                style={{
+                  color: t.text,
+                  backgroundColor: t.surface,
+                  borderWidth: 1,
+                  borderColor: t.borderLight,
+                  minHeight: 80,
+                  textAlignVertical: 'top',
+                }}
+              />
+
+              <Pressable
+                onPress={handleSave}
+                disabled={isSaving || !description.trim()}
+                className="py-3.5 rounded-xl items-center"
+                style={{ backgroundColor: description.trim() ? t.primary : t.borderLight }}
+              >
+                <Text
+                  className="text-sm font-sans-bold"
+                  style={{ color: description.trim() ? t.primaryText : t.textMuted }}
+                >
+                  {isSaving ? 'Salvando...' : 'Salvar refeição'}
+                </Text>
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+    </ScrollView>
   )
 }
 

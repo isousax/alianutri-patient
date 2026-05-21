@@ -1,4 +1,4 @@
-import * as ImageManipulator from 'expo-image-manipulator'
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator'
 
 const MAX_SIZE = 1280
 const QUALITY = 0.6
@@ -12,13 +12,11 @@ const QUALITY = 0.6
  */
 export async function compressImage(uri: string): Promise<string> {
   try {
-    const context = ImageManipulator.manipulate(uri)
-    context.resize({ width: MAX_SIZE })
-    const image = await context.renderAsync()
-    const result = await image.saveAsync({
-      format: ImageManipulator.SaveFormat.JPEG,
-      compress: QUALITY,
-    })
+    const result = await manipulateAsync(
+      uri,
+      [{ resize: { width: MAX_SIZE } }],
+      { format: SaveFormat.JPEG, compress: QUALITY },
+    )
     return result.uri
   } catch (err) {
     console.warn('[compressImage] Falha na compressão, usando original:', err)
