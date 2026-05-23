@@ -7,6 +7,7 @@ import {
 import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient'
+import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import { usePortalProfile, useEvolution } from '../../src/hooks/usePortal'
 import type { PortalEvolution } from '../../src/types/portal'
@@ -67,15 +68,27 @@ export default function ProfileScreen() {
               </View>
 
               <Animated.View entering={FadeIn.duration(400)} className="items-center">
-                <ExpoGradient
-                  colors={[t.primary, t.primary + 'cc']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  className="h-20 w-20 rounded-full items-center justify-center mb-3"
-                  style={SHADOW_SM}
-                >
-                  <Text className="text-2xl font-sans-bold" style={{ color: '#ffffff' }}>{initials}</Text>
-                </ExpoGradient>
+                {profile?.profile_photo_url ? (
+                  <View
+                    className="h-20 w-20 rounded-full mb-3"
+                    style={{ overflow: 'hidden', borderRadius: 40, ...SHADOW_SM }}
+                  >
+                    <Image
+                      source={{ uri: profile.profile_photo_url }}
+                      style={{ width: 80, height: 80 }}
+                      contentFit="cover"
+                    />
+                  </View>
+                ) : (
+                  <ExpoGradient
+                    colors={[t.primary, t.primary + 'cc']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ width: 80, height: 80, borderRadius: 40, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 12, ...SHADOW_SM }}
+                  >
+                    <Text className="text-2xl font-sans-bold" style={{ color: '#ffffff' }}>{initials}</Text>
+                  </ExpoGradient>
+                )}
                 <Text style={{ color: t.text }} className="text-xl font-sans-bold">{displayName}</Text>
               </Animated.View>
             </ExpoGradient>

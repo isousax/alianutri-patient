@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { View, Text, ScrollView, Pressable, ActivityIndicator, TextInput, Alert, RefreshControl, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { ClipboardList, ChevronRight, ChevronLeft, CheckCircle2, Clock, Send } from 'lucide-react-native'
+import { ClipboardList, ChevronRight, ChevronLeft, CheckCircle2, Clock, Send, Circle, CheckCircle } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
-import { useQuestionnaires, useAnswerQuestionnaire } from '../src/hooks/usePortal'
-import type { PortalQuestionnaire } from '../src/types/portal'
+import { useQuestionnaires, useQuestionnaireDetail, useAnswerQuestionnaire } from '../src/hooks/usePortal'
+import type { PortalQuestionnaire, PortalQuestionItem } from '../src/types/portal'
 
 const SHADOW_SM = Platform.select({
   ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
@@ -117,6 +117,7 @@ export default function QuestionnairesScreen() {
 
 function AnswerForm({ questionnaire, onBack }: { questionnaire: PortalQuestionnaire; onBack: () => void }) {
   const t = useThemeColors()
+  const { data: detail, isLoading: loadingDetail } = useQuestionnaireDetail(questionnaire.id)
   const [responses, setResponses] = useState<Record<string, string>>({})
   const { mutateAsync, isPending } = useAnswerQuestionnaire()
 
@@ -124,7 +125,15 @@ function AnswerForm({ questionnaire, onBack }: { questionnaire: PortalQuestionna
     setResponses((prev) => ({ ...prev, [String(questionIdx)]: value }))
   }
 
+  const questions: PortalQuestionItem[] = detail?.questions ?? []
+  const requiredCount = questions.filter((q) => q.required).length
+  const answeredRequired = questions.filter((q, i) => q.required && responses[String(i)]?.trim()).length
+
   async function handleSubmit() {
+    if (requiredCount > 0 && answeredRequired < requiredCount) {
+      Alert.alert('Campos obrigatórios', `Responda todas as ${requiredCount} perguntas obrigatórias antes de enviar.`)
+      return
+    }
     try {
       await mutateAsync({ qId: questionnaire.id, responses })
       Alert.alert('Sucesso', 'Questionário respondido com sucesso!', [
@@ -146,51 +155,170 @@ function AnswerForm({ questionnaire, onBack }: { questionnaire: PortalQuestionna
         </Text>
       </View>
 
-      <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 32 }}>
-        <Text style={{ color: t.textMuted }} className="text-xs font-sans mb-4">
-          Responda as perguntas abaixo. Ao finalizar, toque em "Enviar respostas".
-        </Text>
+      {loadingDetail ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={t.primary} />
+        </View>
+      ) : questions.length === 0 ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <Text style={{ color: t.textMuted }} className="text-sm font-sans text-center">
+            Não foi possível carregar as perguntas deste questionário.
+          </Text>
+        </View>
+      ) : (
+        <>
+          <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+            <Text style={{ color: t.textMuted }} className="text-xs font-sans mb-4">
+              Responda as perguntas abaixo. {requiredCount > 0 ? `${requiredCount} obrigatória${requiredCount > 1 ? 's' : ''}.` : ''}
+            </Text>
 
-        {/* Simple text-based answers — the actual questions are in the questionnaire body on the backend */}
-        <Animated.View entering={FadeInDown.duration(300)}>
-          <View className="mb-4 rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
-            <Text style={{ color: t.text }} className="text-sm font-sans-semibold mb-2">Suas respostas</Text>
-            <TextInput
-              value={responses['0'] ?? ''}
-              onChangeText={(txt) => setAnswer(0, txt)}
-              placeholder="Digite suas respostas aqui..."
-              placeholderTextColor={t.textMuted}
-              multiline
-              className="rounded-xl px-4 py-3 text-sm font-sans min-h-[160px]"
-              style={{
-                color: t.text,
-                backgroundColor: t.surfacePressed,
-                borderWidth: 1,
-                borderColor: t.borderLight,
-              }}
-              textAlignVertical="top"
-            />
+            {questions.map((q, idx) => (
+              <Animated.View key={idx} entering={FadeInDown.duration(250).delay(idx * 40)}>
+                <View className="mb-4 rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+                  <View className="flex-row items-start mb-2.5">
+                    <Text style={{ color: t.primary }} className="text-xs font-sans-bold mr-1.5">
+                      {idx + 1}.
+                    </Text>
+                    <Text style={{ color: t.text }} className="text-[13px] font-sans-semibold flex-1 leading-[18px]">
+                      {q.text}
+                      {q.required && <Text style={{ color: t.error }}> *</Text>}
+                    </Text>
+                  </View>
+
+                  {q.type === 'text' && (
+                    <TextInput
+                      value={responses[String(idx)] ?? ''}
+                      onChangeText={(txt) => setAnswer(idx, txt)}
+                      placeholder="Digite sua resposta..."
+                      placeholderTextColor={t.textMuted}
+                      multiline
+                      className="rounded-xl px-4 py-3 text-sm font-sans min-h-[80px]"
+                      style={{
+                        color: t.text,
+                        backgroundColor: t.surfacePressed,
+                        borderWidth: 1,
+                        borderColor: t.borderLight,
+                      }}
+                      textAlignVertical="top"
+                    />
+                  )}
+
+                  {q.type === 'select' && q.options && (
+                    <View className="gap-2">
+                      {q.options.map((opt) => {
+                        const selected = responses[String(idx)] === opt
+                        return (
+                          <Pressable
+                            key={opt}
+                            onPress={() => setAnswer(idx, opt)}
+                            className="flex-row items-center px-3.5 py-2.5 rounded-xl"
+                            style={{
+                              backgroundColor: selected ? t.primary + '12' : t.surfacePressed,
+                              borderWidth: 1,
+                              borderColor: selected ? t.primary + '40' : t.borderLight,
+                            }}
+                          >
+                            {selected ? (
+                              <CheckCircle size={16} color={t.primary} />
+                            ) : (
+                              <Circle size={16} color={t.textMuted} />
+                            )}
+                            <Text
+                              className="text-[13px] font-sans ml-2.5 flex-1"
+                              style={{ color: selected ? t.primary : t.text }}
+                            >
+                              {opt}
+                            </Text>
+                          </Pressable>
+                        )
+                      })}
+                    </View>
+                  )}
+
+                  {q.type === 'boolean' && (
+                    <View className="flex-row gap-3">
+                      {['Sim', 'Não'].map((opt) => {
+                        const selected = responses[String(idx)] === opt
+                        return (
+                          <Pressable
+                            key={opt}
+                            onPress={() => setAnswer(idx, opt)}
+                            className="flex-1 items-center py-3 rounded-xl"
+                            style={{
+                              backgroundColor: selected ? t.primary + '12' : t.surfacePressed,
+                              borderWidth: 1,
+                              borderColor: selected ? t.primary + '40' : t.borderLight,
+                            }}
+                          >
+                            <Text
+                              className="text-sm font-sans-semibold"
+                              style={{ color: selected ? t.primary : t.text }}
+                            >
+                              {opt}
+                            </Text>
+                          </Pressable>
+                        )
+                      })}
+                    </View>
+                  )}
+
+                  {q.type === 'scale' && (
+                    <View>
+                      <View className="flex-row justify-between mb-1.5">
+                        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
+                          const selected = responses[String(idx)] === String(n)
+                          return (
+                            <Pressable
+                              key={n}
+                              onPress={() => setAnswer(idx, String(n))}
+                              className="items-center justify-center rounded-lg"
+                              style={{
+                                width: 30, height: 30,
+                                backgroundColor: selected ? t.primary : t.surfacePressed,
+                                borderWidth: 1,
+                                borderColor: selected ? t.primary : t.borderLight,
+                              }}
+                            >
+                              <Text
+                                className="text-xs font-sans-bold"
+                                style={{ color: selected ? '#fff' : t.text }}
+                              >
+                                {n}
+                              </Text>
+                            </Pressable>
+                          )
+                        })}
+                      </View>
+                      <View className="flex-row justify-between px-1">
+                        <Text style={{ color: t.textMuted }} className="text-[9px] font-sans">Muito ruim</Text>
+                        <Text style={{ color: t.textMuted }} className="text-[9px] font-sans">Excelente</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </Animated.View>
+            ))}
+          </ScrollView>
+
+          <View className="px-5 pb-6">
+            <Pressable
+              onPress={handleSubmit}
+              disabled={isPending}
+              className="rounded-2xl py-3.5 flex-row items-center justify-center gap-2"
+              style={{ backgroundColor: isPending ? t.primary + '80' : t.primary }}
+            >
+              {isPending ? (
+                <ActivityIndicator color={t.primaryText} />
+              ) : (
+                <>
+                  <Send size={16} color={t.primaryText} />
+                  <Text style={{ color: t.primaryText }} className="text-sm font-sans-semibold">Enviar respostas</Text>
+                </>
+              )}
+            </Pressable>
           </View>
-        </Animated.View>
-      </ScrollView>
-
-      <View className="px-5 pb-6">
-        <Pressable
-          onPress={handleSubmit}
-          disabled={isPending}
-          className="rounded-2xl py-3.5 flex-row items-center justify-center gap-2"
-          style={{ backgroundColor: isPending ? t.primary + '80' : t.primary }}
-        >
-          {isPending ? (
-            <ActivityIndicator color={t.primaryText} />
-          ) : (
-            <>
-              <Send size={16} color={t.primaryText} />
-              <Text style={{ color: t.primaryText }} className="text-sm font-sans-semibold">Enviar respostas</Text>
-            </>
-          )}
-        </Pressable>
-      </View>
+        </>
+      )}
     </SafeAreaView>
   )
 }

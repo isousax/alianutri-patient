@@ -103,6 +103,18 @@ export interface PortalQuestionnaire {
   created_at: string
 }
 
+export interface PortalQuestionItem {
+  text: string
+  type: 'text' | 'select' | 'boolean' | 'scale'
+  options?: string[]
+  required?: boolean
+}
+
+export interface PortalQuestionnaireDetail extends PortalQuestionnaire {
+  questions: PortalQuestionItem[]
+  responses: Record<string, unknown> | null
+}
+
 // ==========================================
 // Goals — GET /p/:code/goals
 // ==========================================
@@ -314,6 +326,21 @@ export interface ProgressPhoto {
 
 export interface ProgressPhotosResponse {
   photos: ProgressPhoto[]
+}
+
+
+// ==========================================
+// Weekly Adherence — GET /p/:code/diary/weekly-adherence
+// ==========================================
+
+export interface WeeklyAdherenceDay {
+  date: string
+  logged: number
+  total: number
+}
+
+export interface WeeklyAdherenceResponse {
+  days: WeeklyAdherenceDay[]
 }
 
 // ==========================================

@@ -9,6 +9,7 @@ import type {
   PortalGuidelineSummary,
   PortalGuidelineDetail,
   PortalQuestionnaire,
+  PortalQuestionnaireDetail,
   PortalGoal,
   PortalFoodDiaryEntry,
   PortalAppointment,
@@ -26,6 +27,7 @@ import type {
   SymptomLog,
   SymptomLogInput,
   ProgressPhotosResponse,
+  WeeklyAdherenceResponse,
 } from '../types/portal'
 
 export function usePortalHome() {
@@ -160,6 +162,22 @@ export function useDiaryStreak() {
   return useQuery({
     queryKey: ['portal', 'diary-streak'],
     queryFn: () => portalApi.get<DiaryStreakResponse>('/diary/streak'),
+  })
+}
+
+export function useWeeklyAdherence() {
+  return useQuery({
+    queryKey: ['portal', 'weekly-adherence'],
+    queryFn: () => portalApi.get<WeeklyAdherenceResponse>('/diary/weekly-adherence'),
+  })
+}
+
+
+export function useQuestionnaireDetail(qId: string | null) {
+  return useQuery({
+    queryKey: ['portal', 'questionnaire-detail', qId],
+    queryFn: () => portalApi.get<PortalQuestionnaireDetail>(`/questionnaires/${qId}`),
+    enabled: !!qId,
   })
 }
 

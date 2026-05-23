@@ -10,9 +10,9 @@ import {
   Calendar, RefreshCw, AlertCircle, ClipboardList, Target,
   Menu, X, ChevronRight, MapPin, Video, Flame, Droplets,
   TrendingDown, TrendingUp, Sparkles, CalendarPlus, MessageCircle,
-  Scale, Heart, Camera, Utensils, Sun, Moon, CloudSun,
+  Scale, Heart, Camera, Utensils, Sun, Moon, CloudSun, BarChart3
 } from 'lucide-react-native'
-import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
+import Svg, { Rect as SvgRect, Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import Animated, {
   FadeIn, FadeInDown, FadeOut, SlideInLeft, SlideOutLeft,
   useSharedValue, useAnimatedStyle, withTiming, runOnJS, Easing,
@@ -25,8 +25,9 @@ import {
   useGoals, useEvolution,
   useWaterIntake,
 } from '../../src/hooks/usePortal'
-import type { PortalGoal, PortalEvolution } from '../../src/types/portal'
+import type { PortalGoal, PortalEvolution, WeeklyAdherenceDay } from '../../src/types/portal'
 import { getTipOfTheDay } from '../../src/data/dailyTips'
+import { useWeeklyAdherence } from '../../src/hooks/usePortal'
 import { useSmartWaterGoal } from '../../src/hooks/useSmartWaterGoal'
 
 const { width: SCREEN_W } = Dimensions.get('window')
@@ -80,6 +81,7 @@ export default function HomeScreen() {
   const { data: evolution } = useEvolution()
   const { data: waterData } = useWaterIntake(today)
   const { goal: waterGoal, weather } = useSmartWaterGoal(waterData?.goal_ml ?? 2000)
+  const { data: adherenceData } = useWeeklyAdherence()
 
   const handleRefresh = useCallback(() => {
     refetch()
@@ -414,7 +416,9 @@ export default function HomeScreen() {
 
         {/* ══════ ADHERENCE CALENDAR ══════ */}
         {(data.logged_dates?.length ?? 0) > 0 && (
-          <AdherenceCalendar loggedDates={data.logged_dates} t={t} />
+          //<AdherenceCalendar loggedDates={data.logged_dates} t={t} />
+        <WeeklyAdherenceChart days={adherenceData?.days ?? []} t={t} />
+          
         )}
 
         {/* ══════ EMPTY STATE ══════ */}
@@ -842,6 +846,87 @@ function AdherenceCalendar({ loggedDates, t }: {
           </View>
         </View>
       </View>
+    </Animated.View>
+  )
+}
+
+// ── Weekly adherence chart ──
+
+const DAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+
+function WeeklyAdherenceChart({ days, t }: {
+  days: WeeklyAdherenceDay[]
+  t: ReturnType<typeof useThemeColors>
+}) {
+  if (days.length === 0 || days.every((d) => d.total === 0)) return null
+
+  const totalLogged = days.reduce((sum, d) => sum + d.logged, 0)
+  const totalExpected = days.reduce((sum, d) => sum + d.total, 0)
+  const overallPct = totalExpected > 0 ? Math.round((totalLogged / totalExpected) * 100) : 0
+
+  const W = SCREEN_W - 40 - 32
+  const barW = Math.floor((W - 6 * 8) / 7)
+  const maxH = 48
+
+  return (
+    <Animated.View entering={FadeInDown.duration(350).delay(240)} className="px-5 mb-3">
+      <Pressable onPress={() => router.push('/(tabs)/diary')}>
+        <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center">
+              <View className="h-6 w-6 rounded-lg items-center justify-center" style={{ backgroundColor: t.primary + '18' }}>
+                <BarChart3 size={13} color={t.primary} />
+              </View>
+              <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
+                Aderência semanal
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <Text className="text-xs font-sans-bold mr-1" style={{ color: overallPct >= 80 ? t.success : overallPct >= 50 ? t.warning : t.textMuted }}>
+                {overallPct}%
+              </Text>
+              <ChevronRight size={14} color={t.textMuted} />
+            </View>
+          </View>
+
+          <View className="flex-row items-end justify-between" style={{ height: maxH + 28 }}>
+            {days.map((day, i) => {
+              const pct = day.total > 0 ? Math.min(day.logged / day.total, 1) : 0
+              const barH = Math.max(pct * maxH, 4)
+              const dayDate = new Date(day.date + 'T12:00:00')
+              const label = DAY_LABELS[dayDate.getDay()]
+              const isToday = day.date === todayStr()
+              const barColor = pct >= 1 ? t.success : pct > 0 ? t.primary : t.border
+
+              return (
+                <View key={i} className="items-center" style={{ width: barW }}>
+                  <Svg width={barW} height={maxH}>
+                    <SvgRect
+                      x={(barW - 14) / 2} y={0}
+                      width={14} height={maxH}
+                      rx={7} fill={t.borderLight}
+                    />
+                    <SvgRect
+                      x={(barW - 14) / 2} y={maxH - barH}
+                      width={14} height={barH}
+                      rx={7} fill={barColor}
+                    />
+                  </Svg>
+                  <Text
+                    className="text-[10px] font-sans-semibold mt-1.5"
+                    style={{ color: isToday ? t.primary : t.textMuted, fontWeight: isToday ? '700' : '500' }}
+                  >
+                    {label}
+                  </Text>
+                  {isToday && (
+                    <View className="h-1 w-1 rounded-full mt-0.5" style={{ backgroundColor: t.primary }} />
+                  )}
+                </View>
+              )
+            })}
+          </View>
+        </View>
+      </Pressable>
     </Animated.View>
   )
 }
