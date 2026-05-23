@@ -14,6 +14,10 @@ export interface PortalHome {
     type: 'online' | 'in_person'
     meeting_provider: string | null
   } | null
+  diary_streak: number
+  logged_dates: string[]
+  chat_unread: number
+  pending_questionnaires: number
   features?: {
     can_write: boolean
   }
@@ -45,7 +49,7 @@ export interface PortalMealPlanSummary {
   id: string
   name: string
   method: 'quantitative' | 'equivalents' | 'qualitative'
-  status: 'published' | 'accepted'
+  status: 'published' | 'accepted' | 'superseded'
   target_kcal: number | null
   total_kcal: number | null
   valid_from: string | null

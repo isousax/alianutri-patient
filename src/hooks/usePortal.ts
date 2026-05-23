@@ -32,6 +32,7 @@ export function usePortalHome() {
   return useQuery({
     queryKey: ['portal', 'home'],
     queryFn: () => portalApi.get<PortalHome>('/home'),
+    refetchInterval: 30_000,
   })
 }
 
@@ -343,6 +344,17 @@ export function useProgressPhotos() {
   return useQuery({
     queryKey: ['portal', 'progress-photos'],
     queryFn: () => portalApi.get<ProgressPhotosResponse>('/progress-photos'),
+  })
+}
+
+export function useDeleteProgressPhoto() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (photoId: string) =>
+      portalApi.delete<{ message: string }>(`/progress-photos/${photoId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'progress-photos'] })
+    },
   })
 }
 

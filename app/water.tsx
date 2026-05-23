@@ -5,13 +5,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import {
-  Droplets, Trash2, ChevronLeft, ChevronRight, ChevronDown,
+  Droplets, Trash2, ChevronLeft, ChevronRight, ChevronDown, Info,
 } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOutUp, useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated'
 import Svg, { Circle as SvgCircle } from 'react-native-svg'
 import { useThemeColors } from '../src/stores/theme'
 import { useWaterIntake, useLogWater, useDeleteWater } from '../src/hooks/usePortal'
+import { useSmartWaterGoal } from '../src/hooks/useSmartWaterGoal'
 
 const AnimatedSvgCircle = Animated.createAnimatedComponent(SvgCircle)
 
@@ -63,9 +64,11 @@ export default function WaterScreen() {
   const { mutateAsync: logWater, isPending: isLogging } = useLogWater()
   const { mutateAsync: deleteWater } = useDeleteWater()
 
-  const goal = data?.goal_ml ?? 2000
+  const apiGoal = data?.goal_ml ?? 2000
   const total = data?.total_ml ?? 0
   const entries = data?.entries ?? []
+
+  const { goal, hydration, weather, nutriSetCustomGoal } = useSmartWaterGoal(apiGoal)
 
   // Absorb server delta synchronously during render (no flicker)
   if (total !== prevServerTotal.current) {
@@ -231,6 +234,51 @@ export default function WaterScreen() {
             </Animated.Text>
           )}
         </Animated.View>
+
+        {/* Weather & smart goal card */}
+        {isToday && (weather || hydration.isPersonalized) && (
+          <Animated.View entering={FadeInDown.duration(300).delay(50)} className="px-5 mb-5">
+            <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+              <View className="flex-row items-center justify-between mb-2">
+                <View className="flex-row items-center gap-2">
+                  {weather && (
+                    <>
+                      <Text className="text-lg">{weather.icon}</Text>
+                      <Text style={{ color: t.text }} className="text-sm font-sans-bold">
+                        {Math.round(weather.temperature)}°C
+                      </Text>
+                      <Text style={{ color: t.textMuted }} className="text-xs font-sans">
+                        {weather.description}
+                      </Text>
+                    </>
+                  )}
+                </View>
+                {hydration.isPersonalized && !nutriSetCustomGoal && (
+                  <Pressable
+                    onPress={() => Alert.alert(
+                      'Meta personalizada',
+                      `Sua meta de ${(goal / 1000).toFixed(1).replace('.', ',')}L foi calculada com base no seu perfil e nas condições climáticas atuais.`,
+                    )}
+                    className="flex-row items-center gap-1 px-2 py-1 rounded-lg"
+                    style={{ backgroundColor: t.primary + '12' }}
+                  >
+                    <Info size={10} color={t.primary} />
+                  </Pressable>
+                )}
+                {nutriSetCustomGoal && (
+                  <View className="flex-row items-center gap-1 px-2 py-1 rounded-lg" style={{ backgroundColor: t.accent + '12' }}>
+                    <Text style={{ color: t.accent }} className="text-[9px] font-sans-bold">NUTRI</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={{ color: t.textSecondary }} className="text-[12px] font-sans leading-4">
+                {nutriSetCustomGoal
+                  ? `Meta de ${(apiGoal / 1000).toFixed(1).replace('.', ',')}L definida pelo seu nutricionista`
+                  : hydration.message}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
 
         {/* 3 quick-add cards */}
         {isToday && (

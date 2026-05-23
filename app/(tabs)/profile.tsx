@@ -71,7 +71,7 @@ export default function ProfileScreen() {
                   colors={[t.primary, t.primary + 'cc']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  className="h-20 w-20 rounded-3xl items-center justify-center mb-3"
+                  className="h-20 w-20 rounded-full items-center justify-center mb-3"
                   style={SHADOW_SM}
                 >
                   <Text className="text-2xl font-sans-bold" style={{ color: '#ffffff' }}>{initials}</Text>

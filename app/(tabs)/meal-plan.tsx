@@ -115,7 +115,18 @@ export default function MealPlanScreen() {
               <Utensils size={18} color={t.primary} />
             </View>
             <View className="flex-1">
-              <Text style={{ color: t.text }} className="text-sm font-sans-semibold">{plan.name}</Text>
+              <View className="flex-row items-center gap-2">
+                <Text style={{ color: t.text }} className="text-sm font-sans-semibold flex-shrink" numberOfLines={1}>{plan.name}</Text>
+                {plan.status === 'superseded' ? (
+                  <View className="px-1.5 py-0.5 rounded" style={{ backgroundColor: t.borderLight }}>
+                    <Text style={{ color: t.textMuted }} className="text-[9px] font-sans-bold">ANTERIOR</Text>
+                  </View>
+                ) : (
+                  <View className="px-1.5 py-0.5 rounded" style={{ backgroundColor: t.primary + '18' }}>
+                    <Text style={{ color: t.primary }} className="text-[9px] font-sans-bold">ATIVO</Text>
+                  </View>
+                )}
+              </View>
               <Text style={{ color: t.textMuted }} className="text-xs font-sans mt-0.5">
                 {plan.total_kcal ? `${plan.total_kcal} kcal` : plan.method}
               </Text>

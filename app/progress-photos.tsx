@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react'
 import {
-  View, Text, ScrollView, Pressable, Alert, ActivityIndicator, Dimensions, Platform,
+  View, Text, ScrollView, Pressable, Alert, ActivityIndicator, Dimensions, Platform, Modal, StatusBar,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import {
-  Camera, ChevronLeft, Image as ImageIcon, Sparkles,
+  Camera, ChevronLeft, Image as ImageIcon, Sparkles, Trash2, X,
 } from 'lucide-react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
@@ -13,7 +13,8 @@ import { Image } from 'expo-image'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient'
 import { useThemeColors } from '../src/stores/theme'
-import { useProgressPhotos, useUploadProgressPhoto } from '../src/hooks/usePortal'
+import { useProgressPhotos, useUploadProgressPhoto, useDeleteProgressPhoto } from '../src/hooks/usePortal'
+import type { ProgressPhoto } from '../src/types/portal'
 import { useAuthStore } from '../src/stores/auth'
 
 const SCREEN_W = Dimensions.get('window').width
@@ -38,7 +39,9 @@ export default function ProgressPhotosScreen() {
   const accessCode = useAuthStore((s) => s.accessCode)
   const { data, isLoading } = useProgressPhotos()
   const { mutateAsync: upload, isPending: isUploading } = useUploadProgressPhoto()
+  const { mutateAsync: deletePhoto } = useDeleteProgressPhoto()
   const [selectedCategory, setSelectedCategory] = useState('front')
+  const [viewerPhoto, setViewerPhoto] = useState<ProgressPhoto | null>(null)
 
   const photos = data?.photos ?? []
 
@@ -212,8 +215,9 @@ export default function ProgressPhotosScreen() {
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
                   {datePhotos.map((photo) => (
-                    <View
+                    <Pressable
                       key={photo.id}
+                      onPress={() => setViewerPhoto(photo)}
                       className="rounded-2xl overflow-hidden"
                       style={{ width: PHOTO_SIZE, height: PHOTO_SIZE * 1.33, ...SHADOW_SM }}
                     >
@@ -230,7 +234,7 @@ export default function ProgressPhotosScreen() {
                           {CATEGORIES.find((c) => c.value === photo.category)?.label ?? photo.category}
                         </Text>
                       </ExpoGradient>
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
               </Animated.View>
@@ -238,6 +242,67 @@ export default function ProgressPhotosScreen() {
           })
         )}
       </ScrollView>
+
+      {/* ── Fullscreen Photo Viewer ── */}
+      <Modal visible={viewerPhoto !== null} transparent animationType="fade" onRequestClose={() => setViewerPhoto(null)}>
+        <StatusBar barStyle="light-content" />
+        <View className="flex-1 bg-black">
+          {/* Top bar */}
+          <SafeAreaView edges={['top']}>
+            <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
+              <Pressable onPress={() => setViewerPhoto(null)} hitSlop={16} className="p-2">
+                <X size={22} color="#fff" />
+              </Pressable>
+              <View className="items-center flex-1">
+                {viewerPhoto && (
+                  <>
+                    <Text className="text-sm font-sans-bold" style={{ color: '#fff' }}>
+                      {CATEGORIES.find((c) => c.value === viewerPhoto.category)?.label ?? viewerPhoto.category}
+                    </Text>
+                    <Text className="text-[11px] font-sans" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      {new Date(viewerPhoto.photo_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </Text>
+                  </>
+                )}
+              </View>
+              <Pressable
+                onPress={() => {
+                  if (!viewerPhoto) return
+                  Alert.alert('Excluir foto', 'Deseja excluir esta foto de progresso?', [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Excluir', style: 'destructive', onPress: async () => {
+                        try {
+                          await deletePhoto(viewerPhoto.id)
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                          setViewerPhoto(null)
+                        } catch {
+                          Alert.alert('Erro', 'Não foi possível excluir a foto.')
+                        }
+                      },
+                    },
+                  ])
+                }}
+                hitSlop={16}
+                className="p-2"
+              >
+                <Trash2 size={20} color="#ef4444" />
+              </Pressable>
+            </View>
+          </SafeAreaView>
+
+          {/* Photo */}
+          <View className="flex-1 items-center justify-center">
+            {viewerPhoto && (
+              <Image
+                source={{ uri: `${API_BASE}/p/${accessCode}/progress-photos/${viewerPhoto.id}` }}
+                style={{ width: SCREEN_W, height: SCREEN_W * 1.33 }}
+                contentFit="contain"
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   )
 }

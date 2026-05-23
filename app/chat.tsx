@@ -8,6 +8,7 @@ import { router } from 'expo-router'
 import { ArrowLeft, Send, MessageCircle, Check, CheckCheck } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated'
+import { useQueryClient } from '@tanstack/react-query'
 import { useThemeColors, type ThemeColors } from '../src/stores/theme'
 import { useChatMessages, useSendChatMessage, usePortalHome } from '../src/hooks/usePortal'
 import type { ChatMessage } from '../src/types/portal'
@@ -76,12 +77,21 @@ function chatItemKey(item: ChatListItem): string {
 
 export default function ChatScreen() {
   const t = useThemeColors()
+  const qc = useQueryClient()
   const [text, setText] = useState('')
   const flatListRef = useRef<FlatList>(null)
 
   const { data: homeData } = usePortalHome()
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useChatMessages()
   const send = useSendChatMessage()
+
+  // Clear unread badge: GET /chat marks messages as read on the server (awaited).
+  // Invalidate /home after data loads (badge clears) + on unmount (safety net).
+  const pageCount = data?.pages?.length ?? 0
+  useEffect(() => {
+    if (pageCount > 0) qc.invalidateQueries({ queryKey: ['portal', 'home'] })
+    return () => { qc.invalidateQueries({ queryKey: ['portal', 'home'] }) }
+  }, [pageCount, qc])
 
   const nutriName = homeData?.nutritionist?.name ?? 'Nutricionista'
 

@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback, useReducer, useEffect } from 'react'
+import { useState, useMemo, useCallback, useReducer, useEffect, useRef } from 'react'
 import {
   View, Text, ScrollView, Pressable, ActivityIndicator,
-  RefreshControl, StyleSheet, Dimensions, Platform,
+  RefreshControl, StyleSheet, Dimensions, Platform, Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
@@ -13,17 +13,21 @@ import {
   Scale, Heart, Camera, Utensils, Sun, Moon, CloudSun,
 } from 'lucide-react-native'
 import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
-import Animated, { FadeIn, FadeInDown, FadeOut, SlideInLeft, SlideOutLeft } from 'react-native-reanimated'
+import Animated, {
+  FadeIn, FadeInDown, FadeOut, SlideInLeft, SlideOutLeft,
+  useSharedValue, useAnimatedStyle, withTiming, runOnJS, Easing,
+} from 'react-native-reanimated'
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient'
 import { useThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
 import {
-  usePortalHome, useDiaryStreak, useDiaryToday,
-  useGoals, useEvolution, useQuestionnaires, useChatUnreadCount,
+  usePortalHome, useDiaryToday,
+  useGoals, useEvolution,
   useWaterIntake,
 } from '../../src/hooks/usePortal'
 import type { PortalGoal, PortalEvolution } from '../../src/types/portal'
 import { getTipOfTheDay } from '../../src/data/dailyTips'
+import { useSmartWaterGoal } from '../../src/hooks/useSmartWaterGoal'
 
 const { width: SCREEN_W } = Dimensions.get('window')
 const DRAWER_W = Math.min(SCREEN_W * 0.78, 320)
@@ -71,22 +75,17 @@ export default function HomeScreen() {
   const [, tick] = useReducer((x: number) => x + 1, 0)
   const today = useMemo(todayStr, [tick]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data: streakData } = useDiaryStreak()
   const { data: diaryToday } = useDiaryToday(today)
   const { data: goals } = useGoals()
   const { data: evolution } = useEvolution()
-  const { data: questionnaires } = useQuestionnaires()
-  const { data: chatUnread } = useChatUnreadCount()
   const { data: waterData } = useWaterIntake(today)
+  const { goal: waterGoal, weather } = useSmartWaterGoal(waterData?.goal_ml ?? 2000)
 
   const handleRefresh = useCallback(() => {
     refetch()
-    qc.invalidateQueries({ queryKey: ['portal', 'diary-streak'] })
     qc.invalidateQueries({ queryKey: ['portal', 'diary-today'] })
     qc.invalidateQueries({ queryKey: ['portal', 'goals'] })
     qc.invalidateQueries({ queryKey: ['portal', 'evolution'] })
-    qc.invalidateQueries({ queryKey: ['portal', 'questionnaires'] })
-    qc.invalidateQueries({ queryKey: ['portal', 'chat-unread'] })
     qc.invalidateQueries({ queryKey: ['portal', 'water'] })
     tick()
   }, [refetch, qc])
@@ -117,17 +116,16 @@ export default function HomeScreen() {
   const displayName = data.patient.name?.split(' ')[0] || 'Paciente'
   const greeting = getGreeting()
   const GreetingIcon = greeting.icon
-  const streak = streakData?.streak ?? 0
+  const streak = data.diary_streak ?? 0
   const meals = diaryToday?.meals ?? []
   const loggedCount = meals.filter((m) => m.entry !== null).length
   const totalMeals = meals.length
   const diaryPct = totalMeals > 0 ? loggedCount / totalMeals : 0
   const activeGoals = (goals ?? []).filter((g: PortalGoal) => g.status === 'active').slice(0, 2)
-  const pendingQ = (questionnaires ?? []).filter((q) => q.status === 'sent')
+  const pendingQ = data.pending_questionnaires ?? 0
   const waterTotal = waterData?.total_ml ?? 0
-  const waterGoal = waterData?.goal_ml ?? 2000
   const waterPct = waterGoal > 0 ? Math.min(waterTotal / waterGoal, 1) : 0
-  const hasAnyContent = totalMeals > 0 || activeGoals.length > 0 || (evolution ?? []).length >= 2 || pendingQ.length > 0 || waterTotal > 0
+  const hasAnyContent = totalMeals > 0 || activeGoals.length > 0 || (evolution ?? []).length >= 2 || pendingQ > 0 || waterTotal > 0
 
   function fmtAppointment(iso: string) {
     const d = new Date(iso)
@@ -166,6 +164,11 @@ export default function HomeScreen() {
                 <Text style={{ color: t.primary }} className="text-xs font-sans-semibold ml-1.5">
                   {greeting.text}
                 </Text>
+                {weather && (
+                  <Text style={{ color: t.textMuted }} className="text-xs font-sans ml-2">
+                    {weather.icon} {Math.round(weather.temperature)}°C
+                  </Text>
+                )}
               </View>
               <Text style={{ color: t.text }} className="text-[26px] font-sans-bold leading-8">
                 {displayName}
@@ -187,7 +190,7 @@ export default function HomeScreen() {
           </View>
 
           {/* ── Streak + Quick Stats Row ── */}
-          {(streak > 0 || totalMeals > 0) && (
+          {(streak > 0 || totalMeals > 0 || weather) && (
             <Animated.View entering={FadeInDown.duration(350).delay(50)} className="flex-row px-6 mt-4 gap-3">
               {streak > 0 && (
                 <View
@@ -217,7 +220,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               )}
-              {chatUnread?.unread != null && chatUnread.unread > 0 && (
+              {(data.chat_unread ?? 0) > 0 && (
                 <Pressable
                   onPress={() => router.push('/chat')}
                   className="flex-row items-center px-3.5 py-2 rounded-2xl"
@@ -225,7 +228,7 @@ export default function HomeScreen() {
                 >
                   <MessageCircle size={14} color={t.primary} />
                   <Text className="text-sm font-sans-bold ml-1.5" style={{ color: t.primary }}>
-                    {chatUnread.unread}
+                    {data.chat_unread}
                   </Text>
                 </Pressable>
               )}
@@ -234,7 +237,7 @@ export default function HomeScreen() {
         </ExpoGradient>
 
         {/* ══════ URGENT: Pending questionnaires ══════ */}
-        {pendingQ.length > 0 && (
+        {pendingQ > 0 && (
           <Animated.View entering={FadeInDown.duration(350).delay(80)} className="px-5 mb-3">
             <Pressable onPress={() => router.push('/questionnaires')}>
               <View
@@ -246,7 +249,7 @@ export default function HomeScreen() {
                 </View>
                 <View className="flex-1">
                   <Text style={{ color: t.text }} className="text-[13px] font-sans-semibold">
-                    {pendingQ.length} questionário{pendingQ.length > 1 ? 's' : ''} pendente{pendingQ.length > 1 ? 's' : ''}
+                    {pendingQ} questionário{pendingQ > 1 ? 's' : ''} pendente{pendingQ > 1 ? 's' : ''}
                   </Text>
                   <Text style={{ color: t.textMuted }} className="text-[11px] font-sans mt-0.5">
                     Toque para responder
@@ -400,8 +403,19 @@ export default function HomeScreen() {
           </Animated.View>
         ) : null}
 
-        {/* ══════ TIP OF THE DAY ══════ */}
-        <TipOfTheDay t={t} />
+        {/* ══════ INSIGHTS CAROUSEL (tip + motivation) ══════ */}
+        <InsightCarousel
+          streak={streak}
+          diaryPct={diaryPct}
+          loggedDates={data.logged_dates ?? []}
+          evolution={evolution ?? []}
+          t={t}
+        />
+
+        {/* ══════ ADHERENCE CALENDAR ══════ */}
+        {(data.logged_dates?.length ?? 0) > 0 && (
+          <AdherenceCalendar loggedDates={data.logged_dates} t={t} />
+        )}
 
         {/* ══════ EMPTY STATE ══════ */}
         {!hasAnyContent && !apt && (
@@ -420,23 +434,15 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* ══════ DRAWER ══════ */}
-      {drawerOpen && (
-        <>
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(150)}
-            style={StyleSheet.absoluteFill}
-          >
-            <Pressable
-              onPress={() => setDrawerOpen(false)}
-              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
-            />
-          </Animated.View>
-
+      <Modal visible={drawerOpen} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setDrawerOpen(false)}>
+        <View style={StyleSheet.absoluteFill}>
+          <Pressable
+            onPress={() => setDrawerOpen(false)}
+            style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
+          />
           <Animated.View
             entering={SlideInLeft.duration(250)}
-            exiting={SlideOutLeft.duration(200)}
-            style={[StyleSheet.absoluteFill, { width: DRAWER_W }]}
+            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: DRAWER_W }}
           >
             <SafeAreaView
               style={{ flex: 1, backgroundColor: t.background }}
@@ -465,7 +471,7 @@ export default function HomeScreen() {
                     icon={<ClipboardList size={18} color={t.accent} />}
                     iconBg={t.accentLight}
                     title="Questionários"
-                    badge={pendingQ.length > 0 ? pendingQ.length : undefined}
+                    badge={pendingQ > 0 ? pendingQ : undefined}
                     t={t}
                     onPress={() => { setDrawerOpen(false); router.push('/questionnaires') }}
                   />
@@ -514,7 +520,7 @@ export default function HomeScreen() {
                     icon={<MessageCircle size={18} color={t.primary} />}
                     iconBg={t.primaryLight}
                     title="Chat"
-                    badge={chatUnread?.unread}
+                    badge={data.chat_unread > 0 ? data.chat_unread : undefined}
                     t={t}
                     onPress={() => { setDrawerOpen(false); router.push('/chat') }}
                   />
@@ -531,8 +537,8 @@ export default function HomeScreen() {
               </ScrollView>
             </SafeAreaView>
           </Animated.View>
-        </>
-      )}
+        </View>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -578,29 +584,262 @@ function ProgressRing({ pct, size, strokeWidth, color, trackColor, label }: {
   )
 }
 
-// ── Tip of the day ──
+// ── Insight carousel (tip + motivation) ──
 
-function TipOfTheDay({ t }: { t: ReturnType<typeof useThemeColors> }) {
+const CAROUSEL_INTERVAL = 6000
+const ANIM_DURATION = 400
+
+type InsightItem = { emoji: string; label: string; text: string; accent: boolean }
+
+function pickMotivation(
+  streak: number,
+  diaryPct: number,
+  loggedDates: string[],
+  evolution: PortalEvolution[],
+): { emoji: string; text: string } | null {
+  const today = new Date()
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const set = new Set(loggedDates)
+
+  const weights = evolution.filter((e) => e.weight_kg !== null) as (PortalEvolution & { weight_kg: number })[]
+  const hasWeightDrop = weights.length >= 2 && weights[weights.length - 1].weight_kg < weights[0].weight_kg
+  const weightDiff = weights.length >= 2
+    ? Math.abs(weights[weights.length - 1].weight_kg - weights[0].weight_kg).toFixed(1).replace('.', ',')
+    : null
+
+  let daysSinceLog = -1
+  if (loggedDates.length > 0 && loggedDates[0] !== todayKey) {
+    const lastDate = new Date(loggedDates[0] + 'T12:00:00')
+    daysSinceLog = Math.floor((today.getTime() - lastDate.getTime()) / 86400000)
+  }
+
+  if (diaryPct >= 1) return { emoji: '🎉', text: 'Parabéns! Você completou todas as refeições de hoje. Continue assim!' }
+  if (streak >= 30) return { emoji: '🏆', text: `${streak} dias seguidos registrando! Você é exemplo de consistência.` }
+  if (streak >= 7) return { emoji: '🔥', text: `${streak} dias de sequência! Cada dia conta para construir o hábito.` }
+  if (hasWeightDrop) return { emoji: '📉', text: `Seu peso reduziu ${weightDiff} kg desde o início. O esforço está valendo!` }
+  if (daysSinceLog >= 3) return { emoji: '👋', text: `Faz ${daysSinceLog} dias que você não registra. Que tal recomeçar hoje?` }
+  if (daysSinceLog === 1 || daysSinceLog === 2) return { emoji: '💪', text: 'Ontem passou, mas hoje é um novo dia. Registre sua primeira refeição!' }
+  if (streak >= 3) return { emoji: '✨', text: `${streak} dias na sequência! Falta pouco para completar uma semana.` }
+  if (set.has(todayKey) && diaryPct > 0 && diaryPct < 1) return { emoji: '🍽️', text: 'Bom progresso hoje! Registre as refeições restantes para fechar o dia.' }
+  return null
+}
+
+function InsightCarousel({ streak, diaryPct, loggedDates, evolution, t }: {
+  streak: number
+  diaryPct: number
+  loggedDates: string[]
+  evolution: PortalEvolution[]
+  t: ReturnType<typeof useThemeColors>
+}) {
   const tip = useMemo(() => getTipOfTheDay(), [])
+  const motivation = useMemo(
+    () => pickMotivation(streak, diaryPct, loggedDates, evolution),
+    [streak, diaryPct, loggedDates, evolution],
+  )
+
+  const items = useMemo<InsightItem[]>(() => {
+    const list: InsightItem[] = [{ emoji: tip.emoji, label: 'Dica do dia', text: tip.text, accent: true }]
+    if (motivation) list.push({ emoji: motivation.emoji, label: 'Seu progresso', text: motivation.text, accent: false })
+    return list
+  }, [tip, motivation])
+
+  const [activeIdx, setActiveIdx] = useState(0)
+  const idxRef = useRef(0)
+  const opacity = useSharedValue(1)
+  const translateY = useSharedValue(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Reset index when items change
+  useEffect(() => { idxRef.current = 0; setActiveIdx(0) }, [items.length])
+
+  const advanceSlide = useCallback(() => {
+    const next = (idxRef.current + 1) % items.length
+    idxRef.current = next
+    setActiveIdx(next)
+  }, [items.length])
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }))
+
+  useEffect(() => {
+    if (items.length <= 1) return
+    timerRef.current = setInterval(() => {
+      // Fade out + slide up
+      opacity.value = withTiming(0, { duration: ANIM_DURATION / 2, easing: Easing.out(Easing.ease) })
+      translateY.value = withTiming(-8, { duration: ANIM_DURATION / 2, easing: Easing.out(Easing.ease) }, () => {
+        runOnJS(advanceSlide)()
+        // Reset position below, then animate in
+        translateY.value = 8
+        opacity.value = withTiming(1, { duration: ANIM_DURATION / 2, easing: Easing.in(Easing.ease) })
+        translateY.value = withTiming(0, { duration: ANIM_DURATION / 2, easing: Easing.in(Easing.ease) })
+      })
+    }, CAROUSEL_INTERVAL)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [items.length, opacity, translateY, advanceSlide])
+
+  const item = items[activeIdx % items.length]
+
   return (
     <Animated.View entering={FadeInDown.duration(350).delay(400)} className="px-5 mb-3">
       <View
-        className="rounded-2xl px-4 py-4 flex-row items-start"
-        style={{ backgroundColor: t.primaryLight, ...SHADOW_SM }}
+        className="rounded-2xl overflow-hidden"
+        style={{ backgroundColor: item.accent ? t.primaryLight : t.surface, ...SHADOW_SM }}
       >
-        <View
-          className="h-9 w-9 rounded-xl items-center justify-center mr-3"
-          style={{ backgroundColor: t.primary + '18' }}
-        >
-          <Text className="text-base">{tip.emoji}</Text>
+        <View className="px-4 py-4">
+          <Animated.View style={animStyle} className="flex-row items-start">
+            <View
+              className="h-10 w-10 rounded-xl items-center justify-center mr-3.5"
+              style={{ backgroundColor: item.accent ? t.primary + '18' : t.borderLight }}
+            >
+              <Text className="text-lg">{item.emoji}</Text>
+            </View>
+            <View className="flex-1">
+              <Text
+                className="text-[10px] font-sans-bold uppercase tracking-wider mb-1"
+                style={{ color: item.accent ? t.primary : t.textMuted }}
+              >
+                {item.label}
+              </Text>
+              <Text style={{ color: t.text }} className="text-[13px] font-sans leading-[19px]">
+                {item.text}
+              </Text>
+            </View>
+          </Animated.View>
         </View>
-        <View className="flex-1">
-          <Text style={{ color: t.primary }} className="text-[10px] font-sans-bold uppercase tracking-wider mb-1">
-            Dica do dia
+
+        {/* Progress dots */}
+        {items.length > 1 && (
+          <View className="flex-row justify-center pb-3 gap-1.5">
+            {items.map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  width: i === activeIdx % items.length ? 16 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: i === activeIdx % items.length
+                    ? t.primary
+                    : t.primary + '30',
+                }}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    </Animated.View>
+  )
+}
+
+// ── Adherence calendar (heatmap) ──
+
+const WEEKDAYS_SHORT = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
+
+function AdherenceCalendar({ loggedDates, t }: {
+  loggedDates: string[]
+  t: ReturnType<typeof useThemeColors>
+}) {
+  const { weeks, totalLogged, totalDays } = useMemo(() => {
+    const set = new Set(loggedDates)
+    const today = new Date()
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+    // Build 35 days (5 weeks) ending on today's weekday-aligned week
+    const dayOfWeek = (today.getDay() + 6) % 7 // Mon=0 … Sun=6
+    const endOffset = 6 - dayOfWeek // days until end of current week (Sun)
+    const endDate = new Date(today)
+    endDate.setDate(endDate.getDate() + endOffset)
+
+    const days: { key: string; logged: boolean; future: boolean; isToday: boolean }[] = []
+    for (let i = 34; i >= 0; i--) {
+      const d = new Date(endDate)
+      d.setDate(d.getDate() - i)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      days.push({ key, logged: set.has(key), future: key > todayKey, isToday: key === todayKey })
+    }
+
+    const rows: typeof days[] = []
+    for (let i = 0; i < days.length; i += 7) rows.push(days.slice(i, i + 7))
+
+    // Count based on fixed last-30-days window (not variable grid size)
+    const d30 = new Date(today)
+    d30.setDate(d30.getDate() - 29)
+    const d30Key = `${d30.getFullYear()}-${String(d30.getMonth() + 1).padStart(2, '0')}-${String(d30.getDate()).padStart(2, '0')}`
+    const last30 = days.filter((d) => !d.future && d.key >= d30Key)
+    return { weeks: rows, totalLogged: last30.filter((d) => d.logged).length, totalDays: 30 }
+  }, [loggedDates])
+
+  const pct = Math.round((totalLogged / 30) * 100)
+  const CELL = (SCREEN_W - 40 - 32 - 6 * 4) / 7 // 7 cols with 4px gap, px-5 padding + p-4 card padding
+
+  return (
+    <Animated.View entering={FadeInDown.duration(350).delay(450)} className="px-5 mb-3">
+      <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+        <View className="flex-row items-center justify-between mb-3">
+          <View className="flex-row items-center">
+            <View className="h-6 w-6 rounded-lg items-center justify-center" style={{ backgroundColor: t.primary + '18' }}>
+              <Calendar size={13} color={t.primary} />
+            </View>
+            <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
+              Aderência
+            </Text>
+          </View>
+          <Text className="text-xs font-sans-bold" style={{ color: pct >= 70 ? t.success : pct >= 40 ? t.warning : t.textMuted }}>
+            {pct}%
           </Text>
-          <Text style={{ color: t.text }} className="text-[13px] font-sans leading-[19px]">
-            {tip.text}
+        </View>
+
+        {/* Weekday headers */}
+        <View className="flex-row mb-1" style={{ gap: 4 }}>
+          {WEEKDAYS_SHORT.map((d, i) => {
+            const isCurrent = i === (new Date().getDay() + 6) % 7
+            return (
+              <View key={i} style={{ width: CELL, alignItems: 'center' }}>
+                <Text className="text-[9px] font-sans-bold" style={{ color: isCurrent ? t.primary : t.textMuted }}>{d}</Text>
+              </View>
+            )
+          })}
+        </View>
+
+        {/* Grid */}
+        {weeks.map((week, wi) => (
+          <View key={wi} className="flex-row" style={{ gap: 4, marginBottom: 4 }}>
+            {week.map((day) => (
+              <View
+                key={day.key}
+                style={{
+                  width: CELL,
+                  height: CELL,
+                  borderRadius: CELL * 0.28,
+                  backgroundColor: day.future
+                    ? 'transparent'
+                    : day.logged
+                      ? t.primary
+                      : t.borderLight,
+                  borderWidth: day.isToday ? 1.5 : 0,
+                  borderColor: day.isToday ? t.primary : 'transparent',
+                }}
+              />
+            ))}
+          </View>
+        ))}
+
+        {/* Legend */}
+        <View className="flex-row items-center justify-between mt-2">
+          <Text className="text-[10px] font-sans" style={{ color: t.textMuted }}>
+            {totalLogged} de {totalDays} dias registrados
           </Text>
+          <View className="flex-row items-center gap-2">
+            <View className="flex-row items-center gap-1">
+              <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: t.borderLight }} />
+              <Text className="text-[9px] font-sans" style={{ color: t.textMuted }}>Sem</Text>
+            </View>
+            <View className="flex-row items-center gap-1">
+              <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: t.primary }} />
+              <Text className="text-[9px] font-sans" style={{ color: t.textMuted }}>Com</Text>
+            </View>
+          </View>
         </View>
       </View>
     </Animated.View>
