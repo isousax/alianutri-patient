@@ -414,8 +414,12 @@ export default function HomeScreen() {
           t={t}
         />
 
-        {/* ══════ ADHERENCE ══════ */}
-        <WeeklyAdherenceChart days={adherenceData?.days ?? []} loggedDates={data.logged_dates ?? []} t={t} />
+        {/* ══════ ADHERENCE CALENDAR ══════ */}
+        {(data.logged_dates?.length ?? 0) > 0 && (
+          //<AdherenceCalendar loggedDates={data.logged_dates} t={t} />
+        <WeeklyAdherenceChart days={adherenceData?.days ?? []} t={t} />
+          
+        )}
 
         {/* ══════ EMPTY STATE ══════ */}
         {!hasAnyContent && !apt && (
@@ -732,142 +736,195 @@ function InsightCarousel({ streak, diaryPct, loggedDates, evolution, t }: {
   )
 }
 
-// ── Hybrid adherence card: weekly bars + 30-day mini dots ──
+// ── Adherence calendar (heatmap) ──
 
-const DAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+const WEEKDAYS_SHORT = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
 
-function WeeklyAdherenceChart({ days, loggedDates, t }: {
-  days: WeeklyAdherenceDay[]
+function AdherenceCalendar({ loggedDates, t }: {
   loggedDates: string[]
   t: ReturnType<typeof useThemeColors>
 }) {
-  const hasBars = days.length > 0 && days.some((d) => d.total > 0)
+  const { weeks, totalLogged, totalDays } = useMemo(() => {
+    const set = new Set(loggedDates)
+    const today = new Date()
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
-  // Weekly bar stats
+    // Build 35 days (5 weeks) ending on today's weekday-aligned week
+    const dayOfWeek = (today.getDay() + 6) % 7 // Mon=0 … Sun=6
+    const endOffset = 6 - dayOfWeek // days until end of current week (Sun)
+    const endDate = new Date(today)
+    endDate.setDate(endDate.getDate() + endOffset)
+
+    const days: { key: string; logged: boolean; future: boolean; isToday: boolean }[] = []
+    for (let i = 34; i >= 0; i--) {
+      const d = new Date(endDate)
+      d.setDate(d.getDate() - i)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      days.push({ key, logged: set.has(key), future: key > todayKey, isToday: key === todayKey })
+    }
+
+    const rows: typeof days[] = []
+    for (let i = 0; i < days.length; i += 7) rows.push(days.slice(i, i + 7))
+
+    // Count based on fixed last-30-days window (not variable grid size)
+    const d30 = new Date(today)
+    d30.setDate(d30.getDate() - 29)
+    const d30Key = `${d30.getFullYear()}-${String(d30.getMonth() + 1).padStart(2, '0')}-${String(d30.getDate()).padStart(2, '0')}`
+    const last30 = days.filter((d) => !d.future && d.key >= d30Key)
+    return { weeks: rows, totalLogged: last30.filter((d) => d.logged).length, totalDays: 30 }
+  }, [loggedDates])
+
+  const pct = Math.round((totalLogged / 30) * 100)
+  const CELL = (SCREEN_W - 40 - 32 - 6 * 4) / 7 // 7 cols with 4px gap, px-5 padding + p-4 card padding
+
+  return (
+    <Animated.View entering={FadeInDown.duration(350).delay(450)} className="px-5 mb-3">
+      <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+        <View className="flex-row items-center justify-between mb-3">
+          <View className="flex-row items-center">
+            <View className="h-6 w-6 rounded-lg items-center justify-center" style={{ backgroundColor: t.primary + '18' }}>
+              <Calendar size={13} color={t.primary} />
+            </View>
+            <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
+              Aderência
+            </Text>
+          </View>
+          <Text className="text-xs font-sans-bold" style={{ color: pct >= 70 ? t.success : pct >= 40 ? t.warning : t.textMuted }}>
+            {pct}%
+          </Text>
+        </View>
+
+        {/* Weekday headers */}
+        <View className="flex-row mb-1" style={{ gap: 4 }}>
+          {WEEKDAYS_SHORT.map((d, i) => {
+            const isCurrent = i === (new Date().getDay() + 6) % 7
+            return (
+              <View key={i} style={{ width: CELL, alignItems: 'center' }}>
+                <Text className="text-[9px] font-sans-bold" style={{ color: isCurrent ? t.primary : t.textMuted }}>{d}</Text>
+              </View>
+            )
+          })}
+        </View>
+
+        {/* Grid */}
+        {weeks.map((week, wi) => (
+          <View key={wi} className="flex-row" style={{ gap: 4, marginBottom: 4 }}>
+            {week.map((day) => (
+              <View
+                key={day.key}
+                style={{
+                  width: CELL,
+                  height: CELL,
+                  borderRadius: CELL * 0.28,
+                  backgroundColor: day.future
+                    ? 'transparent'
+                    : day.logged
+                      ? t.primary
+                      : t.borderLight,
+                  borderWidth: day.isToday ? 1.5 : 0,
+                  borderColor: day.isToday ? t.primary : 'transparent',
+                }}
+              />
+            ))}
+          </View>
+        ))}
+
+        {/* Legend */}
+        <View className="flex-row items-center justify-between mt-2">
+          <Text className="text-[10px] font-sans" style={{ color: t.textMuted }}>
+            {totalLogged} de {totalDays} dias registrados
+          </Text>
+          <View className="flex-row items-center gap-2">
+            <View className="flex-row items-center gap-1">
+              <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: t.borderLight }} />
+              <Text className="text-[9px] font-sans" style={{ color: t.textMuted }}>Sem</Text>
+            </View>
+            <View className="flex-row items-center gap-1">
+              <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: t.primary }} />
+              <Text className="text-[9px] font-sans" style={{ color: t.textMuted }}>Com</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Animated.View>
+  )
+}
+
+// ── Weekly adherence chart ──
+
+const DAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+
+function WeeklyAdherenceChart({ days, t }: {
+  days: WeeklyAdherenceDay[]
+  t: ReturnType<typeof useThemeColors>
+}) {
+  if (days.length === 0 || days.every((d) => d.total === 0)) return null
+
   const totalLogged = days.reduce((sum, d) => sum + d.logged, 0)
   const totalExpected = days.reduce((sum, d) => sum + d.total, 0)
   const overallPct = totalExpected > 0 ? Math.round((totalLogged / totalExpected) * 100) : 0
 
-  // 30-day dots
-  const { dots, dotLogged, dotTotal } = useMemo(() => {
-    const set = new Set(loggedDates)
-    const now = new Date()
-    const tKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    const list: { key: string; logged: boolean; isToday: boolean }[] = []
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now)
-      d.setDate(d.getDate() - i)
-      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      list.push({ key: k, logged: set.has(k), isToday: k === tKey })
-    }
-    return { dots: list, dotLogged: list.filter((d) => d.logged).length, dotTotal: 30 }
-  }, [loggedDates])
-
-  if (!hasBars && loggedDates.length === 0) return null
-
   const W = SCREEN_W - 40 - 32
   const barW = Math.floor((W - 6 * 8) / 7)
   const maxH = 48
-  const DOT_SIZE = 7
-  const DOT_GAP = Math.max((W - 30 * DOT_SIZE) / 29, 1.5)
 
   return (
-    <Animated.View entering={FadeInDown.duration(350).delay(400)} className="px-5 mb-3">
+    <Animated.View entering={FadeInDown.duration(350).delay(240)} className="px-5 mb-3">
       <Pressable onPress={() => router.push('/(tabs)/diary')}>
         <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
-          {/* Header */}
           <View className="flex-row items-center justify-between mb-3">
             <View className="flex-row items-center">
               <View className="h-6 w-6 rounded-lg items-center justify-center" style={{ backgroundColor: t.primary + '18' }}>
                 <BarChart3 size={13} color={t.primary} />
               </View>
               <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
-                Aderência
+                Aderência semanal
               </Text>
             </View>
             <View className="flex-row items-center">
-              {hasBars && (
-                <Text className="text-xs font-sans-bold mr-1" style={{ color: overallPct >= 80 ? t.success : overallPct >= 50 ? t.warning : t.textMuted }}>
-                  {overallPct}%
-                </Text>
-              )}
+              <Text className="text-xs font-sans-bold mr-1" style={{ color: overallPct >= 80 ? t.success : overallPct >= 50 ? t.warning : t.textMuted }}>
+                {overallPct}%
+              </Text>
               <ChevronRight size={14} color={t.textMuted} />
             </View>
           </View>
 
-          {/* Weekly bars */}
-          {hasBars && (
-            <View className="flex-row items-end justify-between" style={{ height: maxH + 28 }}>
-              {days.map((day, i) => {
-                const pct = day.total > 0 ? Math.min(day.logged / day.total, 1) : 0
-                const barH = Math.max(pct * maxH, 4)
-                const dayDate = new Date(day.date + 'T12:00:00')
-                const label = DAY_LABELS[dayDate.getDay()]
-                const isToday = day.date === todayStr()
-                const barColor = pct >= 1 ? t.success : pct > 0 ? t.primary : t.border
+          <View className="flex-row items-end justify-between" style={{ height: maxH + 28 }}>
+            {days.map((day, i) => {
+              const pct = day.total > 0 ? Math.min(day.logged / day.total, 1) : 0
+              const barH = Math.max(pct * maxH, 4)
+              const dayDate = new Date(day.date + 'T12:00:00')
+              const label = DAY_LABELS[dayDate.getDay()]
+              const isToday = day.date === todayStr()
+              const barColor = pct >= 1 ? t.success : pct > 0 ? t.primary : t.border
 
-                return (
-                  <View key={i} className="items-center" style={{ width: barW }}>
-                    <Svg width={barW} height={maxH}>
-                      <SvgRect
-                        x={(barW - 14) / 2} y={0}
-                        width={14} height={maxH}
-                        rx={7} fill={t.borderLight}
-                      />
-                      <SvgRect
-                        x={(barW - 14) / 2} y={maxH - barH}
-                        width={14} height={barH}
-                        rx={7} fill={barColor}
-                      />
-                    </Svg>
-                    <Text
-                      className="text-[10px] font-sans-semibold mt-1.5"
-                      style={{ color: isToday ? t.primary : t.textMuted, fontWeight: isToday ? '700' : '500' }}
-                    >
-                      {label}
-                    </Text>
-                    {isToday && (
-                      <View className="h-1 w-1 rounded-full mt-0.5" style={{ backgroundColor: t.primary }} />
-                    )}
-                  </View>
-                )
-              })}
-            </View>
-          )}
-
-          {/* Divider between bars and dots */}
-          {hasBars && loggedDates.length > 0 && (
-            <View className="my-3" style={{ height: 1, backgroundColor: t.borderLight }} />
-          )}
-
-          {/* 30-day mini dots */}
-          {loggedDates.length > 0 && (
-            <View>
-              <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-[10px] font-sans-semibold" style={{ color: t.textMuted }}>
-                  Últimos 30 dias
-                </Text>
-                <Text className="text-[10px] font-sans-bold" style={{ color: t.textMuted }}>
-                  {dotLogged}/{dotTotal}
-                </Text>
-              </View>
-              <View className="flex-row items-center" style={{ gap: DOT_GAP }}>
-                {dots.map((d) => (
-                  <View
-                    key={d.key}
-                    style={{
-                      width: DOT_SIZE,
-                      height: DOT_SIZE,
-                      borderRadius: DOT_SIZE / 2,
-                      backgroundColor: d.logged ? t.primary : t.borderLight,
-                      borderWidth: d.isToday ? 1.5 : 0,
-                      borderColor: d.isToday ? t.primary : 'transparent',
-                    }}
-                  />
-                ))}
-              </View>
-            </View>
-          )}
+              return (
+                <View key={i} className="items-center" style={{ width: barW }}>
+                  <Svg width={barW} height={maxH}>
+                    <SvgRect
+                      x={(barW - 14) / 2} y={0}
+                      width={14} height={maxH}
+                      rx={7} fill={t.borderLight}
+                    />
+                    <SvgRect
+                      x={(barW - 14) / 2} y={maxH - barH}
+                      width={14} height={barH}
+                      rx={7} fill={barColor}
+                    />
+                  </Svg>
+                  <Text
+                    className="text-[10px] font-sans-semibold mt-1.5"
+                    style={{ color: isToday ? t.primary : t.textMuted, fontWeight: isToday ? '700' : '500' }}
+                  >
+                    {label}
+                  </Text>
+                  {isToday && (
+                    <View className="h-1 w-1 rounded-full mt-0.5" style={{ backgroundColor: t.primary }} />
+                  )}
+                </View>
+              )
+            })}
+          </View>
         </View>
       </Pressable>
     </Animated.View>

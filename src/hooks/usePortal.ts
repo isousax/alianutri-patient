@@ -34,7 +34,7 @@ export function usePortalHome() {
   return useQuery({
     queryKey: ['portal', 'home'],
     queryFn: () => portalApi.get<PortalHome>('/home'),
-    refetchInterval: 30_000,
+    staleTime: 5 * 60 * 1000,
   })
 }
 

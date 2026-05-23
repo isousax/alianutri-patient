@@ -221,28 +221,17 @@ export default function WaterScreen() {
             </Text>
           </View>
 
-          {/* Floating toast — above everything, no layout shift */}
+          {/* Floating toast */}
           {lastAdded && (
-            <Animated.View
+            <Animated.Text
               key={lastAdded.key}
-              entering={FadeInUp.duration(350).springify().damping(14)}
-              exiting={FadeOutUp.duration(600)}
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: -12,
-                left: 0,
-                right: 0,
-                alignItems: 'center',
-                zIndex: 10,
-              }}
+              entering={FadeInUp.duration(250)}
+              exiting={FadeOutUp.duration(350)}
+              style={{ color: t.info }}
+              className="text-base font-sans-bold mt-2"
             >
-              <View className="px-3.5 py-1.5 rounded-full" style={{ backgroundColor: t.info + '18' }}>
-                <Text style={{ color: t.info }} className="text-sm font-sans-bold">
-                  +{lastAdded.amount}ml 💧
-                </Text>
-              </View>
-            </Animated.View>
+              +{lastAdded.amount}ml
+            </Animated.Text>
           )}
         </Animated.View>
 
