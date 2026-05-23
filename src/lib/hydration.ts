@@ -46,8 +46,9 @@ export function calculateHydrationGoal(
   // ── Base ──
   let goal: number
   if (profile.weight_kg && profile.weight_kg > 0) {
-    goal = profile.weight_kg * 35
-    factors.push(`Peso (${profile.weight_kg}kg × 35ml)`)
+    const byWeight = profile.weight_kg * 35
+    goal = Math.max(byWeight, 2000)
+    factors.push(`Peso (${profile.weight_kg}kg × 35ml${byWeight < 2000 ? ', mín. 2L' : ''})`)
   } else {
     goal = 2000
   }
@@ -88,7 +89,7 @@ export function calculateHydrationGoal(
   }
 
   // ── Clamp & round ──
-  goal = Math.max(1500, Math.min(4500, goal))
+  goal = Math.max(2000, Math.min(4500, goal))
   goal = Math.round(goal / 50) * 50 // round to nearest 50ml
 
   // ── Contextual message ──
