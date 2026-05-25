@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Utensils, ChevronRight, Clock, ShoppingCart, X } from 'lucide-react-native'
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated'
+import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../../src/stores/theme'
 import { useMealPlans, useMealPlanDetail } from '../../src/hooks/usePortal'
 import { Card, ScreenHeader, EmptyState, LoadingScreen } from '../../src/components/ui'
@@ -213,16 +213,16 @@ function ShoppingListFAB({ shoppingList }: { shoppingList: string }) {
   const [open, setOpen] = useState(false)
 
   return (
-    <>
+    <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
       <Pressable
         onPress={() => setOpen(true)}
         style={({ pressed }) => ({
           position: 'absolute',
           bottom: space['3xl'],
           right: SCREEN_PADDING,
-          width: 52,
-          height: 52,
-          borderRadius: 26,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: t.accent,
@@ -231,13 +231,13 @@ function ShoppingListFAB({ shoppingList }: { shoppingList: string }) {
           ...shadows.lg,
         })}
       >
-        <ShoppingCart size={20} color="#fff" />
+        <ShoppingCart size={22} color="#fff" />
       </Pressable>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setOpen(false)} />
-          <Animated.View entering={FadeIn.duration(200)} style={{
+          <View style={{
             backgroundColor: t.surface,
             borderTopLeftRadius: radius['2xl'],
             borderTopRightRadius: radius['2xl'],
@@ -258,9 +258,9 @@ function ShoppingListFAB({ shoppingList }: { shoppingList: string }) {
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={[typography.bodyMd, { color: t.textSecondary, lineHeight: 22 }]}>{shoppingList}</Text>
             </ScrollView>
-          </Animated.View>
+          </View>
         </View>
       </Modal>
-    </>
+    </View>
   )
 }

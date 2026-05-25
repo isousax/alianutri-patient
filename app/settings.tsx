@@ -93,15 +93,15 @@ export default function SettingsScreen() {
           <SectionLabel text="GERAL" />
           <Card padded={false}>
             <SettingsRow
-              icon={<Bell size={16} color={t.textSecondary} />}
+              icon={<Bell size={18} color={t.textSecondary} />}
               label="Notificações"
               subtitle="Gerenciar nas configurações do sistema"
               onPress={() => Linking.openSettings()}
               t={t}
             />
-            <Divider inset={space.lg + 32 + space.md} />
+            <Divider inset={space.lg + 34 + space.md} />
             <SettingsRow
-              icon={<Shield size={16} color={t.textSecondary} />}
+              icon={<Shield size={18} color={t.textSecondary} />}
               label="Privacidade"
               subtitle="Seus dados são protegidos e criptografados"
               t={t}
@@ -154,30 +154,31 @@ function SettingsRow({ icon, label, subtitle, onPress, t }: {
       disabled={!onPress}
       style={({ pressed }) => ({
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: subtitle ? 'flex-start' : 'center',
         paddingHorizontal: space.lg,
-        paddingVertical: space.lg,
+        paddingVertical: space.lg - 2,
         backgroundColor: pressed && onPress ? t.surfacePressed : 'transparent',
       })}
     >
       <View style={{
-        width: 32,
-        height: 32,
-        borderRadius: radius.sm,
+        width: 34,
+        height: 34,
+        borderRadius: radius.sm + 2,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: t.surfaceSecondary,
         marginRight: space.md,
+        marginTop: subtitle ? 1 : 0,
       }}>
         {icon}
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[typography.labelMd, { color: t.text }]}>{label}</Text>
         {subtitle && (
-          <Text style={[typography.caption, { color: t.textMuted, marginTop: 2 }]}>{subtitle}</Text>
+          <Text style={[typography.caption, { color: t.textMuted, marginTop: 3 }]}>{subtitle}</Text>
         )}
       </View>
-      {onPress && <ChevronRight size={14} color={t.textMuted} />}
+      {onPress && <ChevronRight size={14} color={t.textMuted} style={{ marginTop: subtitle ? 10 : 0 }} />}
     </Pressable>
   )
 }
