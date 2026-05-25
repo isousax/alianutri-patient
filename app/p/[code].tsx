@@ -4,7 +4,8 @@ import { useLocalSearchParams, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuthStore } from '../../src/stores/auth'
 import { validateAccessCode } from '../../src/services/api'
-import { colors } from '../../src/theme/colors'
+import { useThemeColors } from '../../src/stores/theme'
+import { space, typography } from '../../src/theme/tokens'
 
 /**
  * Deep link handler: /p/:code
@@ -19,6 +20,7 @@ export default function DeepLinkHandler() {
   const { code } = useLocalSearchParams<{ code: string }>()
   const [error, setError] = useState('')
   const setAuth = useAuthStore((s) => s.setAuth)
+  const t = useThemeColors()
 
   useEffect(() => {
     if (!code) {
@@ -59,16 +61,16 @@ export default function DeepLinkHandler() {
   }, [code])
 
   return (
-    <SafeAreaView className="flex-1 bg-white items-center justify-center">
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.background, alignItems: 'center', justifyContent: 'center' }}>
       {error ? (
-        <View className="items-center px-8">
-          <Text className="text-base font-sans-semibold text-red-500 text-center">{error}</Text>
-          <Text className="text-xs text-slate-400 mt-2 font-sans">Redirecionando para login...</Text>
+        <View style={{ alignItems: 'center', paddingHorizontal: space['3xl'] }}>
+          <Text style={[typography.headingSm, { color: t.error, textAlign: 'center' }]}>{error}</Text>
+          <Text style={[typography.caption, { color: t.textMuted, marginTop: space.sm }]}>Redirecionando para login...</Text>
         </View>
       ) : (
-        <View className="items-center">
-          <ActivityIndicator size="large" color={colors.brand[600]} />
-          <Text className="text-sm text-slate-400 mt-4 font-sans">Validando código de acesso...</Text>
+        <View style={{ alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={t.primary} />
+          <Text style={[typography.bodySm, { color: t.textMuted, marginTop: space.lg }]}>Validando código de acesso...</Text>
         </View>
       )}
     </SafeAreaView>

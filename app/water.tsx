@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import {
-  View, Text, ScrollView, Pressable, Alert, Platform,
+  View, Text, ScrollView, Pressable, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
 import {
   Droplets, Trash2, ChevronLeft, ChevronRight, ChevronDown, Info,
 } from 'lucide-react-native'
@@ -13,25 +12,10 @@ import Svg, { Circle as SvgCircle } from 'react-native-svg'
 import { useThemeColors } from '../src/stores/theme'
 import { useWaterIntake, useLogWater, useDeleteWater } from '../src/hooks/usePortal'
 import { useSmartWaterGoal } from '../src/hooks/useSmartWaterGoal'
+import { ScreenHeader, Card } from '../src/components/ui'
+import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../src/theme/tokens'
 
 const AnimatedSvgCircle = Animated.createAnimatedComponent(SvgCircle)
-
-const SHADOW_SM = Platform.select({
-  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
-  android: { elevation: 2 },
-  default: {},
-}) as Record<string, unknown>
-
-const SHADOW_MD = Platform.select({
-  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-  android: { elevation: 4 },
-  default: {},
-}) as Record<string, unknown>
-
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 function fmtDate(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -145,24 +129,15 @@ export default function WaterScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      {/* Header */}
-      <View className="px-5 pt-4 pb-2 flex-row items-center gap-3">
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ChevronLeft size={22} color={t.textSecondary} />
-        </Pressable>
-        <View className="h-8 w-8 rounded-xl items-center justify-center" style={{ backgroundColor: t.info + '15' }}>
-          <Droplets size={16} color={t.info} />
-        </View>
-        <Text style={{ color: t.text }} className="text-xl font-sans-bold">Hidratação</Text>
-      </View>
+      <ScreenHeader title="Hidratação" />
 
       {/* Discrete date nav */}
-      <View className="flex-row items-center justify-center gap-3 pb-2">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.md, paddingBottom: space.sm }}>
         <Pressable onPress={() => setDate(shiftDate(date, -1))} hitSlop={12}>
           <ChevronLeft size={16} color={t.textMuted} />
         </Pressable>
         <Pressable onPress={() => setDate(todayStr())}>
-          <Text style={{ color: t.textMuted }} className="text-xs font-sans-medium">
+          <Text style={[typography.captionBold, { color: t.textMuted }]}>
             {isToday ? 'Hoje' : fmtDate(date)}
           </Text>
         </Pressable>
@@ -171,9 +146,9 @@ export default function WaterScreen() {
         </Pressable>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Circular progress */}
-        <Animated.View entering={FadeIn.duration(400)} className="items-center mt-6 mb-8">
+        <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: 'center', marginTop: space['2xl'], marginBottom: space['3xl'] }}>
           <View style={{ width: RADIUS * 2 + STROKE * 2, height: RADIUS * 2 + STROKE * 2 }}>
             <Svg
               width={RADIUS * 2 + STROKE * 2}
@@ -200,54 +175,57 @@ export default function WaterScreen() {
                 strokeLinecap="round"
               />
             </Svg>
-            <View
-              className="absolute items-center justify-center"
-              style={{ top: STROKE, left: STROKE, width: RADIUS * 2, height: RADIUS * 2 }}
-            >
+            <View style={{
+              position: 'absolute',
+              top: STROKE, left: STROKE,
+              width: RADIUS * 2, height: RADIUS * 2,
+              alignItems: 'center', justifyContent: 'center',
+            }}>
               <Droplets size={22} color={ringColor} />
-              <Text style={{ color: t.text }} className="text-3xl font-sans-bold mt-1">
+              <Text style={[typography.displayMd, { color: t.text, marginTop: 4 }]}>
                 {displayTotal >= 1000 ? `${(displayTotal / 1000).toFixed(1).replace('.', ',')}` : `${displayTotal}`}
               </Text>
-              <Text style={{ color: t.textMuted }} className="text-xs font-sans">
+              <Text style={[typography.caption, { color: t.textMuted }]}>
                 {displayTotal >= 1000 ? 'litros' : 'ml'} de {goal >= 1000 ? `${(goal / 1000).toFixed(1).replace('.', ',')}L` : `${goal}ml`}
               </Text>
             </View>
           </View>
 
-          {/* Percentage badge */}
-          <View className="mt-3 px-3 py-1 rounded-full" style={{ backgroundColor: ringColor + '15' }}>
-            <Text style={{ color: ringColor }} className="text-xs font-sans-bold">
-              {displayProgress >= 1 ? 'Meta atingida! 🎉' : `${pct}% da meta`}
-            </Text>
+          {/* Percentage badge + absolutely positioned floating toast */}
+          <View style={{ alignItems: 'center', marginTop: space.md, minHeight: 28 }}>
+            <View style={{ paddingHorizontal: space.md, paddingVertical: 4, borderRadius: 999, backgroundColor: ringColor + '15' }}>
+              <Text style={[typography.captionBold, { color: ringColor }]}>
+                {displayProgress >= 1 ? 'Meta atingida! 🎉' : `${pct}% da meta`}
+              </Text>
+            </View>
+            {lastAdded && (
+              <Animated.View
+                key={lastAdded.key}
+                entering={FadeInUp.duration(200)}
+                exiting={FadeOutUp.duration(300)}
+                style={{ position: 'absolute', top: -32, alignItems: 'center' }}
+              >
+                <Text style={[typography.headingMd, { color: ringColor }]}>
+                  +{lastAdded.amount}ml
+                </Text>
+              </Animated.View>
+            )}
           </View>
-
-          {/* Floating toast */}
-          {lastAdded && (
-            <Animated.Text
-              key={lastAdded.key}
-              entering={FadeInUp.duration(250)}
-              exiting={FadeOutUp.duration(350)}
-              style={{ color: t.info }}
-              className="text-base font-sans-bold mt-2"
-            >
-              +{lastAdded.amount}ml
-            </Animated.Text>
-          )}
         </Animated.View>
 
         {/* Weather & smart goal card */}
         {isToday && (weather || hydration.isPersonalized) && (
-          <Animated.View entering={FadeInDown.duration(300).delay(50)} className="px-5 mb-5">
-            <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
-              <View className="flex-row items-center justify-between mb-2">
-                <View className="flex-row items-center gap-2">
+          <Animated.View entering={FadeInDown.duration(300).delay(50)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.xl }}>
+            <Card>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
                   {weather && (
                     <>
-                      <Text className="text-lg">{weather.icon}</Text>
-                      <Text style={{ color: t.text }} className="text-sm font-sans-bold">
+                      <Text style={{ fontSize: 18 }}>{weather.icon}</Text>
+                      <Text style={[typography.headingSm, { color: t.text }]}>
                         {Math.round(weather.temperature)}°C
                       </Text>
-                      <Text style={{ color: t.textMuted }} className="text-xs font-sans">
+                      <Text style={[typography.caption, { color: t.textMuted }]}>
                         {weather.description}
                       </Text>
                     </>
@@ -259,70 +237,87 @@ export default function WaterScreen() {
                       'Meta personalizada',
                       `Sua meta de ${(goal / 1000).toFixed(1).replace('.', ',')}L foi calculada com base no seu perfil e nas condições climáticas atuais.`,
                     )}
-                    className="flex-row items-center gap-1 px-2 py-1 rounded-lg"
-                    style={{ backgroundColor: t.primary + '12' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space.sm, paddingVertical: 4, borderRadius: radius.sm, backgroundColor: t.primary + '12' }}
                   >
                     <Info size={10} color={t.primary} />
                   </Pressable>
                 )}
                 {nutriSetCustomGoal && (
-                  <View className="flex-row items-center gap-1 px-2 py-1 rounded-lg" style={{ backgroundColor: t.accent + '12' }}>
-                    <Text style={{ color: t.accent }} className="text-[9px] font-sans-bold">NUTRI</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space.sm, paddingVertical: 4, borderRadius: radius.sm, backgroundColor: t.accent + '12' }}>
+                    <Text style={[typography.captionBold, { color: t.accent, fontSize: 9 }]}>NUTRI</Text>
                   </View>
                 )}
               </View>
-              <Text style={{ color: t.textSecondary }} className="text-[12px] font-sans leading-4">
+              <Text style={[typography.bodySm, { color: t.textSecondary, lineHeight: 18 }]}>
                 {nutriSetCustomGoal
                   ? `Meta de ${(apiGoal / 1000).toFixed(1).replace('.', ',')}L definida pelo seu nutricionista`
                   : hydration.message}
               </Text>
-            </View>
+            </Card>
           </Animated.View>
         )}
 
-        {/* 3 quick-add cards */}
+        {/* 3 quick-add cards — perfectly balanced */}
         {isToday && (
-          <Animated.View entering={FadeInDown.duration(300).delay(100)} className="px-5 mb-6">
-            <View className="flex-row gap-3">
-              {WATER_OPTIONS.map((opt) => {
-                return (
-                  <Pressable
-                    key={opt.ml}
-                    onPress={() => handleAdd(opt.ml)}
-                    disabled={isLogging}
-                    className="flex-1 items-center py-4 rounded-2xl"
-                    style={{ backgroundColor: t.surface, ...SHADOW_MD }}
-                  >
-                    <View
-                      className="h-11 w-11 rounded-xl items-center justify-center mb-2"
-                      style={{ backgroundColor: t.info + '12' }}
-                    >
-                      <Text className="text-xl">{opt.emoji}</Text>
-                    </View>
-                    <Text style={{ color: t.text }} className="text-base font-sans-bold">
-                      {opt.ml}ml
-                    </Text>
-                    <Text style={{ color: t.textMuted }} className="text-[10px] font-sans mt-0.5">
-                      {opt.label}
-                    </Text>
-                  </Pressable>
-                )
-              })}
+          <Animated.View entering={FadeInDown.duration(300).delay(100)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space['2xl'] }}>
+            <View style={{ flexDirection: 'row', gap: space.sm + 2 }}>
+              {WATER_OPTIONS.map((opt) => (
+                <Pressable
+                  key={opt.ml}
+                  onPress={() => handleAdd(opt.ml)}
+                  disabled={isLogging}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    alignItems: 'center',
+                    paddingVertical: space.xl,
+                    paddingHorizontal: space.xs,
+                    borderRadius: radius.xl,
+                    backgroundColor: t.surface,
+                    opacity: pressed ? 0.85 : 1,
+                    transform: [{ scale: pressed ? 0.96 : 1 }],
+                    ...shadows.md,
+                  })}
+                >
+                  <View style={{
+                    width: 48, height: 48,
+                    borderRadius: radius.lg + 2,
+                    alignItems: 'center', justifyContent: 'center',
+                    marginBottom: space.sm + 2,
+                    backgroundColor: t.infoLight,
+                  }}>
+                    <Text style={{ fontSize: 22 }}>{opt.emoji}</Text>
+                  </View>
+                  <Text style={[typography.headingSm, { color: t.text }]}>
+                    {opt.ml}ml
+                  </Text>
+                  <Text style={[typography.caption, { color: t.textMuted, marginTop: 3 }]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           </Animated.View>
         )}
 
         {/* Collapsible history */}
         {entries.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(300).delay(200)} className="px-5">
+          <Animated.View entering={FadeInDown.duration(300).delay(200)} style={{ paddingHorizontal: SCREEN_PADDING }}>
             <Pressable
               onPress={() => setShowHistory(!showHistory)}
-              className="flex-row items-center justify-between py-3 px-4 rounded-2xl"
-              style={{ backgroundColor: t.surface, ...SHADOW_SM }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: space.md,
+                paddingHorizontal: space.lg,
+                borderRadius: radius.xl,
+                backgroundColor: t.surface,
+                ...shadows.sm,
+              }}
             >
-              <View className="flex-row items-center gap-2">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
                 <Droplets size={14} color={t.info} />
-                <Text style={{ color: t.text }} className="text-[13px] font-sans-semibold">
+                <Text style={[typography.headingSm, { color: t.text }]}>
                   {entries.length} {entries.length === 1 ? 'registro' : 'registros'} hoje
                 </Text>
               </View>
@@ -334,21 +329,29 @@ export default function WaterScreen() {
             </Pressable>
 
             {showHistory && (
-              <Animated.View entering={FadeInDown.duration(200)} className="mt-2">
+              <Animated.View entering={FadeInDown.duration(200)} style={{ marginTop: space.sm }}>
                 {entries.map((entry) => {
                   const time = new Date(entry.created_at)
                   const timeStr = `${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`
                   return (
                     <View
                       key={entry.id}
-                      className="flex-row items-center py-2.5 px-3 rounded-xl mb-1.5"
-                      style={{ backgroundColor: t.surface, ...SHADOW_SM }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: space.sm + 2,
+                        paddingHorizontal: space.md,
+                        borderRadius: radius.lg,
+                        marginBottom: 6,
+                        backgroundColor: t.surface,
+                        ...shadows.sm,
+                      }}
                     >
                       <Droplets size={14} color={t.info} />
-                      <Text style={{ color: t.text }} className="text-sm font-sans-semibold ml-2 flex-1">
+                      <Text style={[typography.labelMd, { color: t.text, marginLeft: space.sm, flex: 1 }]}>
                         {entry.amount_ml}ml
                       </Text>
-                      <Text style={{ color: t.textMuted }} className="text-xs font-sans mr-3">{timeStr}</Text>
+                      <Text style={[typography.caption, { color: t.textMuted, marginRight: space.md }]}>{timeStr}</Text>
                       {isToday && (
                         <Pressable onPress={() => handleDelete(entry.id)} hitSlop={8}>
                           <Trash2 size={14} color={t.textMuted} />

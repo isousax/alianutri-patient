@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Platform, Dimensions } from 'react-native'
+import { View, Text, ScrollView, Pressable, RefreshControl, Dimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   Ruler, Weight, Phone, Mail,
@@ -6,24 +6,22 @@ import {
 } from 'lucide-react-native'
 import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
-import { LinearGradient as ExpoGradient } from 'expo-linear-gradient'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import { usePortalProfile, useEvolution } from '../../src/hooks/usePortal'
 import type { PortalEvolution } from '../../src/types/portal'
 import { useThemeColors } from '../../src/stores/theme'
+import { Card, LoadingScreen } from '../../src/components/ui'
+import { shadows, radius, space, typography, SCREEN_PADDING, fmtDateLabel } from '../../src/theme/tokens'
 
 const { width: SCREEN_W } = Dimensions.get('window')
-
-const SHADOW_SM = Platform.select({
-  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
-  android: { elevation: 2 },
-  default: {},
-}) as Record<string, unknown>
+const AVATAR_SIZE = 88
 
 export default function ProfileScreen() {
   const t = useThemeColors()
   const { data: profile, isLoading, refetch, isRefetching } = usePortalProfile()
+
+  if (isLoading) return <LoadingScreen />
 
   const infoRows: { icon: React.ReactNode; label: string; value: string }[] = []
   if (profile?.phone) infoRows.push({ icon: <Phone size={15} color={t.primary} />, label: 'Telefone', value: profile.phone })
@@ -38,87 +36,111 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 32 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
       >
-        {isLoading ? (
-          <View className="items-center py-20">
-            <ActivityIndicator size="large" color={t.primary} />
-          </View>
-        ) : (
-          <>
-            {/* ══════ HERO HEADER ══════ */}
-            <ExpoGradient
-              colors={[t.primary + '20', t.background]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={{ paddingBottom: 24 }}
-            >
-              <View className="flex-row items-center justify-end px-5 pt-3 mb-2">
-                <Pressable
-                  onPress={() => router.push('/settings')}
-                  hitSlop={12}
-                  className="h-10 w-10 rounded-2xl items-center justify-center"
-                  style={{ backgroundColor: t.surface, ...SHADOW_SM }}
-                >
-                  <Settings size={16} color={t.textSecondary} />
-                </Pressable>
-              </View>
+        {/* ═══════ HEADER BAR ═══════ */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          paddingHorizontal: SCREEN_PADDING,
+          paddingTop: space.md,
+          paddingBottom: space.xs,
+        }}>
+          <Pressable
+            onPress={() => router.push('/settings')}
+            hitSlop={12}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: radius.md,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: t.surfaceSecondary,
+            }}
+          >
+            <Settings size={18} color={t.textSecondary} strokeWidth={1.8} />
+          </Pressable>
+        </View>
 
-              <Animated.View entering={FadeIn.duration(400)} className="items-center">
-                {profile?.profile_photo_url ? (
-                  <View
-                    className="h-20 w-20 rounded-full mb-3"
-                    style={{ overflow: 'hidden', borderRadius: 40, ...SHADOW_SM }}
-                  >
-                    <Image
-                      source={{ uri: profile.profile_photo_url }}
-                      style={{ width: 80, height: 80 }}
-                      contentFit="cover"
-                    />
-                  </View>
-                ) : (
-                  <ExpoGradient
-                    colors={[t.primary, t.primary + 'cc']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{ width: 80, height: 80, borderRadius: 40, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 12, ...SHADOW_SM }}
-                  >
-                    <Text className="text-2xl font-sans-bold" style={{ color: '#ffffff' }}>{initials}</Text>
-                  </ExpoGradient>
-                )}
-                <Text style={{ color: t.text }} className="text-xl font-sans-bold">{displayName}</Text>
-              </Animated.View>
-            </ExpoGradient>
+        {/* ═══════ AVATAR + NAME ═══════ */}
+        <Animated.View entering={FadeIn.duration(400)} style={{
+          alignItems: 'center',
+          paddingBottom: space['3xl'],
+        }}>
+          {profile?.profile_photo_url ? (
+            <View style={{
+              width: AVATAR_SIZE, height: AVATAR_SIZE,
+              borderRadius: AVATAR_SIZE / 2,
+              overflow: 'hidden',
+              marginBottom: space.lg,
+              borderWidth: 3,
+              borderColor: t.primaryLight,
+              ...shadows.md,
+            }}>
+              <Image
+                source={{ uri: profile.profile_photo_url }}
+                style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
+                contentFit="cover"
+              />
+            </View>
+          ) : (
+            <View style={{
+              width: AVATAR_SIZE, height: AVATAR_SIZE,
+              borderRadius: AVATAR_SIZE / 2,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: space.lg,
+              backgroundColor: t.primary,
+              ...shadows.md,
+            }}>
+              <Text style={[typography.displaySm, { color: t.primaryFg }]}>{initials}</Text>
+            </View>
+          )}
+          <Text style={[typography.displaySm, { color: t.text }]}>{displayName}</Text>
+        </Animated.View>
 
-            {/* ══════ INFO CARD ══════ */}
-            {infoRows.length > 0 && (
-              <Animated.View entering={FadeInDown.duration(350).delay(80)} className="px-5 mb-4">
-                <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
-                  {infoRows.map((row, i) => (
-                    <View key={i}>
-                      {i > 0 && <View className="mx-4" style={{ height: 1, backgroundColor: t.borderLight }} />}
-                      <View className="flex-row items-center gap-3 px-4 py-3.5">
-                        <View className="h-8 w-8 rounded-xl items-center justify-center" style={{ backgroundColor: t.primary + '12' }}>
-                          {row.icon}
-                        </View>
-                        <View className="flex-1">
-                          <Text style={{ color: t.textMuted }} className="text-[10px] font-sans uppercase tracking-wider">{row.label}</Text>
-                          <Text style={{ color: t.text }} className="text-[13px] font-sans-medium mt-0.5">{row.value}</Text>
-                        </View>
-                      </View>
+        {/* ═══════ INFO CARD ═══════ */}
+        {infoRows.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(350).delay(80)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.xl }}>
+            <Card padded={false}>
+              {infoRows.map((row, i) => (
+                <View key={i}>
+                  {i > 0 && (
+                    <View style={{ height: 1, backgroundColor: t.borderLight, marginHorizontal: space.lg }} />
+                  )}
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: space.lg,
+                    paddingVertical: space.md + 2,
+                    gap: space.md,
+                  }}>
+                    <View style={{
+                      width: 34, height: 34,
+                      borderRadius: radius.md,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: t.primaryLight,
+                    }}>
+                      {row.icon}
                     </View>
-                  ))}
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.overline, { color: t.textMuted, marginBottom: 2 }]}>{row.label}</Text>
+                      <Text style={[typography.labelMd, { color: t.text }]}>{row.value}</Text>
+                    </View>
+                  </View>
                 </View>
-              </Animated.View>
-            )}
-
-            {/* ══════ EVOLUTION CHART ══════ */}
-            <WeightChart />
-          </>
+              ))}
+            </Card>
+          </Animated.View>
         )}
+
+        {/* ═══════ EVOLUTION CHART ═══════ */}
+        <WeightChart />
       </ScrollView>
     </SafeAreaView>
   )
@@ -131,7 +153,7 @@ function WeightChart() {
   const points = (evolution ?? []).filter((e) => e.weight_kg !== null) as (PortalEvolution & { weight_kg: number })[]
   if (points.length < 2) return null
 
-  const W = SCREEN_W - 40 - 32
+  const W = SCREEN_W - SCREEN_PADDING * 2 - space.lg * 2
   const H = 100
   const padX = 4
   const padTop = 10
@@ -160,34 +182,38 @@ function WeightChart() {
   const TrendIcon = diff <= 0 ? TrendingDown : TrendingUp
 
   return (
-    <Animated.View entering={FadeInDown.duration(350).delay(160)} className="px-5 mb-4">
-      <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
-        <View className="flex-row items-center justify-between mb-3">
-          <View className="flex-row items-center">
-            <View className="h-7 w-7 rounded-lg items-center justify-center" style={{ backgroundColor: trendColor + '18' }}>
+    <Animated.View entering={FadeInDown.duration(350).delay(160)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{
+              width: 28, height: 28, borderRadius: radius.sm,
+              alignItems: 'center', justifyContent: 'center',
+              backgroundColor: diff <= 0 ? t.successLight : t.warningLight,
+            }}>
               <TrendIcon size={14} color={trendColor} />
             </View>
-            <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
+            <Text style={[typography.headingSm, { color: t.text, marginLeft: space.sm }]}>
               Evolução de peso
             </Text>
           </View>
-          <Text className="text-xs font-sans-bold" style={{ color: trendColor }}>{diffStr}</Text>
+          <Text style={[typography.captionBold, { color: trendColor }]}>{diffStr}</Text>
         </View>
 
-        <View className="flex-row items-baseline justify-between mb-2">
-          <Text style={{ color: t.text }} className="text-xl font-sans-bold">
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: space.sm }}>
+          <Text style={[typography.headingLg, { color: t.text }]}>
             {last.toFixed(1).replace('.', ',')}
-            <Text className="text-xs font-sans" style={{ color: t.textMuted }}> kg</Text>
+            <Text style={[typography.caption, { color: t.textMuted }]}> kg</Text>
           </Text>
-          <Text style={{ color: t.textMuted }} className="text-[10px] font-sans">
-            {fmtShort(points[0].evaluation_date)} — {fmtShort(points[points.length - 1].evaluation_date)}
+          <Text style={[typography.caption, { color: t.textMuted }]}>
+            {fmtDateLabel(points[0].evaluation_date)} — {fmtDateLabel(points[points.length - 1].evaluation_date)}
           </Text>
         </View>
 
         <Svg width={W} height={H}>
           <Defs>
             <LinearGradient id="profileFill" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={t.primary} stopOpacity="0.15" />
+              <Stop offset="0" stopColor={t.primary} stopOpacity="0.12" />
               <Stop offset="1" stopColor={t.primary} stopOpacity="0" />
             </LinearGradient>
           </Defs>
@@ -204,18 +230,12 @@ function WeightChart() {
             cx={coords[coords.length - 1].x}
             cy={coords[coords.length - 1].y}
             r={4}
-            fill="#ffffff"
+            fill={t.surface}
             stroke={t.primary}
             strokeWidth={2.5}
           />
         </Svg>
-      </View>
+      </Card>
     </Animated.View>
   )
 }
-
-function fmtShort(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-}
-

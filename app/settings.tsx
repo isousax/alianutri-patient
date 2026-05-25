@@ -1,8 +1,7 @@
 import { View, Text, Pressable, Alert, Linking, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
-  ChevronLeft, Palette, LogOut, Bell, Shield, Info,
-  ChevronRight,
+  LogOut, Bell, Shield, ChevronRight,
 } from 'lucide-react-native'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
@@ -10,8 +9,9 @@ import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { useAuthStore } from '../src/stores/auth'
 import { useThemeColors, useTheme, useThemeStore } from '../src/stores/theme'
-import { THEME_LIST, type AppTheme } from '../src/theme/themes'
-import type { ThemeColors } from '../src/theme/themes'
+import { THEME_LIST, type AppTheme, type ThemeColors } from '../src/theme/themes'
+import { ScreenHeader, Card, SectionLabel, Divider } from '../src/components/ui'
+import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 export default function SettingsScreen() {
   const t = useThemeColors()
@@ -42,65 +42,56 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      {/* Header */}
-      <View className="flex-row items-center px-4 pt-3 pb-2">
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={12}
-          className="h-9 w-9 rounded-xl items-center justify-center mr-3"
-          style={{ backgroundColor: t.surface }}
-        >
-          <ChevronLeft size={18} color={t.text} />
-        </Pressable>
-        <Text style={{ color: t.text }} className="text-lg font-sans-bold">Configurações</Text>
-      </View>
+      <ScreenHeader title="Configurações" />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         {/* ── Theme section ── */}
-        <Animated.View entering={FadeInDown.duration(300).delay(50)} className="px-5 mt-4">
-          <SectionHeader icon={<Palette size={14} color={t.textSecondary} />} label="Aparência" t={t} />
-          <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
-            <View className="p-4">
-              <Text style={{ color: t.textSecondary }} className="text-xs font-sans mb-3">Escolha o tema visual do app</Text>
-              <View className="flex-row gap-2.5">
-                {THEME_LIST.map((th: AppTheme) => {
-                  const selected = theme.id === th.id
-                  return (
-                    <Pressable
-                      key={th.id}
-                      onPress={() => handleThemeSelect(th.id)}
-                      className="flex-1 rounded-xl items-center py-3"
-                      style={{
-                        backgroundColor: selected ? t.primary : t.surfacePressed,
-                        borderWidth: 1.5,
-                        borderColor: selected ? t.primary : t.borderLight,
-                      }}
-                    >
-                      <Text className="text-xl mb-1">{th.emoji}</Text>
-                      <Text
-                        className="text-[11px] font-sans-semibold"
-                        style={{ color: selected ? t.primaryText : t.textSecondary }}
-                      >
-                        {th.name}
-                      </Text>
-                      {selected && (
-                        <View
-                          className="h-1.5 w-1.5 rounded-full mt-1.5"
-                          style={{ backgroundColor: t.primaryText }}
-                        />
-                      )}
-                    </Pressable>
-                  )
-                })}
-              </View>
+        <Animated.View entering={FadeInDown.duration(300).delay(50)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.lg }}>
+          <SectionLabel text="APARÊNCIA" />
+          <Card>
+            <Text style={[typography.caption, { color: t.textSecondary, marginBottom: space.md }]}>
+              Escolha o tema visual do app
+            </Text>
+            <View style={{ flexDirection: 'row', gap: space.sm + 2 }}>
+              {THEME_LIST.map((th: AppTheme) => {
+                const selected = theme.id === th.id
+                return (
+                  <Pressable
+                    key={th.id}
+                    onPress={() => handleThemeSelect(th.id)}
+                    style={{
+                      flex: 1,
+                      borderRadius: radius.lg,
+                      alignItems: 'center',
+                      paddingVertical: space.md,
+                      backgroundColor: selected ? t.primary : t.surfacePressed,
+                      borderWidth: 1.5,
+                      borderColor: selected ? t.primary : t.borderLight,
+                    }}
+                  >
+                    <Text style={{ fontSize: 20, marginBottom: 4 }}>{th.emoji}</Text>
+                    <Text style={[typography.captionBold, { color: selected ? t.primaryFg : t.textSecondary }]}>
+                      {th.name}
+                    </Text>
+                    {selected && (
+                      <View style={{
+                        width: 6, height: 6,
+                        borderRadius: 3,
+                        marginTop: 6,
+                        backgroundColor: t.primaryFg,
+                      }} />
+                    )}
+                  </Pressable>
+                )
+              })}
             </View>
-          </View>
+          </Card>
         </Animated.View>
 
         {/* ── General section ── */}
-        <Animated.View entering={FadeInDown.duration(300).delay(150)} className="px-5 mt-6">
-          <SectionHeader icon={<Info size={14} color={t.textSecondary} />} label="Geral" t={t} />
-          <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
+        <Animated.View entering={FadeInDown.duration(300).delay(150)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space['2xl'] }}>
+          <SectionLabel text="GERAL" />
+          <Card padded={false}>
             <SettingsRow
               icon={<Bell size={16} color={t.textSecondary} />}
               label="Notificações"
@@ -108,32 +99,38 @@ export default function SettingsScreen() {
               onPress={() => Linking.openSettings()}
               t={t}
             />
-            <Divider t={t} />
+            <Divider inset={space.lg + 32 + space.md} />
             <SettingsRow
               icon={<Shield size={16} color={t.textSecondary} />}
               label="Privacidade"
               subtitle="Seus dados são protegidos e criptografados"
               t={t}
             />
-          </View>
+          </Card>
         </Animated.View>
 
         {/* ── Danger zone ── */}
-        <Animated.View entering={FadeInDown.duration(300).delay(250)} className="px-5 mt-6">
-          <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
+        <Animated.View entering={FadeInDown.duration(300).delay(250)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space['2xl'] }}>
+          <Card padded={false}>
             <Pressable
               onPress={handleLogout}
-              className="flex-row items-center gap-3 px-4 py-4"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: space.md,
+                paddingHorizontal: space.lg,
+                paddingVertical: space.lg,
+              }}
             >
               <LogOut size={18} color={t.error} />
-              <Text style={{ color: t.error }} className="text-sm font-sans-semibold flex-1">Sair da conta</Text>
+              <Text style={[typography.labelMd, { color: t.error, flex: 1 }]}>Sair da conta</Text>
             </Pressable>
-          </View>
+          </Card>
         </Animated.View>
 
         {/* ── Version footer ── */}
-        <Animated.View entering={FadeIn.duration(400).delay(400)} className="items-center mt-8">
-          <Text style={{ color: t.textMuted }} className="text-[10px] font-sans">
+        <Animated.View entering={FadeIn.duration(400).delay(400)} style={{ alignItems: 'center', marginTop: space['3xl'] }}>
+          <Text style={[typography.caption, { color: t.textMuted }]}>
             AliaPatient v{version}
           </Text>
         </Animated.View>
@@ -142,16 +139,7 @@ export default function SettingsScreen() {
   )
 }
 
-// ── Shared subcomponents ──
-
-function SectionHeader({ icon, label, t }: { icon: React.ReactNode; label: string; t: ThemeColors }) {
-  return (
-    <View className="flex-row items-center gap-2 mb-2 ml-1">
-      {icon}
-      <Text style={{ color: t.textSecondary }} className="text-[11px] font-sans-semibold uppercase tracking-wider">{label}</Text>
-    </View>
-  )
-}
+// ── Settings row subcomponent ──
 
 function SettingsRow({ icon, label, subtitle, onPress, t }: {
   icon: React.ReactNode
@@ -164,20 +152,32 @@ function SettingsRow({ icon, label, subtitle, onPress, t }: {
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      className="flex-row items-center gap-3 px-4 py-3.5"
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: space.lg,
+        paddingVertical: space.lg,
+        backgroundColor: pressed && onPress ? t.surfacePressed : 'transparent',
+      })}
     >
-      {icon}
-      <View className="flex-1">
-        <Text style={{ color: t.text }} className="text-[13px] font-sans-medium">{label}</Text>
+      <View style={{
+        width: 32,
+        height: 32,
+        borderRadius: radius.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: t.surfaceSecondary,
+        marginRight: space.md,
+      }}>
+        {icon}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[typography.labelMd, { color: t.text }]}>{label}</Text>
         {subtitle && (
-          <Text style={{ color: t.textMuted }} className="text-[11px] font-sans mt-0.5">{subtitle}</Text>
+          <Text style={[typography.caption, { color: t.textMuted, marginTop: 2 }]}>{subtitle}</Text>
         )}
       </View>
       {onPress && <ChevronRight size={14} color={t.textMuted} />}
     </Pressable>
   )
-}
-
-function Divider({ t }: { t: ThemeColors }) {
-  return <View className="mx-4" style={{ height: 1, backgroundColor: t.borderLight }} />
 }

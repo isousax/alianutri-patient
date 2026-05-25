@@ -1,19 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import {
-  View, Text, ScrollView, Pressable, Alert, Platform,
+  View, Text, ScrollView, Pressable, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
-import { Heart, ChevronLeft, Check, Send } from 'lucide-react-native'
+import { Check, Send } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOutUp } from 'react-native-reanimated'
 import { useThemeColors } from '../src/stores/theme'
 import { useSymptoms, useLogSymptoms } from '../src/hooks/usePortal'
-
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+import { ScreenHeader } from '../src/components/ui'
+import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../src/theme/tokens'
 
 const CATEGORIES = [
   {
@@ -139,17 +135,11 @@ export default function WellnessScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      <View className="px-5 pt-4 pb-2 flex-row items-center gap-3">
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ChevronLeft size={22} color={t.textSecondary} />
-        </Pressable>
-        <Heart size={22} color="#ec4899" />
-        <Text style={{ color: t.text }} className="text-xl font-sans-bold">Bem-estar</Text>
-      </View>
+      <ScreenHeader title="Bem-estar" />
 
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-          <Animated.View entering={FadeIn.duration(300)} className="px-5 mt-2">
-            <Text style={{ color: t.textMuted }} className="text-sm font-sans leading-5 mb-4">
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          <Animated.View entering={FadeIn.duration(300)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.sm }}>
+            <Text style={[typography.bodyMd, { color: t.textMuted, lineHeight: 22, marginBottom: space.lg }]}>
               Como você está se sentindo hoje? Seu nutricionista usa essas informações para ajustar seu plano.
             </Text>
           </Animated.View>
@@ -158,27 +148,29 @@ export default function WellnessScreen() {
             <Animated.View
               key={cat.key}
               entering={FadeInDown.duration(300).delay(catIdx * 60)}
-              className="px-5 mb-4"
+              style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}
             >
-              <Text style={{ color: t.text }} className="text-sm font-sans-semibold mb-2">{cat.label}</Text>
-              <View className="flex-row gap-2">
+              <Text style={[typography.labelMd, { color: t.text, marginBottom: space.sm }]}>{cat.label}</Text>
+              <View style={{ flexDirection: 'row', gap: space.sm }}>
                 {cat.options.map((opt) => {
                   const selected = values[cat.key] === opt.value
                   return (
                     <Pressable
                       key={opt.value}
                       onPress={() => handleSelect(cat.key, opt.value)}
-                      className="flex-1 items-center py-2.5 rounded-xl"
                       style={{
+                        flex: 1,
+                        alignItems: 'center',
+                        paddingVertical: space.sm + 2,
+                        borderRadius: radius.lg,
                         backgroundColor: selected ? t.primaryLight : t.surface,
                         borderWidth: selected ? 1.5 : 1,
                         borderColor: selected ? t.primary : t.borderLight,
                       }}
                     >
-                      <Text className="text-lg">{opt.emoji}</Text>
+                      <Text style={{ fontSize: 18 }}>{opt.emoji}</Text>
                       <Text
-                        style={{ color: selected ? t.primary : t.textMuted }}
-                        className="text-[9px] font-sans-medium mt-0.5"
+                        style={[typography.captionBold, { color: selected ? t.primary : t.textMuted, fontSize: 9, marginTop: 2 }]}
                         numberOfLines={1}
                       >
                         {opt.label}
@@ -191,24 +183,27 @@ export default function WellnessScreen() {
           ))}
 
           {/* Save button */}
-          <Animated.View entering={FadeInDown.duration(300).delay(300)} className="px-5">
+          <Animated.View entering={FadeInDown.duration(300).delay(300)} style={{ paddingHorizontal: SCREEN_PADDING }}>
             <Pressable
               onPress={handleSave}
               disabled={isPending || filledCount === 0}
-              className="py-3.5 rounded-2xl flex-row items-center justify-center gap-2"
               style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: space.sm,
+                paddingVertical: space.md + 2,
+                borderRadius: radius.xl,
                 backgroundColor: filledCount > 0 ? t.primary : t.borderLight,
+                ...shadows.glow(filledCount > 0 ? t.primary : 'transparent'),
               }}
             >
               {isPending ? (
-                <Text className="text-sm font-sans-bold" style={{ color: t.primaryText }}>Salvando...</Text>
+                <Text style={[typography.labelMd, { color: t.primaryFg }]}>Salvando...</Text>
               ) : (
                 <>
-                  <Send size={14} color={filledCount > 0 ? t.primaryText : t.textMuted} />
-                  <Text
-                    className="text-sm font-sans-bold"
-                    style={{ color: filledCount > 0 ? t.primaryText : t.textMuted }}
-                  >
+                  <Send size={14} color={filledCount > 0 ? t.primaryFg : t.textMuted} />
+                  <Text style={[typography.labelMd, { color: filledCount > 0 ? t.primaryFg : t.textMuted }]}>
                     {saved ? 'Atualizar registro' : 'Salvar registro'}
                   </Text>
                 </>
@@ -221,15 +216,28 @@ export default function WellnessScreen() {
             <Animated.View
               entering={FadeInUp.duration(350)}
               exiting={FadeOutUp.duration(400)}
-              className="mx-5 mt-4 rounded-2xl p-4 flex-row items-center gap-3"
-              style={{ backgroundColor: t.success + '15' }}
+              style={{
+                marginHorizontal: SCREEN_PADDING,
+                marginTop: space.lg,
+                borderRadius: radius.xl,
+                padding: space.lg,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: space.md,
+                backgroundColor: t.successLight,
+              }}
             >
-              <View className="h-8 w-8 rounded-full items-center justify-center" style={{ backgroundColor: t.success + '20' }}>
+              <View style={{
+                width: 32, height: 32,
+                borderRadius: 16,
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: t.success + '25',
+              }}>
                 <Check size={16} color={t.success} />
               </View>
-              <View className="flex-1">
-                <Text style={{ color: t.success }} className="text-sm font-sans-bold">Registro salvo!</Text>
-                <Text style={{ color: t.success + 'cc' }} className="text-[11px] font-sans mt-0.5">
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.labelMd, { color: t.success }]}>Registro salvo!</Text>
+                <Text style={[typography.caption, { color: t.success + 'cc', marginTop: 2 }]}>
                   Seu nutricionista pode acompanhar seus dados.
                 </Text>
               </View>

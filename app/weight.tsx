@@ -3,26 +3,16 @@ import {
   View, Text, ScrollView, Pressable, Alert, TextInput, Dimensions, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
 import {
-  Scale, ChevronLeft, TrendingDown, TrendingUp,
+  Scale, TrendingDown, TrendingUp,
 } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { useThemeColors } from '../src/stores/theme'
 import { useLogWeight, useWeightHistory } from '../src/hooks/usePortal'
-
-const SHADOW_SM = Platform.select({
-  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
-  android: { elevation: 2 },
-  default: {},
-}) as Record<string, unknown>
-
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+import { ScreenHeader, Card, SectionLabel } from '../src/components/ui'
+import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../src/theme/tokens'
 
 export default function WeightScreen() {
   const t = useThemeColors()
@@ -79,27 +69,27 @@ export default function WeightScreen() {
     const trendColor = diff <= 0 ? t.success : t.warning
 
     sparkline = (
-      <Animated.View entering={FadeInDown.duration(300)} className="px-5 mb-4">
-        <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
-          <View className="flex-row items-center justify-between mb-2">
-            <View className="flex-row items-center">
-              <View className="h-7 w-7 rounded-lg items-center justify-center" style={{ backgroundColor: trendColor + '18' }}>
+      <Animated.View entering={FadeInDown.duration(300)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 28, height: 28, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: diff <= 0 ? t.successLight : t.warningLight }}>
                 <TrendIcon size={14} color={trendColor} />
               </View>
-              <Text style={{ color: t.text }} className="text-[13px] font-sans-bold ml-2">
+              <Text style={[typography.headingSm, { color: t.text, marginLeft: space.sm }]}>
                 Evolução
               </Text>
             </View>
-            <Text className="text-xs font-sans-bold" style={{ color: trendColor }}>
+            <Text style={[typography.captionBold, { color: trendColor }]}>
               {diffStr}
             </Text>
           </View>
-          <View className="flex-row items-baseline justify-between mb-2">
-            <Text style={{ color: t.text }} className="text-xl font-sans-bold">
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: space.sm }}>
+            <Text style={[typography.headingLg, { color: t.text }]}>
               {last.toFixed(1).replace('.', ',')}
-              <Text className="text-xs font-sans" style={{ color: t.textMuted }}> kg</Text>
+              <Text style={[typography.caption, { color: t.textMuted }]}> kg</Text>
             </Text>
-            <Text style={{ color: t.textMuted }} className="text-[10px] font-sans">{points.length} registros</Text>
+            <Text style={[typography.caption, { color: t.textMuted }]}>{points.length} registros</Text>
           </View>
           <Svg width={W} height={H}>
             <Defs>
@@ -121,62 +111,67 @@ export default function WeightScreen() {
               cx={coords[coords.length - 1].x}
               cy={coords[coords.length - 1].y}
               r={4}
-              fill="#ffffff"
+              fill={t.surface}
               stroke={t.primary}
               strokeWidth={2.5}
             />
           </Svg>
-        </View>
+        </Card>
       </Animated.View>
     )
   }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      <View className="px-5 pt-4 pb-2 flex-row items-center gap-3">
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ChevronLeft size={22} color={t.textSecondary} />
-        </Pressable>
-        <Scale size={22} color={t.accent} />
-        <Text style={{ color: t.text }} className="text-xl font-sans-bold">Registro de Peso</Text>
-      </View>
+      <ScreenHeader title="Registro de Peso" />
 
-      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           {/* Input card */}
-          <Animated.View entering={FadeIn.duration(300)} className="px-5 mt-4 mb-4">
-            <View className="rounded-2xl p-5" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
-              <Text style={{ color: t.textMuted }} className="text-xs font-sans-bold uppercase tracking-widest mb-3">
-                Peso de hoje
+          <Animated.View entering={FadeIn.duration(300)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.lg, marginBottom: space.lg }}>
+            <Card>
+              <Text style={[typography.overline, { color: t.textMuted, marginBottom: space.md }]}>
+                PESO DE HOJE
               </Text>
-              <View className="flex-row items-center gap-3">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
                 <TextInput
                   value={value}
                   onChangeText={setValue}
                   placeholder="Ex: 72,5"
                   placeholderTextColor={t.textMuted}
                   keyboardType="decimal-pad"
-                  className="flex-1 text-2xl font-sans-bold py-3 px-4 rounded-xl"
-                  style={{ color: t.text, backgroundColor: t.surfacePressed, borderWidth: 1, borderColor: t.borderLight }}
+                  style={[
+                    typography.displaySm,
+                    {
+                      flex: 1,
+                      paddingVertical: space.md,
+                      paddingHorizontal: space.lg,
+                      borderRadius: radius.lg,
+                      color: t.text,
+                      backgroundColor: t.surfaceSecondary,
+                      borderWidth: 1,
+                      borderColor: t.borderLight,
+                    },
+                  ]}
                 />
-                <Text style={{ color: t.textSecondary }} className="text-lg font-sans-semibold">kg</Text>
+                <Text style={[typography.headingMd, { color: t.textSecondary }]}>kg</Text>
               </View>
               <Pressable
                 onPress={handleSave}
                 disabled={isPending || !value.trim()}
-                className="mt-4 py-3 rounded-xl items-center"
                 style={{
+                  marginTop: space.lg,
+                  paddingVertical: space.md,
+                  borderRadius: radius.lg,
+                  alignItems: 'center',
                   backgroundColor: value.trim() ? t.primary : t.borderLight,
                 }}
               >
-                <Text
-                  className="text-sm font-sans-bold"
-                  style={{ color: value.trim() ? t.primaryText : t.textMuted }}
-                >
+                <Text style={[typography.labelMd, { color: value.trim() ? t.primaryFg : t.textMuted }]}>
                   {isPending ? 'Salvando...' : 'Registrar peso'}
                 </Text>
               </Pressable>
-            </View>
+            </Card>
           </Animated.View>
 
           {/* Chart */}
@@ -184,10 +179,8 @@ export default function WeightScreen() {
 
           {/* History list */}
           {entries.length > 0 && (
-            <Animated.View entering={FadeInDown.duration(300).delay(100)} className="px-5">
-              <Text style={{ color: t.textMuted }} className="text-[10px] font-sans-bold uppercase tracking-widest mb-2 ml-1">
-                Histórico
-              </Text>
+            <Animated.View entering={FadeInDown.duration(300).delay(100)} style={{ paddingHorizontal: SCREEN_PADDING }}>
+              <SectionLabel text="HISTÓRICO" />
               {entries.slice(0, 30).map((entry, i) => {
                 const fmtDate = new Date(entry.entry_date + 'T00:00:00').toLocaleDateString('pt-BR', {
                   day: '2-digit', month: 'short',
@@ -197,22 +190,29 @@ export default function WeightScreen() {
                 return (
                   <View
                     key={`${entry.entry_date}-${entry.source}`}
-                    className="flex-row items-center py-2.5 px-3 rounded-xl mb-1.5"
-                    style={{ backgroundColor: t.surface, ...SHADOW_SM }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: space.sm + 2,
+                      paddingHorizontal: space.md,
+                      borderRadius: radius.lg,
+                      marginBottom: 6,
+                      backgroundColor: t.surface,
+                      ...shadows.sm,
+                    }}
                   >
                     <Scale size={14} color={t.accent} />
-                    <Text style={{ color: t.text }} className="text-sm font-sans-semibold ml-2 flex-1">
+                    <Text style={[typography.labelMd, { color: t.text, marginLeft: space.sm, flex: 1 }]}>
                       {entry.weight_kg.toFixed(1).replace('.', ',')} kg
                     </Text>
                     {diff !== 0 && (
                       <Text
-                        className="text-[11px] font-sans-medium mr-2"
-                        style={{ color: diff < 0 ? t.success : t.warning }}
+                        style={[typography.captionBold, { color: diff < 0 ? t.success : t.warning, marginRight: space.sm }]}
                       >
                         {diff > 0 ? '+' : ''}{diff.toFixed(1).replace('.', ',')}
                       </Text>
                     )}
-                    <Text style={{ color: t.textMuted }} className="text-xs font-sans">{fmtDate}</Text>
+                    <Text style={[typography.caption, { color: t.textMuted }]}>{fmtDate}</Text>
                   </View>
                 )
               })}

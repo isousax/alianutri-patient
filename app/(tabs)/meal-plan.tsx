@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Utensils, ChevronRight, RefreshCw, Clock, ShoppingCart } from 'lucide-react-native'
+import { Utensils, ChevronRight, Clock, ShoppingCart, X } from 'lucide-react-native'
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated'
 import { useThemeColors } from '../../src/stores/theme'
 import { useMealPlans, useMealPlanDetail } from '../../src/hooks/usePortal'
+import { Card, ScreenHeader, EmptyState, LoadingScreen } from '../../src/components/ui'
+import { shadows, radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
 
 export default function MealPlanScreen() {
   const t = useThemeColors()
@@ -11,135 +14,253 @@ export default function MealPlanScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const { data: detail, isLoading: loadingDetail } = useMealPlanDetail(selectedId)
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} className="items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={t.primary} />
-      </SafeAreaView>
-    )
-  }
+  // ── Loading ──
+  if (isLoading) return <LoadingScreen />
 
+  // ── Empty state ──
   if (!plans || plans.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-        <View className="px-5 pt-4 pb-3">
-          <Text style={{ color: t.text }} className="text-xl font-sans-bold">Plano alimentar</Text>
+        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space.lg, paddingBottom: space.md }}>
+          <Text style={[typography.displaySm, { color: t.text }]}>Plano alimentar</Text>
         </View>
-        <View className="flex-1 items-center justify-center px-8">
-          <View className="h-16 w-16 rounded-2xl items-center justify-center mb-4" style={{ backgroundColor: t.primaryLight }}>
-            <Utensils size={28} color={t.primary} />
-          </View>
-          <Text style={{ color: t.text }} className="text-base font-sans-semibold mb-1">Nenhum plano ativo</Text>
-          <Text style={{ color: t.textMuted }} className="text-sm text-center font-sans">
-            Quando seu nutricionista publicar um plano alimentar, ele aparecerá aqui.
-          </Text>
-          <Pressable onPress={() => refetch()} className="mt-4 flex-row items-center gap-2">
-            <RefreshCw size={14} color={t.primary} />
-            <Text style={{ color: t.primary }} className="text-sm font-sans-medium">Atualizar</Text>
-          </Pressable>
-        </View>
+        <EmptyState
+          icon={<Utensils size={28} color={t.primary} />}
+          title="Nenhum plano ativo"
+          description="Quando seu nutricionista publicar um plano alimentar, ele aparecerá aqui."
+          actionLabel="Atualizar"
+          onAction={() => refetch()}
+        />
       </SafeAreaView>
     )
   }
 
+  // ── Detail view ──
   if (selectedId && detail) {
     const meals = Array.isArray(detail.meals) ? detail.meals : []
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-        <View className="px-5 pt-4 pb-3 flex-row items-center gap-3">
-          <Pressable onPress={() => setSelectedId(null)}>
-            <Text style={{ color: t.primary }} className="text-sm font-sans-medium">← Voltar</Text>
-          </Pressable>
-          <Text style={{ color: t.text }} className="text-lg font-sans-bold flex-1" numberOfLines={1}>{detail.name}</Text>
-        </View>
+        <ScreenHeader title={detail.name} onBack={() => setSelectedId(null)} />
 
         {detail.total_kcal ? (
-          <View className="mx-5 mb-3 rounded-xl px-4 py-2.5 flex-row items-center gap-2" style={{ backgroundColor: t.primaryLight }}>
-            <Text style={{ color: t.primary }} className="text-xs font-sans-semibold">
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginHorizontal: SCREEN_PADDING,
+            marginBottom: space.lg,
+            paddingHorizontal: space.lg,
+            paddingVertical: space.sm + 2,
+            borderRadius: radius.lg,
+            backgroundColor: t.primaryLight,
+            gap: space.sm,
+          }}>
+            <Text style={[typography.captionBold, { color: t.primary }]}>
               {detail.total_kcal} kcal
             </Text>
-            {detail.total_protein_g ? <Text style={{ color: t.primary }} className="text-xs font-sans">• P {detail.total_protein_g}g</Text> : null}
-            {detail.total_carbs_g ? <Text style={{ color: t.primary }} className="text-xs font-sans">• C {detail.total_carbs_g}g</Text> : null}
-            {detail.total_fat_g ? <Text style={{ color: t.primary }} className="text-xs font-sans">• G {detail.total_fat_g}g</Text> : null}
+            {detail.total_protein_g ? <Text style={[typography.caption, { color: t.primary }]}>• P {detail.total_protein_g}g</Text> : null}
+            {detail.total_carbs_g ? <Text style={[typography.caption, { color: t.primary }]}>• C {detail.total_carbs_g}g</Text> : null}
+            {detail.total_fat_g ? <Text style={[typography.caption, { color: t.primary }]}>• G {detail.total_fat_g}g</Text> : null}
           </View>
         ) : null}
 
-        <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 32 }} refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={t.primary} />}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 80 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={t.primary} />}
+        >
           {meals.map((meal: any, idx: number) => (
-            <View key={idx} className="mb-4 rounded-2xl p-4" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
-              <View className="flex-row items-center gap-2 mb-2">
-                <Clock size={14} color={t.textSecondary} />
-                <Text style={{ color: t.text }} className="text-sm font-sans-semibold">{meal.name || `Refeição ${idx + 1}`}</Text>
-                {meal.time ? <Text style={{ color: t.textMuted }} className="text-xs font-sans">{meal.time}</Text> : null}
-              </View>
-              {Array.isArray(meal.foods) && meal.foods.map((food: any, fi: number) => (
-                <View key={fi} className="ml-6 mb-1 flex-row">
-                  <Text style={{ color: t.textSecondary }} className="text-xs font-sans">• {food.name || food.food_description}</Text>
-                  {food.quantity ? <Text style={{ color: t.textMuted }} className="text-xs font-sans"> — {food.quantity}{food.unit ? ` ${food.unit}` : ''}</Text> : null}
+            <Animated.View key={idx} entering={FadeInDown.duration(250).delay(idx * 50)}>
+              <Card style={{ marginBottom: space.lg }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.sm + 2 }}>
+                  <View style={{
+                    width: 28, height: 28, borderRadius: radius.sm,
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: t.primaryLight,
+                  }}>
+                    <Clock size={12} color={t.primary} />
+                  </View>
+                  <Text style={[typography.headingSm, { color: t.text, flex: 1 }]}>{meal.name || `Refeição ${idx + 1}`}</Text>
+                  {meal.time ? <Text style={[typography.caption, { color: t.textMuted }]}>{meal.time}</Text> : null}
                 </View>
-              ))}
-            </View>
+                {Array.isArray(meal.foods) && meal.foods.map((food: any, fi: number) => (
+                  <View key={fi} style={{ marginLeft: 28 + space.sm, marginBottom: 5, flexDirection: 'row', flexWrap: 'wrap' }}>
+                    <Text style={[typography.bodySm, { color: t.textSecondary }]}>• {food.name || food.food_description}</Text>
+                    {food.quantity ? <Text style={[typography.caption, { color: t.textMuted }]}> — {food.quantity}{food.unit ? ` ${food.unit}` : ''}</Text> : null}
+                  </View>
+                ))}
+              </Card>
+            </Animated.View>
           ))}
           {meals.length === 0 && (
-            <Text style={{ color: t.textMuted }} className="text-sm text-center font-sans mt-8">Sem detalhes das refeições.</Text>
+            <Text style={[typography.bodyMd, { color: t.textMuted, textAlign: 'center', marginTop: space['5xl'] }]}>
+              Sem detalhes das refeições.
+            </Text>
           )}
-
-          {detail.shopping_list ? (
-            <View className="mt-2 mb-4 rounded-2xl p-4" style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}>
-              <View className="flex-row items-center gap-2 mb-3">
-                <ShoppingCart size={14} color={t.accent} />
-                <Text style={{ color: t.text }} className="text-sm font-sans-semibold">Lista de compras</Text>
-              </View>
-              <Text style={{ color: t.textSecondary }} className="text-xs font-sans leading-5">{detail.shopping_list}</Text>
-            </View>
-          ) : null}
         </ScrollView>
+
+        {/* Shopping list FAB */}
+        {detail.shopping_list ? (
+          <ShoppingListFAB shoppingList={detail.shopping_list} />
+        ) : null}
       </SafeAreaView>
     )
   }
 
+  // ── Plan list ──
+  const activePlans = plans.filter((p) => p.status !== 'superseded')
+  const olderPlans = plans.filter((p) => p.status === 'superseded')
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      <View className="px-5 pt-4 pb-3">
-        <Text style={{ color: t.text }} className="text-xl font-sans-bold">Plano alimentar</Text>
+      <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space.lg, paddingBottom: space.md }}>
+        <Text style={[typography.displaySm, { color: t.text }]}>Plano alimentar</Text>
+        {plans.length > 1 && (
+          <Text style={[typography.caption, { color: t.textMuted, marginTop: 4 }]}>
+            {activePlans.length} ativo{activePlans.length > 1 ? 's' : ''}{olderPlans.length > 0 ? ` · ${olderPlans.length} anterior${olderPlans.length > 1 ? 'es' : ''}` : ''}
+          </Text>
+        )}
       </View>
-      <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 32 }} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}>
-        {plans.map((plan) => (
-          <Pressable
-            key={plan.id}
-            onPress={() => setSelectedId(plan.id)}
-            className="mb-3 rounded-2xl p-4 flex-row items-center"
-            style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}
-          >
-            <View className="h-10 w-10 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: t.primaryLight }}>
-              <Utensils size={18} color={t.primary} />
-            </View>
-            <View className="flex-1">
-              <View className="flex-row items-center gap-2">
-                <Text style={{ color: t.text }} className="text-sm font-sans-semibold flex-shrink" numberOfLines={1}>{plan.name}</Text>
-                {plan.status === 'superseded' ? (
-                  <View className="px-1.5 py-0.5 rounded" style={{ backgroundColor: t.borderLight }}>
-                    <Text style={{ color: t.textMuted }} className="text-[9px] font-sans-bold">ANTERIOR</Text>
-                  </View>
-                ) : (
-                  <View className="px-1.5 py-0.5 rounded" style={{ backgroundColor: t.primary + '18' }}>
-                    <Text style={{ color: t.primary }} className="text-[9px] font-sans-bold">ATIVO</Text>
-                  </View>
-                )}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
+      >
+        {activePlans.map((plan, i) => (
+          <Animated.View key={plan.id} entering={FadeInDown.duration(300).delay(i * 60)}>
+            <Card onPress={() => setSelectedId(plan.id)} style={{ marginBottom: space.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{
+                  width: 44, height: 44,
+                  borderRadius: radius.md,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: t.primaryLight,
+                  marginRight: space.md,
+                }}>
+                  <Utensils size={18} color={t.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[typography.headingSm, { color: t.text }]} numberOfLines={1}>{plan.name}</Text>
+                  <Text style={[typography.caption, { color: t.textMuted, marginTop: 3 }]}>
+                    {plan.total_kcal ? `${plan.total_kcal} kcal` : plan.method}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color={t.textMuted} />
               </View>
-              <Text style={{ color: t.textMuted }} className="text-xs font-sans mt-0.5">
-                {plan.total_kcal ? `${plan.total_kcal} kcal` : plan.method}
-              </Text>
-            </View>
-            <ChevronRight size={16} color={t.textMuted} />
-          </Pressable>
+            </Card>
+          </Animated.View>
         ))}
+
+        {olderPlans.length > 0 && (
+          <View style={{ marginTop: space.sm }}>
+            <Text style={[typography.overline, { color: t.textMuted, marginBottom: space.sm, marginLeft: 2 }]}>ANTERIORES</Text>
+            {olderPlans.map((plan, i) => (
+              <Animated.View key={plan.id} entering={FadeInDown.duration(300).delay((activePlans.length + i) * 60)}>
+                <Pressable
+                  onPress={() => setSelectedId(plan.id)}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: space.md + 2,
+                    paddingHorizontal: space.md,
+                    marginBottom: space.sm,
+                    borderRadius: radius.lg,
+                    backgroundColor: pressed ? t.surfacePressed : 'transparent',
+                  })}
+                >
+                  <View style={{
+                    width: 36, height: 36,
+                    borderRadius: radius.sm,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: t.borderLight,
+                    marginRight: space.md,
+                  }}>
+                    <Utensils size={14} color={t.textMuted} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.labelMd, { color: t.textSecondary }]} numberOfLines={1}>{plan.name}</Text>
+                    <Text style={[typography.caption, { color: t.textMuted, marginTop: 2 }]}>
+                      {plan.total_kcal ? `${plan.total_kcal} kcal` : plan.method}
+                    </Text>
+                  </View>
+                  <ChevronRight size={14} color={t.borderLight} />
+                </Pressable>
+              </Animated.View>
+            ))}
+          </View>
+        )}
       </ScrollView>
       {loadingDetail && (
-        <View className="absolute inset-0 items-center justify-center" style={{ backgroundColor: t.background + '99' }}>
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          alignItems: 'center', justifyContent: 'center',
+          backgroundColor: t.background + '99',
+        }}>
           <ActivityIndicator size="large" color={t.primary} />
         </View>
       )}
     </SafeAreaView>
+  )
+}
+
+// ── Shopping List FAB + Modal ──
+
+function ShoppingListFAB({ shoppingList }: { shoppingList: string }) {
+  const t = useThemeColors()
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => ({
+          position: 'absolute',
+          bottom: space['3xl'],
+          right: SCREEN_PADDING,
+          width: 52,
+          height: 52,
+          borderRadius: 26,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: t.accent,
+          opacity: pressed ? 0.9 : 1,
+          transform: [{ scale: pressed ? 0.94 : 1 }],
+          ...shadows.lg,
+        })}
+      >
+        <ShoppingCart size={20} color="#fff" />
+      </Pressable>
+
+      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setOpen(false)} />
+          <Animated.View entering={FadeIn.duration(200)} style={{
+            backgroundColor: t.surface,
+            borderTopLeftRadius: radius['2xl'],
+            borderTopRightRadius: radius['2xl'],
+            paddingHorizontal: SCREEN_PADDING,
+            paddingTop: space.lg,
+            paddingBottom: space['4xl'],
+            maxHeight: '70%',
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.xl }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                <ShoppingCart size={16} color={t.accent} />
+                <Text style={[typography.headingMd, { color: t.text }]}>Lista de compras</Text>
+              </View>
+              <Pressable onPress={() => setOpen(false)} hitSlop={12} style={{ padding: space.xs }}>
+                <X size={20} color={t.textMuted} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={[typography.bodyMd, { color: t.textSecondary, lineHeight: 22 }]}>{shoppingList}</Text>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
+    </>
   )
 }

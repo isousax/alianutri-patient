@@ -36,7 +36,18 @@ export function useTheme(): AppTheme {
   return THEMES[themeId]
 }
 
-export function useThemeColors(): ThemeColors {
+// Backward-compatible color accessor: maps old property names to new ones
+// so existing screens compile while being migrated to the new design system.
+type CompatColors = ThemeColors & {
+  primaryText: string    // → primaryFg
+}
+
+export function useThemeColors(): CompatColors {
   const themeId = useThemeStore((s) => s.themeId)
-  return THEMES[themeId].colors
+  const c = THEMES[themeId].colors
+  return {
+    ...c,
+    // Legacy aliases
+    primaryText: c.primaryFg,
+  }
 }

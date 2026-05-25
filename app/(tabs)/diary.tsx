@@ -510,8 +510,8 @@ function FreeDiary({
             className="flex-row items-center justify-center py-3.5 rounded-xl"
             style={{ backgroundColor: t.primary }}
           >
-            <Plus size={18} color={t.primaryText} />
-            <Text style={{ color: t.primaryText }} className="text-sm font-sans-bold ml-2">Registrar refeição</Text>
+            <Plus size={18} color={t.primaryFg} />
+            <Text style={{ color: t.primaryFg }} className="text-sm font-sans-bold ml-2">Registrar refeição</Text>
           </Pressable>
         </Animated.View>
       )}
@@ -621,7 +621,7 @@ function FreeDiary({
               >
                 <Text
                   className="text-sm font-sans-bold"
-                  style={{ color: description.trim() ? t.primaryText : t.textMuted }}
+                  style={{ color: description.trim() ? t.primaryFg : t.textMuted }}
                 >
                   {isSaving ? 'Salvando...' : 'Salvar refeição'}
                 </Text>
@@ -895,11 +895,11 @@ function HeroMealCard({
               style={{ backgroundColor: t.primary }}
             >
               {isLogging ? (
-                <ActivityIndicator color={t.primaryText} size="small" />
+                <ActivityIndicator color={t.primaryFg} size="small" />
               ) : (
                 <>
-                  <Check size={16} color={t.primaryText} />
-                  <Text style={{ color: t.primaryText }} className="text-sm font-sans-bold ml-2">Segui</Text>
+                  <Check size={16} color={t.primaryFg} />
+                  <Text style={{ color: t.primaryFg }} className="text-sm font-sans-bold ml-2">Segui</Text>
                 </>
               )}
             </Pressable>

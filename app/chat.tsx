@@ -4,8 +4,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
-import { ArrowLeft, Send, MessageCircle, Check, CheckCheck } from 'lucide-react-native'
+import { Send, MessageCircle, Check, CheckCheck } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated'
 import { useQueryClient } from '@tanstack/react-query'
@@ -13,6 +12,8 @@ import { useThemeColors, type ThemeColors } from '../src/stores/theme'
 import { useChatMessages, useSendChatMessage, usePortalHome } from '../src/hooks/usePortal'
 import type { ChatMessage } from '../src/types/portal'
 import { SkeletonChatList } from '../src/components/Skeleton'
+import { ScreenHeader, EmptyState } from '../src/components/ui'
+import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 // ── helpers ──
 
@@ -129,30 +130,26 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        className="flex-1"
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        {/* Header */}
-        <View className="px-5 pt-4 pb-3 flex-row items-center gap-3">
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <ArrowLeft size={20} color={t.textSecondary} />
-          </Pressable>
-          <View className="flex-1">
-            <Text style={{ color: t.text }} className="text-xl font-sans-bold">Chat</Text>
-            <Text style={{ color: t.textMuted }} className="text-xs font-sans">
-              com {nutriName}
-            </Text>
-          </View>
-          <View
-            className="h-9 w-9 rounded-full items-center justify-center"
-            style={{ backgroundColor: t.primaryLight }}
-          >
-            <Text style={{ color: t.primary }} className="text-xs font-sans-bold">
-              {nutriName.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        </View>
+        <ScreenHeader
+          title="Chat"
+          subtitle={`com ${nutriName}`}
+          rightAction={
+            <View style={{
+              width: 36, height: 36,
+              borderRadius: 18,
+              alignItems: 'center', justifyContent: 'center',
+              backgroundColor: t.primaryLight,
+            }}>
+              <Text style={[typography.captionBold, { color: t.primary }]}>
+                {nutriName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          }
+        />
 
         {/* Messages */}
         {isLoading ? (
@@ -169,12 +166,12 @@ export default function ChatScreen() {
                 <Pressable
                   onPress={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
-                  className="items-center py-3"
+                  style={{ alignItems: 'center', paddingVertical: space.md }}
                 >
                   {isFetchingNextPage ? (
                     <ActivityIndicator size="small" color={t.primary} />
                   ) : (
-                    <Text style={{ color: t.primary }} className="text-xs font-sans-semibold">
+                    <Text style={[typography.captionBold, { color: t.primary }]}>
                       Carregar anteriores
                     </Text>
                   )}
@@ -182,55 +179,59 @@ export default function ChatScreen() {
               ) : null
             }
             ListEmptyComponent={
-              <View className="flex-1 items-center justify-center px-8">
-                <View
-                  className="h-16 w-16 rounded-2xl items-center justify-center mb-4"
-                  style={{ backgroundColor: t.primaryLight }}
-                >
-                  <MessageCircle size={28} color={t.primary} />
-                </View>
-                <Text style={{ color: t.text }} className="text-base font-sans-semibold mb-1">
-                  Nenhuma mensagem
-                </Text>
-                <Text style={{ color: t.textMuted }} className="text-sm font-sans text-center">
-                  Envie a primeira mensagem para {nutriName}.
-                </Text>
-              </View>
+              <EmptyState
+                icon={<MessageCircle size={28} color={t.primary} />}
+                title="Nenhuma mensagem"
+                description={`Envie a primeira mensagem para ${nutriName}.`}
+              />
             }
           />
         )}
 
         {/* Input */}
-        <View
-          className="px-5 py-3 flex-row items-end gap-2"
-          style={{ borderTopWidth: 1, borderTopColor: t.borderLight }}
-        >
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'flex-end',
+          gap: space.sm,
+          paddingHorizontal: SCREEN_PADDING,
+          paddingVertical: space.md,
+          borderTopWidth: 1,
+          borderTopColor: t.borderLight,
+        }}>
           <TextInput
             value={text}
             onChangeText={setText}
             placeholder="Digite sua mensagem..."
             placeholderTextColor={t.textMuted}
             multiline
-            className="flex-1 rounded-xl px-3 py-2 text-sm font-sans max-h-24"
-            style={{
-              backgroundColor: t.surface,
-              borderWidth: 1,
-              borderColor: t.border,
-              color: t.text,
-            }}
+            style={[
+              typography.bodyMd,
+              {
+                flex: 1,
+                maxHeight: 96,
+                borderRadius: radius.lg,
+                paddingHorizontal: space.md,
+                paddingVertical: space.sm,
+                backgroundColor: t.surface,
+                borderWidth: 1,
+                borderColor: t.border,
+                color: t.text,
+              },
+            ]}
           />
           <Pressable
             onPress={handleSend}
             disabled={!text.trim() || send.isPending}
-            className="p-2.5 rounded-xl"
             style={{
+              padding: space.sm + 2,
+              borderRadius: radius.lg,
               backgroundColor: text.trim() && !send.isPending ? t.primary : t.borderLight,
             }}
           >
             {send.isPending ? (
-              <ActivityIndicator size="small" color={t.primaryText} />
+              <ActivityIndicator size="small" color={t.primaryFg} />
             ) : (
-              <Send size={18} color={text.trim() ? t.primaryText : t.textMuted} />
+              <Send size={18} color={text.trim() ? t.primaryFg : t.textMuted} />
             )}
           </Pressable>
         </View>
@@ -243,12 +244,14 @@ export default function ChatScreen() {
 
 function DateSeparator({ label, t }: { label: string; t: ThemeColors }) {
   return (
-    <Animated.View entering={FadeIn.duration(200)} className="items-center my-3">
-      <View
-        className="px-3 py-1 rounded-full"
-        style={{ backgroundColor: t.surface }}
-      >
-        <Text style={{ color: t.textMuted }} className="text-[11px] font-sans-semibold">
+    <Animated.View entering={FadeIn.duration(200)} style={{ alignItems: 'center', marginVertical: space.md }}>
+      <View style={{
+        paddingHorizontal: space.md,
+        paddingVertical: 4,
+        borderRadius: 999,
+        backgroundColor: t.surface,
+      }}>
+        <Text style={[typography.captionBold, { color: t.textMuted }]}>
           {label}
         </Text>
       </View>
@@ -264,27 +267,34 @@ function MessageBubble({ msg, t }: { msg: ChatMessage; t: ThemeColors }) {
   return (
     <Animated.View
       entering={FadeInDown.duration(250)}
-      className={`mb-2 px-5 ${isPatient ? 'items-end' : 'items-start'}`}
+      style={{
+        marginBottom: space.sm,
+        paddingHorizontal: SCREEN_PADDING,
+        alignItems: isPatient ? 'flex-end' : 'flex-start',
+      }}
     >
       <View
-        style={
-          isPatient
+        style={{
+          maxWidth: '80%',
+          borderRadius: radius.xl,
+          paddingHorizontal: space.md + 2,
+          paddingVertical: space.sm + 2,
+          ...(isPatient
             ? { backgroundColor: t.primary, borderBottomRightRadius: 6 }
-            : { backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight, borderBottomLeftRadius: 6 }
-        }
-        className="max-w-[80%] rounded-2xl px-3.5 py-2.5"
+            : { backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight, borderBottomLeftRadius: 6 }),
+        }}
       >
-        <Text
-          style={{ color: isPatient ? t.primaryText : t.text }}
-          className="text-sm font-sans"
-        >
+        <Text style={[typography.bodyMd, { color: isPatient ? t.primaryFg : t.text }]}>
           {msg.content}
         </Text>
-        <View className={`flex-row items-center mt-1 gap-1 ${isPatient ? 'justify-end' : ''}`}>
-          <Text
-            style={{ color: isPatient ? t.primaryMuted : t.textMuted }}
-            className="text-[10px] font-sans"
-          >
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginTop: 4,
+          gap: 4,
+          justifyContent: isPatient ? 'flex-end' : 'flex-start',
+        }}>
+          <Text style={[typography.caption, { color: isPatient ? t.primaryMuted : t.textMuted, fontSize: 10 }]}>
             {fmtTime(msg.created_at)}
           </Text>
           {isPatient && (

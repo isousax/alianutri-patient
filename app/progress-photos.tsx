@@ -1,11 +1,10 @@
 import { useState, useCallback } from 'react'
 import {
-  View, Text, ScrollView, Pressable, Alert, ActivityIndicator, Dimensions, Platform, Modal, StatusBar,
+  View, Text, ScrollView, Pressable, Alert, ActivityIndicator, Dimensions, Modal, StatusBar,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
 import {
-  Camera, ChevronLeft, Image as ImageIcon, Sparkles, Trash2, X,
+  Camera, Image as ImageIcon, Sparkles, Trash2, X,
 } from 'lucide-react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
@@ -16,16 +15,12 @@ import { useThemeColors } from '../src/stores/theme'
 import { useProgressPhotos, useUploadProgressPhoto, useDeleteProgressPhoto } from '../src/hooks/usePortal'
 import type { ProgressPhoto } from '../src/types/portal'
 import { useAuthStore } from '../src/stores/auth'
+import { ScreenHeader, EmptyState, SectionLabel } from '../src/components/ui'
+import { shadows, radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 const SCREEN_W = Dimensions.get('window').width
-const PHOTO_SIZE = (SCREEN_W - 40 - 8) / 2
+const PHOTO_SIZE = (SCREEN_W - SCREEN_PADDING * 2 - space.sm) / 2
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://api.alianutri.com.br'
-
-const SHADOW_SM = Platform.select({
-  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
-  android: { elevation: 2 },
-  default: {},
-}) as Record<string, unknown>
 
 const CATEGORIES = [
   { value: 'front', label: 'Frente' },
@@ -112,38 +107,28 @@ export default function ProgressPhotosScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      <View className="px-5 pt-4 pb-2 flex-row items-center gap-3">
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ChevronLeft size={22} color={t.textSecondary} />
-        </Pressable>
-        <View className="h-8 w-8 rounded-xl items-center justify-center" style={{ backgroundColor: t.primary + '15' }}>
-          <Camera size={16} color={t.primary} />
-        </View>
-        <Text style={{ color: t.text }} className="text-xl font-sans-bold flex-1">Fotos de Progresso</Text>
-      </View>
+      <ScreenHeader title="Fotos de Progresso" />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Category selector */}
-        <Animated.View entering={FadeIn.duration(300)} className="px-5 mt-2 mb-4">
-          <Text style={{ color: t.textMuted }} className="text-[10px] font-sans-bold uppercase tracking-widest mb-2 ml-1">
-            Categoria
-          </Text>
-          <View className="flex-row gap-2">
+        <Animated.View entering={FadeIn.duration(300)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.sm, marginBottom: space.lg }}>
+          <SectionLabel text="CATEGORIA" />
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
             {CATEGORIES.map((cat) => (
               <Pressable
                 key={cat.value}
                 onPress={() => setSelectedCategory(cat.value)}
-                className="flex-1 py-2.5 rounded-xl items-center"
-                style={
-                  selectedCategory === cat.value
+                style={{
+                  flex: 1,
+                  paddingVertical: space.sm + 2,
+                  borderRadius: radius.lg,
+                  alignItems: 'center',
+                  ...(selectedCategory === cat.value
                     ? { backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primary }
-                    : { backgroundColor: t.surface, ...SHADOW_SM }
-                }
+                    : { backgroundColor: t.surface, ...shadows.sm }),
+                }}
               >
-                <Text
-                  style={{ color: selectedCategory === cat.value ? t.primary : t.textSecondary }}
-                  className="text-xs font-sans-bold"
-                >
+                <Text style={[typography.captionBold, { color: selectedCategory === cat.value ? t.primary : t.textSecondary }]}>
                   {cat.label}
                 </Text>
               </Pressable>
@@ -152,52 +137,62 @@ export default function ProgressPhotosScreen() {
         </Animated.View>
 
         {/* Action buttons */}
-        <Animated.View entering={FadeInDown.duration(300).delay(100)} className="px-5 mb-6">
-          <View className="flex-row gap-3">
+        <Animated.View entering={FadeInDown.duration(300).delay(100)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space['2xl'] }}>
+          <View style={{ flexDirection: 'row', gap: space.md }}>
             <Pressable
               onPress={handleTakePhoto}
               disabled={isUploading}
-              className="flex-1 flex-row items-center justify-center py-3.5 rounded-xl"
-              style={{ backgroundColor: t.primary, ...SHADOW_SM }}
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: space.md + 2,
+                borderRadius: radius.lg,
+                backgroundColor: t.primary,
+                ...shadows.sm,
+              }}
             >
               {isUploading ? (
-                <ActivityIndicator color={t.primaryText} size="small" />
+                <ActivityIndicator color={t.primaryFg} size="small" />
               ) : (
                 <>
-                  <Camera size={18} color={t.primaryText} />
-                  <Text style={{ color: t.primaryText }} className="text-sm font-sans-bold ml-2">Tirar foto</Text>
+                  <Camera size={18} color={t.primaryFg} />
+                  <Text style={[typography.labelMd, { color: t.primaryFg, marginLeft: space.sm }]}>Tirar foto</Text>
                 </>
               )}
             </Pressable>
             <Pressable
               onPress={handlePickPhoto}
               disabled={isUploading}
-              className="flex-1 flex-row items-center justify-center py-3.5 rounded-xl"
-              style={{ backgroundColor: t.surface, ...SHADOW_SM }}
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: space.md + 2,
+                borderRadius: radius.lg,
+                backgroundColor: t.surface,
+                ...shadows.sm,
+              }}
             >
               <ImageIcon size={18} color={t.textSecondary} />
-              <Text style={{ color: t.text }} className="text-sm font-sans-semibold ml-2">Galeria</Text>
+              <Text style={[typography.labelMd, { color: t.text, marginLeft: space.sm }]}>Galeria</Text>
             </Pressable>
           </View>
         </Animated.View>
 
         {/* Photos grid by date */}
         {isLoading ? (
-          <View className="items-center mt-8">
+          <View style={{ alignItems: 'center', marginTop: space['3xl'] }}>
             <ActivityIndicator size="large" color={t.primary} />
           </View>
         ) : photos.length === 0 ? (
-          <Animated.View entering={FadeIn.duration(400)} className="items-center mt-12 px-8">
-            <View className="h-20 w-20 rounded-3xl items-center justify-center mb-4" style={{ backgroundColor: t.primaryLight }}>
-              <Sparkles size={32} color={t.primary} />
-            </View>
-            <Text style={{ color: t.text }} className="text-base font-sans-bold mt-1 text-center">
-              Nenhuma foto registrada
-            </Text>
-            <Text style={{ color: t.textMuted }} className="text-sm font-sans text-center mt-2 leading-5">
-              Tire fotos periodicamente para acompanhar{'\n'}sua evolução visual.
-            </Text>
-          </Animated.View>
+          <EmptyState
+            icon={<Sparkles size={32} color={t.primary} />}
+            title="Nenhuma foto registrada"
+            description={`Tire fotos periodicamente para acompanhar\nsua evolução visual.`}
+          />
         ) : (
           sortedDates.map((date, dateIdx) => {
             const datePhotos = groupedByDate[date]
@@ -208,18 +203,21 @@ export default function ProgressPhotosScreen() {
               <Animated.View
                 key={date}
                 entering={FadeInDown.duration(300).delay(dateIdx * 80)}
-                className="px-5 mb-5"
+                style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.xl }}
               >
-                <Text style={{ color: t.textMuted }} className="text-[10px] font-sans-bold uppercase tracking-widest mb-2 ml-1">
-                  {fmtDate}
-                </Text>
-                <View className="flex-row flex-wrap gap-2">
+                <SectionLabel text={fmtDate.toUpperCase()} />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
                   {datePhotos.map((photo) => (
                     <Pressable
                       key={photo.id}
                       onPress={() => setViewerPhoto(photo)}
-                      className="rounded-2xl overflow-hidden"
-                      style={{ width: PHOTO_SIZE, height: PHOTO_SIZE * 1.33, ...SHADOW_SM }}
+                      style={{
+                        borderRadius: radius.xl,
+                        overflow: 'hidden',
+                        width: PHOTO_SIZE,
+                        height: PHOTO_SIZE * 1.33,
+                        ...shadows.sm,
+                      }}
                     >
                       <Image
                         source={{ uri: `${API_BASE}/p/${accessCode}/progress-photos/${photo.id}` }}
@@ -228,9 +226,9 @@ export default function ProgressPhotosScreen() {
                       />
                       <ExpoGradient
                         colors={['transparent', 'rgba(0,0,0,0.55)']}
-                        className="absolute bottom-0 left-0 right-0 px-2.5 py-2"
+                        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: space.sm + 2, paddingVertical: space.sm }}
                       >
-                        <Text className="text-[10px] font-sans-bold" style={{ color: '#fff' }}>
+                        <Text style={[typography.captionBold, { color: '#fff', fontSize: 10 }]}>
                           {CATEGORIES.find((c) => c.value === photo.category)?.label ?? photo.category}
                         </Text>
                       </ExpoGradient>
@@ -246,20 +244,20 @@ export default function ProgressPhotosScreen() {
       {/* ── Fullscreen Photo Viewer ── */}
       <Modal visible={viewerPhoto !== null} transparent animationType="fade" onRequestClose={() => setViewerPhoto(null)}>
         <StatusBar barStyle="light-content" />
-        <View className="flex-1 bg-black">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
           {/* Top bar */}
           <SafeAreaView edges={['top']}>
-            <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-              <Pressable onPress={() => setViewerPhoto(null)} hitSlop={16} className="p-2">
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SCREEN_PADDING, paddingTop: space.sm, paddingBottom: space.md }}>
+              <Pressable onPress={() => setViewerPhoto(null)} hitSlop={16} style={{ padding: space.sm }}>
                 <X size={22} color="#fff" />
               </Pressable>
-              <View className="items-center flex-1">
+              <View style={{ alignItems: 'center', flex: 1 }}>
                 {viewerPhoto && (
                   <>
-                    <Text className="text-sm font-sans-bold" style={{ color: '#fff' }}>
+                    <Text style={[typography.labelMd, { color: '#fff' }]}>
                       {CATEGORIES.find((c) => c.value === viewerPhoto.category)?.label ?? viewerPhoto.category}
                     </Text>
-                    <Text className="text-[11px] font-sans" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    <Text style={[typography.caption, { color: 'rgba(255,255,255,0.6)' }]}>
                       {new Date(viewerPhoto.photo_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </Text>
                   </>
@@ -284,7 +282,7 @@ export default function ProgressPhotosScreen() {
                   ])
                 }}
                 hitSlop={16}
-                className="p-2"
+                style={{ padding: space.sm }}
               >
                 <Trash2 size={20} color="#ef4444" />
               </Pressable>
@@ -292,7 +290,7 @@ export default function ProgressPhotosScreen() {
           </SafeAreaView>
 
           {/* Photo */}
-          <View className="flex-1 items-center justify-center">
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             {viewerPhoto && (
               <Image
                 source={{ uri: `${API_BASE}/p/${accessCode}/progress-photos/${viewerPhoto.id}` }}

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, Platform } from 'react-native'
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Calendar, Clock, MapPin, Video, ChevronLeft, ChevronRight, Check, Info } from 'lucide-react-native'
@@ -8,12 +8,8 @@ import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { useBookingConfig, useBookingSlots, useRequestBooking } from '../src/hooks/usePortal'
 import type { BookingSlot } from '../src/types/portal'
-
-const SHADOW_SM = Platform.select({
-  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
-  android: { elevation: 2 },
-  default: {},
-}) as Record<string, unknown>
+import { ScreenHeader, Card, EmptyState, LoadingScreen } from '../src/components/ui'
+import { shadows, radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const MONTHS = [
@@ -108,57 +104,35 @@ export default function BookingScreen() {
     }
   }, [selectedDate, selectedSlot, effectiveType, requestBooking])
 
-  if (configLoading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} className="items-center justify-center" edges={['top']}>
-        <ActivityIndicator color={t.primary} size="large" />
-      </SafeAreaView>
-    )
-  }
+  if (configLoading) return <LoadingScreen />
 
   if (!config || config.booking_mode === 'disabled') {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-        <View className="px-5 pt-4 pb-3 flex-row items-center gap-3">
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <ChevronLeft size={22} color={t.textSecondary} />
-          </Pressable>
-          <Text style={{ color: t.text }} className="text-xl font-sans-bold">Agendar consulta</Text>
-        </View>
-        <View className="flex-1 items-center justify-center px-8">
-          <View className="h-16 w-16 rounded-3xl items-center justify-center mb-4" style={{ backgroundColor: t.primaryLight }}>
-            <Calendar size={28} color={t.primary} />
-          </View>
-          <Text style={{ color: t.textSecondary }} className="text-base text-center mt-2 font-sans">
-            O agendamento online não está disponível no momento.
-          </Text>
-        </View>
+        <ScreenHeader title="Agendar consulta" />
+        <EmptyState
+          icon={<Calendar size={28} color={t.primary} />}
+          title="Indisponível"
+          description="O agendamento online não está disponível no momento."
+        />
       </SafeAreaView>
     )
   }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      {/* Header */}
-      <View className="px-5 pt-4 pb-3 flex-row items-center gap-3">
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ChevronLeft size={22} color={t.textSecondary} />
-        </Pressable>
-        <View className="h-8 w-8 rounded-xl items-center justify-center" style={{ backgroundColor: t.primary + '15' }}>
-          <Calendar size={16} color={t.primary} />
-        </View>
-        <Text style={{ color: t.text }} className="text-xl font-sans-bold">Agendar consulta</Text>
-      </View>
+      <ScreenHeader title="Agendar consulta" />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Calendar */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)} className="mx-5 rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
+        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={{ paddingHorizontal: SCREEN_PADDING }}>
+          <Card>
           {/* Month nav */}
-          <View className="flex-row items-center justify-between mb-4">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg }}>
             <Pressable onPress={() => setCurrentMonth(addMonths(currentMonth, -1))} hitSlop={12}>
               <ChevronLeft size={20} color={t.textSecondary} />
             </Pressable>
-            <Text style={{ color: t.text }} className="text-sm font-sans-bold">
+            <Text style={[typography.headingSm, { color: t.text }]}>
               {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </Text>
             <Pressable onPress={() => setCurrentMonth(addMonths(currentMonth, 1))} hitSlop={12}>
@@ -167,40 +141,41 @@ export default function BookingScreen() {
           </View>
 
           {/* Weekday headers */}
-          <View className="flex-row mb-2">
+          <View style={{ flexDirection: 'row', marginBottom: space.sm }}>
             {WEEKDAYS.map((w) => (
-              <View key={w} className="flex-1 items-center">
-                <Text style={{ color: t.textMuted }} className="text-[10px] font-sans-bold uppercase">{w}</Text>
+              <View key={w} style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={[typography.captionBold, { color: t.textMuted, fontSize: 10, textTransform: 'uppercase' }]}>{w}</Text>
               </View>
             ))}
           </View>
 
           {/* Days grid */}
-          <View className="flex-row flex-wrap">
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {calendarDays.map((d, i) => (
-              <View key={i} className="items-center justify-center" style={{ width: '14.28%', height: 42 }}>
+              <View key={i} style={{ alignItems: 'center', justifyContent: 'center', width: '14.28%', height: 42 }}>
                 {d.day > 0 && (
                   <Pressable
                     onPress={() => d.enabled && handleDateSelect(d.date)}
                     disabled={!d.enabled}
-                    className="w-9 h-9 rounded-xl items-center justify-center"
-                    style={
-                      d.date === selectedDate
+                    style={{
+                      width: 36, height: 36,
+                      borderRadius: radius.lg,
+                      alignItems: 'center', justifyContent: 'center',
+                      ...(d.date === selectedDate
                         ? { backgroundColor: t.primary }
                         : d.isToday
                         ? { borderWidth: 1.5, borderColor: t.primary }
-                        : undefined
-                    }
+                        : {}),
+                    }}
                   >
                     <Text
-                      className="text-xs font-sans-semibold"
-                      style={{
+                      style={[typography.captionBold, {
                         color: d.date === selectedDate
-                          ? t.primaryText
+                          ? t.primaryFg
                           : !d.enabled
                           ? t.borderLight
                           : t.text,
-                      }}
+                      }]}
                     >
                       {d.day}
                     </Text>
@@ -209,48 +184,50 @@ export default function BookingScreen() {
               </View>
             ))}
           </View>
+          </Card>
         </Animated.View>
 
         {/* Time slots */}
         {selectedDate && (
-          <Animated.View entering={FadeInDown.delay(200).duration(400)} className="mx-5 mt-4">
-            <View className="flex-row items-center gap-2 mb-3 ml-1">
+          <Animated.View entering={FadeInDown.delay(200).duration(400)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.md, marginLeft: 2 }}>
               <Clock size={14} color={t.primary} />
-              <Text style={{ color: t.text }} className="text-sm font-sans-bold">Horários disponíveis</Text>
+              <Text style={[typography.headingSm, { color: t.text }]}>Horários disponíveis</Text>
               {slotsLoading && <ActivityIndicator size="small" color={t.primary} />}
             </View>
 
             {!slotsLoading && slotsData && slotsData.slots.length === 0 && (
-              <View className="rounded-2xl p-4" style={{ backgroundColor: t.surface, ...SHADOW_SM }}>
-                <Text style={{ color: t.textMuted }} className="text-sm text-center font-sans">Nenhum horário disponível neste dia.</Text>
-              </View>
+              <Card>
+                <Text style={[typography.bodyMd, { color: t.textMuted, textAlign: 'center' }]}>Nenhum horário disponível neste dia.</Text>
+              </Card>
             )}
 
             {!slotsLoading && slotsData && slotsData.slots.length > 0 && (
-              <View className="flex-row flex-wrap gap-2">
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
                 {slotsData.slots.map((slot: BookingSlot) => (
                   <Pressable
                     key={slot.time}
                     onPress={() => slot.available && setSelectedSlot(slot.time)}
                     disabled={!slot.available}
-                    className="px-4 py-2.5 rounded-xl"
-                    style={
-                      selectedSlot === slot.time
+                    style={{
+                      paddingHorizontal: space.lg,
+                      paddingVertical: space.sm + 2,
+                      borderRadius: radius.lg,
+                      ...(selectedSlot === slot.time
                         ? { backgroundColor: t.primary }
                         : slot.available
-                        ? { backgroundColor: t.surface, ...SHADOW_SM }
-                        : { backgroundColor: t.borderLight }
-                    }
+                        ? { backgroundColor: t.surface, ...shadows.sm }
+                        : { backgroundColor: t.borderLight }),
+                    }}
                   >
                     <Text
-                      className="text-sm font-sans-semibold"
-                      style={{
+                      style={[typography.labelMd, {
                         color: selectedSlot === slot.time
-                          ? t.primaryText
+                          ? t.primaryFg
                           : slot.available
                           ? t.text
                           : t.textMuted,
-                      }}
+                      }]}
                     >
                       {slot.time}
                     </Text>
@@ -260,7 +237,7 @@ export default function BookingScreen() {
             )}
 
             {slotsData && (
-              <Text style={{ color: t.textMuted }} className="text-[10px] font-sans mt-2 ml-1">
+              <Text style={[typography.caption, { color: t.textMuted, marginTop: space.sm, marginLeft: 2 }]}>
                 Duração: {slotsData.duration_minutes} min
               </Text>
             )}
@@ -269,34 +246,42 @@ export default function BookingScreen() {
 
         {/* Type selector */}
         {showTypeSelector && selectedSlot && (
-          <Animated.View entering={FadeInDown.delay(300).duration(400)} className="mx-5 mt-4">
-            <Text style={{ color: t.text }} className="text-sm font-sans-bold mb-3 ml-1">Tipo de consulta</Text>
-            <View className="flex-row gap-3">
+          <Animated.View entering={FadeInDown.delay(300).duration(400)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.lg }}>
+            <Text style={[typography.headingSm, { color: t.text, marginBottom: space.md, marginLeft: 2 }]}>Tipo de consulta</Text>
+            <View style={{ flexDirection: 'row', gap: space.md }}>
               <Pressable
                 onPress={() => setSelectedType('online')}
-                className="flex-1 p-4 rounded-2xl items-center gap-2"
-                style={
-                  selectedType === 'online'
+                style={{
+                  flex: 1,
+                  padding: space.lg,
+                  borderRadius: radius.xl,
+                  alignItems: 'center',
+                  gap: space.sm,
+                  ...(selectedType === 'online'
                     ? { backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primary }
-                    : { backgroundColor: t.surface, ...SHADOW_SM }
-                }
+                    : { backgroundColor: t.surface, ...shadows.sm }),
+                }}
               >
                 <Video size={20} color={selectedType === 'online' ? t.primary : t.textMuted} />
-                <Text className="text-sm font-sans-semibold" style={{ color: selectedType === 'online' ? t.primary : t.text }}>
+                <Text style={[typography.labelMd, { color: selectedType === 'online' ? t.primary : t.text }]}>
                   Online
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => setSelectedType('in_person')}
-                className="flex-1 p-4 rounded-2xl items-center gap-2"
-                style={
-                  selectedType === 'in_person'
+                style={{
+                  flex: 1,
+                  padding: space.lg,
+                  borderRadius: radius.xl,
+                  alignItems: 'center',
+                  gap: space.sm,
+                  ...(selectedType === 'in_person'
                     ? { backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primary }
-                    : { backgroundColor: t.surface, ...SHADOW_SM }
-                }
+                    : { backgroundColor: t.surface, ...shadows.sm }),
+                }}
               >
                 <MapPin size={20} color={selectedType === 'in_person' ? t.primary : t.textMuted} />
-                <Text className="text-sm font-sans-semibold" style={{ color: selectedType === 'in_person' ? t.primary : t.text }}>
+                <Text style={[typography.labelMd, { color: selectedType === 'in_person' ? t.primary : t.text }]}>
                   Presencial
                 </Text>
               </Pressable>
@@ -308,11 +293,19 @@ export default function BookingScreen() {
         {config.booking_mode === 'approval' && selectedSlot && (
           <Animated.View
             entering={FadeInDown.delay(350).duration(400)}
-            className="mx-5 mt-4 rounded-xl p-3 flex-row items-start gap-2"
-            style={{ backgroundColor: t.accent + '12' }}
+            style={{
+              marginHorizontal: SCREEN_PADDING,
+              marginTop: space.lg,
+              borderRadius: radius.lg,
+              padding: space.md,
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: space.sm,
+              backgroundColor: t.accentLight,
+            }}
           >
             <Info size={14} color={t.accent} style={{ marginTop: 1 }} />
-            <Text style={{ color: t.accent }} className="text-xs font-sans flex-1">
+            <Text style={[typography.bodySm, { color: t.accent, flex: 1 }]}>
               Sua solicitação será enviada para o nutricionista aprovar antes de ser confirmada.
             </Text>
           </Animated.View>
@@ -320,8 +313,8 @@ export default function BookingScreen() {
 
         {/* Price */}
         {config.consultation_price_cents && selectedSlot && (
-          <Animated.View entering={FadeInDown.delay(360).duration(400)} className="mx-5 mt-3 ml-6">
-            <Text style={{ color: t.textMuted }} className="text-xs font-sans">
+          <Animated.View entering={FadeInDown.delay(360).duration(400)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.md }}>
+            <Text style={[typography.caption, { color: t.textMuted, marginLeft: 2 }]}>
               Valor: R$ {(config.consultation_price_cents / 100).toFixed(2).replace('.', ',')}
             </Text>
           </Animated.View>
@@ -332,24 +325,37 @@ export default function BookingScreen() {
       {canBook && (
         <Animated.View
           entering={FadeInDown.duration(300)}
-          className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-4"
-          style={{ backgroundColor: t.background, borderTopWidth: 1, borderTopColor: t.borderLight }}
+          style={{
+            position: 'absolute',
+            bottom: 0, left: 0, right: 0,
+            paddingHorizontal: SCREEN_PADDING,
+            paddingBottom: space['3xl'],
+            paddingTop: space.lg,
+            backgroundColor: t.background,
+            borderTopWidth: 1,
+            borderTopColor: t.borderLight,
+          }}
         >
           <Pressable
             onPress={handleBook}
             disabled={requestBooking.isPending}
-            className="rounded-2xl py-4 flex-row items-center justify-center gap-2"
             style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: space.sm,
+              paddingVertical: space.lg,
+              borderRadius: radius.xl,
               backgroundColor: requestBooking.isPending ? t.primary + '80' : t.primary,
-              ...SHADOW_SM,
+              ...shadows.glow(t.primary),
             }}
           >
             {requestBooking.isPending ? (
-              <ActivityIndicator color={t.primaryText} size="small" />
+              <ActivityIndicator color={t.primaryFg} size="small" />
             ) : (
-              <Check size={18} color={t.primaryText} />
+              <Check size={18} color={t.primaryFg} />
             )}
-            <Text style={{ color: t.primaryText }} className="font-sans-bold text-base">
+            <Text style={[typography.headingSm, { color: t.primaryFg }]}>
               {config.booking_mode === 'approval' ? 'Solicitar agendamento' : 'Confirmar agendamento'}
             </Text>
           </Pressable>
