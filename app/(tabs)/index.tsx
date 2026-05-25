@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useReducer, useEffect } from "react";
+import { useMemo, useCallback, useReducer, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Pressable,
   RefreshControl,
   Dimensions,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,6 +34,7 @@ import {
   Scale,
   Camera,
   CalendarPlus,
+  LayoutGrid,
 } from "lucide-react-native";
 import Svg, {
   Rect as SvgRect,
@@ -42,7 +44,20 @@ import Svg, {
   LinearGradient,
   Stop,
 } from "react-native-svg";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  ZoomIn,
+  SlideInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withDelay,
+  runOnJS,
+  Easing,
+} from "react-native-reanimated";
 import { useThemeColors } from "../../src/stores/theme";
 import { useFeaturesStore } from "../../src/stores/features";
 import {
@@ -68,6 +83,7 @@ import {
 } from "../../src/components/ui";
 import {
   radius,
+  shadows,
   space,
   typography,
   SCREEN_PADDING,
@@ -491,68 +507,8 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
-        {/* ═══════ QUICK ACTIONS — 4-column icon grid ═══════ */}
-        <Animated.View
-          entering={FadeInDown.duration(350).delay(160)}
-          style={{
-            paddingHorizontal: SCREEN_PADDING,
-            marginBottom: space.xl,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              columnGap: GRID_GAP,
-              rowGap: 0,
-            }}
-          >
-            <QuickAction
-              icon={<Scale size={18} color={t.accent} />}
-              label="Peso"
-              bg={t.accentLight}
-              onPress={() => router.push("/weight" as never)}
-            />
-            <QuickAction
-              icon={<Target size={18} color={t.success} />}
-              label="Metas"
-              bg={t.successLight}
-              onPress={() => router.push("/goals")}
-            />
-            <QuickAction
-              icon={<Heart size={18} color="#EC4899" />}
-              label="Bem-estar"
-              bg="#FDF2F8"
-              onPress={() => router.push("/wellness" as never)}
-            />
-            <QuickAction
-              icon={<MessageCircle size={18} color={t.info} />}
-              label="Chat"
-              bg={t.infoLight}
-              onPress={() => router.push("/chat")}
-            />
-            {canWrite && (
-              <QuickAction
-                icon={<CalendarPlus size={18} color={t.primary} />}
-                label="Agendar"
-                bg={t.primaryLight}
-                onPress={() => router.push("/booking")}
-              />
-            )}
-            <QuickAction
-              icon={<Camera size={18} color={t.primary} />}
-              label="Fotos"
-              bg={t.primaryLight}
-              onPress={() => router.push("/progress-photos" as never)}
-            />
-            <QuickAction
-              icon={<ClipboardList size={18} color={t.accent} />}
-              label="Question."
-              bg={t.accentLight}
-              onPress={() => router.push("/questionnaires")}
-            />
-          </View>
-        </Animated.View>
+        {/* ═══════ QUICK ACTIONS — 4-column icon grid + folder ═══════ */}
+        <QuickActionsGrid canWrite={canWrite} />
 
         {/* ═══════ NEXT APPOINTMENT ═══════ */}
         {apt && <AppointmentCard apt={apt} />}
@@ -742,6 +698,243 @@ function QuickAction({
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+// ── Quick Actions Grid with iOS Folder ──
+
+const MAX_VISIBLE = 5;
+const FOLDER_SPRING = { damping: 16, stiffness: 200, mass: 0.8 };
+
+type ActionDef = {
+  icon: React.ReactNode;
+  label: string;
+  bg: string;
+  route: string;
+  folderIcon?: React.ReactNode;
+};
+
+function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
+  const t = useThemeColors();
+  const [folderOpen, setFolderOpen] = useState(false);
+
+  const allActions: ActionDef[] = useMemo(() => {
+    const actions: ActionDef[] = [
+      { icon: <Scale size={18} color={t.accent} />, label: "Peso", bg: t.accentLight, route: "/weight", folderIcon: <Scale size={10} color={t.accent} /> },
+      { icon: <Target size={18} color={t.success} />, label: "Metas", bg: t.successLight, route: "/goals", folderIcon: <Target size={10} color={t.success} /> },
+      { icon: <Heart size={18} color="#EC4899" />, label: "Bem-estar", bg: "#FDF2F8", route: "/wellness", folderIcon: <Heart size={10} color="#EC4899" /> },
+      { icon: <MessageCircle size={18} color={t.info} />, label: "Chat", bg: t.infoLight, route: "/chat", folderIcon: <MessageCircle size={10} color={t.info} /> },
+    ];
+    if (canWrite) {
+      actions.push({ icon: <CalendarPlus size={18} color={t.primary} />, label: "Agendar", bg: t.primaryLight, route: "/booking", folderIcon: <CalendarPlus size={10} color={t.primary} /> });
+    }
+    actions.push(
+      { icon: <Camera size={18} color={t.primary} />, label: "Fotos", bg: t.primaryLight, route: "/progress-photos", folderIcon: <Camera size={10} color={t.primary} /> },
+      { icon: <ClipboardList size={18} color={t.accent} />, label: "Quest.", bg: t.accentLight, route: "/questionnaires", folderIcon: <ClipboardList size={10} color={t.accent} /> },
+    );
+    return actions;
+  }, [canWrite, t]);
+
+  const visible = allActions.slice(0, MAX_VISIBLE);
+  const overflow = allActions.slice(MAX_VISIBLE);
+  const hasOverflow = overflow.length > 0;
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(350).delay(160)}
+      style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.xl }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          columnGap: GRID_GAP,
+          rowGap: 0,
+        }}
+      >
+        {visible.map((a) => (
+          <QuickAction
+            key={a.route}
+            icon={a.icon}
+            label={a.label}
+            bg={a.bg}
+            onPress={() => router.push(a.route as never)}
+          />
+        ))}
+
+        {/* ── Folder button with mini-icon grid ── */}
+        {hasOverflow && (
+          <Pressable
+            onPress={() => setFolderOpen(true)}
+            style={({ pressed }) => ({
+              width: GRID_ITEM_W,
+              alignItems: "center",
+              paddingVertical: space.md,
+              marginBottom: space.md,
+              borderRadius: radius.lg,
+              opacity: pressed ? 0.75 : 1,
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+            })}
+          >
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: radius.lg,
+                backgroundColor: t.surfaceSecondary,
+                borderWidth: 1,
+                borderColor: t.border,
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                flexWrap: "wrap",
+                padding: 5,
+                gap: 2,
+              }}
+            >
+              {overflow.slice(0, 4).map((a, i) => (
+                <View
+                  key={i}
+                  style={{
+                    width: 15,
+                    height: 15,
+                    borderRadius: 5,
+                    backgroundColor: a.bg,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {a.folderIcon}
+                </View>
+              ))}
+            </View>
+            <Text
+              style={[
+                typography.captionBold,
+                { color: t.textMuted, textAlign: "center", marginTop: space.sm },
+              ]}
+              numberOfLines={1}
+            >
+              Mais
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
+      {/* ── Folder overlay — Apple-style ── */}
+      <Modal
+        visible={folderOpen}
+        transparent
+        statusBarTranslucent
+        animationType="none"
+        onRequestClose={() => setFolderOpen(false)}
+      >
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Pressable
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+            onPress={() => setFolderOpen(false)}
+          />
+
+          {/* Card */}
+          <Animated.View
+            entering={ZoomIn.springify()
+              .damping(FOLDER_SPRING.damping)
+              .stiffness(FOLDER_SPRING.stiffness)
+              .mass(FOLDER_SPRING.mass)}
+            style={{
+              backgroundColor: t.surface,
+              borderRadius: 28,
+              paddingTop: space.xl + 4,
+              paddingBottom: space.xl,
+              paddingHorizontal: space.xl,
+              width: SCREEN_W - SCREEN_PADDING * 3,
+              borderWidth: 1,
+              borderColor: t.borderLight,
+              ...shadows.xl,
+            }}
+          >
+            {/* Handle bar */}
+            <View style={{ alignItems: "center", marginBottom: space.lg + 4 }}>
+              <View
+                style={{
+                  width: 36,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: t.borderLight,
+                }}
+              />
+            </View>
+
+            {/* Items grid */}
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: space.lg,
+              }}
+            >
+              {overflow.map((a, i) => (
+                <Animated.View
+                  key={a.route}
+                  entering={ZoomIn.springify()
+                    .damping(14)
+                    .stiffness(160)
+                    .mass(0.6)
+                    .delay(80 + i * 60)}
+                >
+                  <Pressable
+                    onPress={() => {
+                      setFolderOpen(false);
+                      setTimeout(() => router.push(a.route as never), 200);
+                    }}
+                    style={({ pressed }) => ({
+                      alignItems: "center",
+                      width: 80,
+                      paddingVertical: space.sm,
+                      borderRadius: radius.xl,
+                      backgroundColor: pressed ? t.surfacePressed : "transparent",
+                      transform: [{ scale: pressed ? 0.9 : 1 }],
+                    })}
+                  >
+                    <View
+                      style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: 18,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: a.bg,
+                        marginBottom: space.sm + 2,
+                      }}
+                    >
+                      {a.icon}
+                    </View>
+                    <Text
+                      style={[
+                        typography.captionBold,
+                        { color: t.text, textAlign: "center", lineHeight: 14 },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {a.label}
+                    </Text>
+                  </Pressable>
+                </Animated.View>
+              ))}
+            </View>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+    </Animated.View>
   );
 }
 
