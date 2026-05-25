@@ -669,34 +669,35 @@ function QuickAction({
         width: GRID_ITEM_W,
         alignItems: "center",
         paddingVertical: space.md,
-        marginBottom: space.md,
+        marginBottom: space.xs,
         borderRadius: radius.lg,
         opacity: pressed ? 0.75 : 1,
-        transform: [{ scale: pressed ? 0.95 : 1 }],
+        transform: [{ scale: pressed ? 0.93 : 1 }],
       })}
     >
       <View
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: radius.lg,
+          width: 46,
+          height: 46,
+          borderRadius: 15,
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: bg,
-          marginBottom: space.sm,
         }}
       >
         {icon}
       </View>
-      <Text
-        style={[
-          typography.captionBold,
-          { color: t.textSecondary, textAlign: "center" },
-        ]}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
+      <View style={{ height: 30, justifyContent: "center", marginTop: space.xs + 2 }}>
+        <Text
+          style={[
+            typography.captionBold,
+            { color: t.textSecondary, textAlign: "center", fontSize: 10.5, lineHeight: 13 },
+          ]}
+          numberOfLines={2}
+        >
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -770,7 +771,7 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
               width: GRID_ITEM_W,
               alignItems: "center",
               paddingVertical: space.md,
-              marginBottom: space.md,
+              marginBottom: space.xs,
               borderRadius: radius.lg,
               opacity: pressed ? 0.75 : 1,
               transform: [{ scale: pressed ? 0.92 : 1 }],
@@ -778,17 +779,15 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
           >
             <View
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: radius.lg,
+                width: 46,
+                height: 46,
+                borderRadius: 15,
                 backgroundColor: t.surfaceSecondary,
-                borderWidth: 1,
-                borderColor: t.border,
                 alignItems: "center",
                 justifyContent: "center",
                 flexDirection: "row",
                 flexWrap: "wrap",
-                padding: 5,
+                padding: 6,
                 gap: 2,
               }}
             >
@@ -808,15 +807,17 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
                 </View>
               ))}
             </View>
-            <Text
-              style={[
-                typography.captionBold,
-                { color: t.textMuted, textAlign: "center", marginTop: space.sm },
-              ]}
-              numberOfLines={1}
-            >
-              Mais
-            </Text>
+            <View style={{ height: 30, justifyContent: "center", marginTop: space.xs + 2 }}>
+              <Text
+                style={[
+                  typography.captionBold,
+                  { color: t.textMuted, textAlign: "center", fontSize: 10.5, lineHeight: 13 },
+                ]}
+                numberOfLines={2}
+              >
+                Mais
+              </Text>
+            </View>
           </Pressable>
         )}
       </View>
@@ -829,110 +830,117 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
         animationType="none"
         onRequestClose={() => setFolderOpen(false)}
       >
-        <Animated.View
-          entering={FadeIn.duration(200)}
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.45)",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Pressable
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-            onPress={() => setFolderOpen(false)}
-          />
-
-          {/* Card */}
+        <View style={{ flex: 1 }}>
+          {/* Backdrop */}
           <Animated.View
-            entering={ZoomIn.springify()
-              .damping(FOLDER_SPRING.damping)
-              .stiffness(FOLDER_SPRING.stiffness)
-              .mass(FOLDER_SPRING.mass)}
+            entering={FadeIn.duration(250)}
             style={{
-              backgroundColor: t.surface,
-              borderRadius: 28,
-              paddingTop: space.xl + 4,
-              paddingBottom: space.xl,
-              paddingHorizontal: space.xl,
-              width: SCREEN_W - SCREEN_PADDING * 3,
-              borderWidth: 1,
-              borderColor: t.borderLight,
-              ...shadows.xl,
+              position: "absolute",
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: "rgba(0,0,0,0.5)",
             }}
+          />
+          <Pressable
+            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+            onPress={() => setFolderOpen(false)}
           >
-            {/* Handle bar */}
-            <View style={{ alignItems: "center", marginBottom: space.lg + 4 }}>
-              <View
-                style={{
-                  width: 36,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: t.borderLight,
-                }}
-              />
-            </View>
-
-            {/* Items grid */}
-            <View
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: space.lg,
-              }}
+            {/* Card */}
+            <Animated.View
+              entering={ZoomIn.springify()
+                .damping(FOLDER_SPRING.damping)
+                .stiffness(FOLDER_SPRING.stiffness)
+                .mass(FOLDER_SPRING.mass)}
             >
-              {overflow.map((a, i) => (
-                <Animated.View
-                  key={a.route}
-                  entering={ZoomIn.springify()
-                    .damping(14)
-                    .stiffness(160)
-                    .mass(0.6)
-                    .delay(80 + i * 60)}
-                >
-                  <Pressable
-                    onPress={() => {
-                      setFolderOpen(false);
-                      setTimeout(() => router.push(a.route as never), 200);
+              <Pressable
+                onPress={(e) => e.stopPropagation()}
+                style={{
+                  backgroundColor: t.surface,
+                  borderRadius: 24,
+                  paddingTop: space.xl,
+                  paddingBottom: space.xl + 4,
+                  paddingHorizontal: space.lg,
+                  width: SCREEN_W * 0.72,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 12 },
+                  shadowOpacity: 0.18,
+                  shadowRadius: 32,
+                  elevation: 24,
+                }}
+              >
+                {/* Accent line */}
+                <View style={{ alignItems: "center", marginBottom: space.xl }}>
+                  <View
+                    style={{
+                      width: 40,
+                      height: 3.5,
+                      borderRadius: 2,
+                      backgroundColor: t.primary,
+                      opacity: 0.25,
                     }}
-                    style={({ pressed }) => ({
-                      alignItems: "center",
-                      width: 80,
-                      paddingVertical: space.sm,
-                      borderRadius: radius.xl,
-                      backgroundColor: pressed ? t.surfacePressed : "transparent",
-                      transform: [{ scale: pressed ? 0.9 : 1 }],
-                    })}
-                  >
-                    <View
-                      style={{
-                        width: 52,
-                        height: 52,
-                        borderRadius: 18,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: a.bg,
-                        marginBottom: space.sm + 2,
-                      }}
+                  />
+                </View>
+
+                {/* Items */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    gap: space.xl,
+                  }}
+                >
+                  {overflow.map((a, i) => (
+                    <Animated.View
+                      key={a.route}
+                      entering={FadeInUp.springify()
+                        .damping(12)
+                        .stiffness(150)
+                        .mass(0.5)
+                        .delay(100 + i * 80)}
                     >
-                      {a.icon}
-                    </View>
-                    <Text
-                      style={[
-                        typography.captionBold,
-                        { color: t.text, textAlign: "center", lineHeight: 14 },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {a.label}
-                    </Text>
-                  </Pressable>
-                </Animated.View>
-              ))}
-            </View>
-          </Animated.View>
-        </Animated.View>
+                      <Pressable
+                        onPress={() => {
+                          setFolderOpen(false);
+                          setTimeout(() => router.push(a.route as never), 180);
+                        }}
+                        style={({ pressed }) => ({
+                          alignItems: "center",
+                          paddingVertical: space.sm,
+                          paddingHorizontal: space.sm,
+                          borderRadius: radius.xl,
+                          backgroundColor: pressed ? t.borderLight : "transparent",
+                          transform: [{ scale: pressed ? 0.88 : 1 }],
+                        })}
+                      >
+                        <View
+                          style={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: 18,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: a.bg,
+                            marginBottom: space.sm,
+                          }}
+                        >
+                          {a.icon}
+                        </View>
+                        <Text
+                          style={[
+                            typography.captionBold,
+                            { color: t.text, textAlign: "center", fontSize: 11, lineHeight: 14 },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {a.label}
+                        </Text>
+                      </Pressable>
+                    </Animated.View>
+                  ))}
+                </View>
+              </Pressable>
+            </Animated.View>
+          </Pressable>
+        </View>
       </Modal>
     </Animated.View>
   );
