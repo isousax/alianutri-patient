@@ -148,18 +148,14 @@ function SettingsRow({ icon, label, subtitle, onPress, t }: {
   onPress?: () => void
   t: ThemeColors
 }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: subtitle ? 'flex-start' : 'center',
-        paddingHorizontal: space.lg,
-        paddingVertical: space.lg - 2,
-        backgroundColor: pressed && onPress ? t.surfacePressed : 'transparent',
-      })}
-    >
+  const content = (
+    <View style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      paddingHorizontal: space.lg,
+      paddingVertical: space.lg,
+    }}>
       <View style={{
         width: 34,
         height: 34,
@@ -167,18 +163,22 @@ function SettingsRow({ icon, label, subtitle, onPress, t }: {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: t.surfaceSecondary,
-        marginRight: space.md,
-        marginTop: subtitle ? 1 : 0,
+        flexShrink: 0,
       }}>
         {icon}
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[typography.labelMd, { color: t.text }]}>{label}</Text>
-        {subtitle && (
-          <Text style={[typography.caption, { color: t.textMuted, marginTop: 3 }]}>{subtitle}</Text>
-        )}
+      <View style={{ flex: 1, flexShrink: 1 }}>
+        <Text style={[typography.labelMd, { color: t.text }]} numberOfLines={1}>{label}</Text>
+        {subtitle ? (
+          <Text style={[typography.caption, { color: t.textMuted, marginTop: 2 }]} numberOfLines={2}>{subtitle}</Text>
+        ) : null}
       </View>
-      {onPress && <ChevronRight size={14} color={t.textMuted} style={{ marginTop: subtitle ? 10 : 0 }} />}
-    </Pressable>
+      {onPress ? <ChevronRight size={14} color={t.textMuted} /> : null}
+    </View>
   )
+
+  if (onPress) {
+    return <Pressable onPress={onPress}>{content}</Pressable>
+  }
+  return content
 }

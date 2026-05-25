@@ -96,15 +96,15 @@ export default function GuidelinesScreen() {
       </View>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 40, gap: space.lg }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
       >
         {guidelines.map((g) => (
-          <Card key={g.id} onPress={() => setSelectedId(g.id)} style={{ marginBottom: space.md }}>
+          <Card key={g.id} onPress={() => setSelectedId(g.id)}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{
-                width: 42, height: 42,
+                width: 40, height: 42,
                 borderRadius: radius.md,
                 alignItems: 'center',
                 justifyContent: 'center',
