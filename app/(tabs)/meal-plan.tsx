@@ -12,6 +12,7 @@ export default function MealPlanScreen() {
   const t = useThemeColors()
   const { data: plans, isLoading, refetch, isRefetching } = useMealPlans()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [shoppingOpen, setShoppingOpen] = useState(false)
   const { data: detail, isLoading: loadingDetail } = useMealPlanDetail(selectedId)
 
   // ── Loading ──
@@ -39,71 +40,122 @@ export default function MealPlanScreen() {
   if (selectedId && detail) {
     const meals = Array.isArray(detail.meals) ? detail.meals : []
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-        <ScreenHeader title={detail.name} onBack={() => setSelectedId(null)} />
+      <View style={{ flex: 1, backgroundColor: t.background }}>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <ScreenHeader title={detail.name} onBack={() => setSelectedId(null)} />
 
-        {detail.total_kcal ? (
+          {detail.total_kcal ? (
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginHorizontal: SCREEN_PADDING,
+              marginBottom: space.lg,
+              paddingHorizontal: space.lg,
+              paddingVertical: space.sm + 2,
+              borderRadius: radius.lg,
+              backgroundColor: t.primaryLight,
+              gap: space.sm,
+            }}>
+              <Text style={[typography.captionBold, { color: t.primary }]}>
+                {detail.total_kcal} kcal
+              </Text>
+              {detail.total_protein_g ? <Text style={[typography.caption, { color: t.primary }]}>• P {detail.total_protein_g}g</Text> : null}
+              {detail.total_carbs_g ? <Text style={[typography.caption, { color: t.primary }]}>• C {detail.total_carbs_g}g</Text> : null}
+              {detail.total_fat_g ? <Text style={[typography.caption, { color: t.primary }]}>• G {detail.total_fat_g}g</Text> : null}
+            </View>
+          ) : null}
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 80 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={t.primary} />}
+          >
+            {meals.map((meal: any, idx: number) => (
+              <Animated.View key={idx} entering={FadeInDown.duration(250).delay(idx * 50)}>
+                <Card style={{ marginBottom: space.lg }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.sm + 2 }}>
+                    <View style={{
+                      width: 28, height: 28, borderRadius: radius.sm,
+                      alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: t.primaryLight,
+                    }}>
+                      <Clock size={12} color={t.primary} />
+                    </View>
+                    <Text style={[typography.headingSm, { color: t.text, flex: 1 }]}>{meal.name || `Refeição ${idx + 1}`}</Text>
+                    {meal.time ? <Text style={[typography.caption, { color: t.textMuted }]}>{meal.time}</Text> : null}
+                  </View>
+                  {Array.isArray(meal.foods) && meal.foods.map((food: any, fi: number) => (
+                    <View key={fi} style={{ marginLeft: 28 + space.sm, marginBottom: 5, flexDirection: 'row', flexWrap: 'wrap' }}>
+                      <Text style={[typography.bodySm, { color: t.textSecondary }]}>• {food.name || food.food_description}</Text>
+                      {food.quantity ? <Text style={[typography.caption, { color: t.textMuted }]}> — {food.quantity}{food.unit ? ` ${food.unit}` : ''}</Text> : null}
+                    </View>
+                  ))}
+                </Card>
+              </Animated.View>
+            ))}
+            {meals.length === 0 && (
+              <Text style={[typography.bodyMd, { color: t.textMuted, textAlign: 'center', marginTop: space['5xl'] }]}>
+                Sem detalhes das refeições.
+              </Text>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+
+        {/* Shopping list FAB — inline to avoid Fragment/absolute positioning bug */}
+        {detail.shopping_list ? (
           <View style={{
-            flexDirection: 'row',
+            position: 'absolute',
+            bottom: 24,
+            right: SCREEN_PADDING,
+            width: 56,
+            height: 56,
+            borderRadius: 28,
             alignItems: 'center',
-            marginHorizontal: SCREEN_PADDING,
-            marginBottom: space.lg,
-            paddingHorizontal: space.lg,
-            paddingVertical: space.sm + 2,
-            borderRadius: radius.lg,
-            backgroundColor: t.primaryLight,
-            gap: space.sm,
+            justifyContent: 'center',
+            backgroundColor: t.accent,
+            zIndex: 999,
+            elevation: 10,
+            ...shadows.lg,
           }}>
-            <Text style={[typography.captionBold, { color: t.primary }]}>
-              {detail.total_kcal} kcal
-            </Text>
-            {detail.total_protein_g ? <Text style={[typography.caption, { color: t.primary }]}>• P {detail.total_protein_g}g</Text> : null}
-            {detail.total_carbs_g ? <Text style={[typography.caption, { color: t.primary }]}>• C {detail.total_carbs_g}g</Text> : null}
-            {detail.total_fat_g ? <Text style={[typography.caption, { color: t.primary }]}>• G {detail.total_fat_g}g</Text> : null}
+            <Pressable
+              onPress={() => setShoppingOpen(true)}
+              style={{ width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <ShoppingCart size={22} color="#fff" />
+            </Pressable>
           </View>
         ) : null}
 
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 80 }}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={t.primary} />}
-        >
-          {meals.map((meal: any, idx: number) => (
-            <Animated.View key={idx} entering={FadeInDown.duration(250).delay(idx * 50)}>
-              <Card style={{ marginBottom: space.lg }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.sm + 2 }}>
-                  <View style={{
-                    width: 28, height: 28, borderRadius: radius.sm,
-                    alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: t.primaryLight,
-                  }}>
-                    <Clock size={12} color={t.primary} />
-                  </View>
-                  <Text style={[typography.headingSm, { color: t.text, flex: 1 }]}>{meal.name || `Refeição ${idx + 1}`}</Text>
-                  {meal.time ? <Text style={[typography.caption, { color: t.textMuted }]}>{meal.time}</Text> : null}
+        {/* Shopping list bottom sheet */}
+        <Modal visible={shoppingOpen} animationType="slide" transparent statusBarTranslucent presentationStyle="overFullScreen" onRequestClose={() => setShoppingOpen(false)}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' }}>
+            <Pressable style={{ flex: 1 }} onPress={() => setShoppingOpen(false)} />
+            <View style={{
+              backgroundColor: t.surface,
+              borderTopLeftRadius: radius['2xl'],
+              borderTopRightRadius: radius['2xl'],
+              paddingHorizontal: SCREEN_PADDING,
+              paddingTop: space.lg,
+              paddingBottom: 100,
+              maxHeight: '80%',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.xl }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                  <ShoppingCart size={16} color={t.accent} />
+                  <Text style={[typography.headingMd, { color: t.text }]}>Lista de compras</Text>
                 </View>
-                {Array.isArray(meal.foods) && meal.foods.map((food: any, fi: number) => (
-                  <View key={fi} style={{ marginLeft: 28 + space.sm, marginBottom: 5, flexDirection: 'row', flexWrap: 'wrap' }}>
-                    <Text style={[typography.bodySm, { color: t.textSecondary }]}>• {food.name || food.food_description}</Text>
-                    {food.quantity ? <Text style={[typography.caption, { color: t.textMuted }]}> — {food.quantity}{food.unit ? ` ${food.unit}` : ''}</Text> : null}
-                  </View>
-                ))}
-              </Card>
-            </Animated.View>
-          ))}
-          {meals.length === 0 && (
-            <Text style={[typography.bodyMd, { color: t.textMuted, textAlign: 'center', marginTop: space['5xl'] }]}>
-              Sem detalhes das refeições.
-            </Text>
-          )}
-        </ScrollView>
-
-        {/* Shopping list FAB */}
-        {detail.shopping_list ? (
-          <ShoppingListFAB shoppingList={detail.shopping_list} />
-        ) : null}
-      </SafeAreaView>
+                <Pressable onPress={() => setShoppingOpen(false)} hitSlop={12} style={{ padding: space.xs }}>
+                  <X size={20} color={t.textMuted} />
+                </Pressable>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={[typography.bodyMd, { color: t.textSecondary, lineHeight: 22 }]}>{detail.shopping_list}</Text>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </View>
     )
   }
 
@@ -203,64 +255,5 @@ export default function MealPlanScreen() {
         </View>
       )}
     </SafeAreaView>
-  )
-}
-
-// ── Shopping List FAB + Modal ──
-
-function ShoppingListFAB({ shoppingList }: { shoppingList: string }) {
-  const t = useThemeColors()
-  const [open, setOpen] = useState(false)
-
-  return (
-    <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-      <Pressable
-        onPress={() => setOpen(true)}
-        style={({ pressed }) => ({
-          position: 'absolute',
-          bottom: space['3xl'],
-          right: SCREEN_PADDING,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: t.accent,
-          opacity: pressed ? 0.9 : 1,
-          transform: [{ scale: pressed ? 0.94 : 1 }],
-          ...shadows.lg,
-        })}
-      >
-        <ShoppingCart size={22} color="#fff" />
-      </Pressable>
-
-      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' }}>
-          <Pressable style={{ flex: 1 }} onPress={() => setOpen(false)} />
-          <View style={{
-            backgroundColor: t.surface,
-            borderTopLeftRadius: radius['2xl'],
-            borderTopRightRadius: radius['2xl'],
-            paddingHorizontal: SCREEN_PADDING,
-            paddingTop: space.lg,
-            paddingBottom: space['4xl'],
-            maxHeight: '70%',
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.xl }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-                <ShoppingCart size={16} color={t.accent} />
-                <Text style={[typography.headingMd, { color: t.text }]}>Lista de compras</Text>
-              </View>
-              <Pressable onPress={() => setOpen(false)} hitSlop={12} style={{ padding: space.xs }}>
-                <X size={20} color={t.textMuted} />
-              </Pressable>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={[typography.bodyMd, { color: t.textSecondary, lineHeight: 22 }]}>{shoppingList}</Text>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    </View>
   )
 }
