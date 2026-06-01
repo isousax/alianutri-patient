@@ -37,13 +37,20 @@ export default function BookingScreen() {
   const [selectedType, setSelectedType] = useState<'online' | 'in_person' | null>(null)
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
 
+  const ms = config?.mode_status
+  const onlineBookable = ms?.online.bookable ?? false
+  const inPersonBookable = ms?.in_person.bookable ?? false
+  const bothBookable = onlineBookable && inPersonBookable
+  const anyBookable = onlineBookable || inPersonBookable
+  const bothEnabled = (ms?.online.enabled ?? false) && (ms?.in_person.enabled ?? false)
+
   const effectiveType = useMemo((): 'online' | 'in_person' | null => {
     if (selectedType) return selectedType
-    if (!config?.consultation_mode) return null
-    if (config.consultation_mode === 'online') return 'online'
-    if (config.consultation_mode === 'in_person') return 'in_person'
+    if (bothBookable) return null
+    if (onlineBookable) return 'online'
+    if (inPersonBookable) return 'in_person'
     return null
-  }, [selectedType, config])
+  }, [selectedType, bothBookable, onlineBookable, inPersonBookable])
 
   // Filter locations by selected type
   const filteredLocations = useMemo(() => {
@@ -82,7 +89,12 @@ export default function BookingScreen() {
       const dateStr = toDateStr(dt)
       const dayOfWeek = dt.getDay()
       const isPast = dateStr < today
-      const isDayEnabled = config?.enabled_days?.includes(dayOfWeek) ?? false
+      const activeDays = effectiveType === 'online'
+        ? (config?.enabled_days_online ?? [])
+        : effectiveType === 'in_person'
+        ? (config?.enabled_days_in_person ?? [])
+        : (config?.enabled_days ?? [])
+      const isDayEnabled = activeDays.includes(dayOfWeek)
 
       days.push({
         date: dateStr,
@@ -94,10 +106,9 @@ export default function BookingScreen() {
     }
 
     return days
-  }, [currentMonth, config])
+  }, [currentMonth, config, effectiveType])
 
   const canBook = canWrite && selectedDate && selectedSlot && effectiveType
-  const showTypeSelector = config?.consultation_mode === 'both'
 
   const handleDateSelect = useCallback((date: string) => {
     setSelectedDate(date)
@@ -138,6 +149,19 @@ export default function BookingScreen() {
           icon={<Calendar size={28} color={t.primary} />}
           title="Indisponível"
           description="O agendamento online não está disponível no momento."
+        />
+      </SafeAreaView>
+    )
+  }
+
+  if (!anyBookable) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+        <ScreenHeader title="Agendar consulta" />
+        <EmptyState
+          icon={<Calendar size={28} color={t.primary} />}
+          title="Nenhum horário disponível"
+          description="Este profissional ainda não possui horários configurados para agendamento."
         />
       </SafeAreaView>
     )
@@ -311,19 +335,21 @@ export default function BookingScreen() {
           </Animated.View>
         )}
 
-        {/* Type selector */}
-        {showTypeSelector && selectedSlot && (
+        {/* Type selector — show when both modes are enabled */}
+        {bothEnabled && selectedSlot && (
           <Animated.View entering={FadeInDown.delay(300).duration(400)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.lg }}>
             <Text style={[typography.headingSm, { color: t.text, marginBottom: space.md, marginLeft: 2 }]}>Tipo de consulta</Text>
             <View style={{ flexDirection: 'row', gap: space.md }}>
               <Pressable
-                onPress={() => setSelectedType('online')}
+                onPress={() => onlineBookable && setSelectedType('online')}
+                disabled={!onlineBookable}
                 style={{
                   flex: 1,
                   padding: space.lg,
                   borderRadius: radius.xl,
                   alignItems: 'center',
                   gap: space.sm,
+                  opacity: onlineBookable ? 1 : 0.5,
                   ...(selectedType === 'online'
                     ? { backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primary }
                     : { backgroundColor: t.surface, ...shadows.sm }),
@@ -333,15 +359,22 @@ export default function BookingScreen() {
                 <Text style={[typography.labelMd, { color: selectedType === 'online' ? t.primary : t.text }]}>
                   Online
                 </Text>
+                {!onlineBookable && (
+                  <Text style={[typography.caption, { color: t.textMuted, fontSize: 10, textAlign: 'center' }]}>
+                    Sem hor\u00e1rios
+                  </Text>
+                )}
               </Pressable>
               <Pressable
-                onPress={() => setSelectedType('in_person')}
+                onPress={() => inPersonBookable && setSelectedType('in_person')}
+                disabled={!inPersonBookable}
                 style={{
                   flex: 1,
                   padding: space.lg,
                   borderRadius: radius.xl,
                   alignItems: 'center',
                   gap: space.sm,
+                  opacity: inPersonBookable ? 1 : 0.5,
                   ...(selectedType === 'in_person'
                     ? { backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primary }
                     : { backgroundColor: t.surface, ...shadows.sm }),
@@ -351,6 +384,11 @@ export default function BookingScreen() {
                 <Text style={[typography.labelMd, { color: selectedType === 'in_person' ? t.primary : t.text }]}>
                   Presencial
                 </Text>
+                {!inPersonBookable && (
+                  <Text style={[typography.caption, { color: t.textMuted, fontSize: 10, textAlign: 'center' }]}>
+                    Sem hor\u00e1rios
+                  </Text>
+                )}
               </Pressable>
             </View>
           </Animated.View>

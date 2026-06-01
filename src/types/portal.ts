@@ -217,13 +217,25 @@ export interface BookingLocationItem {
   address: string | null
 }
 
+export interface ModeStatusEntry {
+  enabled: boolean
+  bookable: boolean
+  reason?: string
+}
+
 export interface BookingConfig {
   booking_mode: 'direct' | 'approval' | 'disabled'
   consultation_mode: 'online' | 'in_person' | 'both' | null
+  mode_status: {
+    online: ModeStatusEntry
+    in_person: ModeStatusEntry
+  }
   consultation_duration_minutes: number
   consultation_price_cents: number | null
   locations: BookingLocationItem[]
   enabled_days: number[]
+  enabled_days_online: number[]
+  enabled_days_in_person: number[]
 }
 
 // ==========================================
