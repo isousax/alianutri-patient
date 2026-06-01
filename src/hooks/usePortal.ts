@@ -213,10 +213,14 @@ export function useBookingConfig() {
   })
 }
 
-export function useBookingSlots(date: string | null) {
+export function useBookingSlots(date: string | null, locationId?: string) {
   return useQuery({
-    queryKey: ['portal', 'booking-slots', date],
-    queryFn: () => portalApi.get<BookingSlotsResponse>(`/booking/slots?date=${date}`),
+    queryKey: ['portal', 'booking-slots', date, locationId],
+    queryFn: () => {
+      const params = new URLSearchParams({ date: date! })
+      if (locationId) params.set('location_id', locationId)
+      return portalApi.get<BookingSlotsResponse>(`/booking/slots?${params}`)
+    },
     enabled: !!date,
   })
 }

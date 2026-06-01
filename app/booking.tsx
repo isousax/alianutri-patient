@@ -2,12 +2,12 @@ import { useState, useMemo, useCallback } from 'react'
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { Calendar, Clock, MapPin, Video, ChevronLeft, ChevronRight, Check, Info } from 'lucide-react-native'
+import { Calendar, Clock, MapPin, Video, ChevronLeft, ChevronRight, Check, Info, Wifi } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { useBookingConfig, useBookingSlots, useRequestBooking } from '../src/hooks/usePortal'
-import type { BookingSlot } from '../src/types/portal'
+import type { BookingSlot, BookingLocationItem } from '../src/types/portal'
 import { ScreenHeader, Card, EmptyState, LoadingScreen } from '../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
@@ -35,8 +35,34 @@ export default function BookingScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<'online' | 'in_person' | null>(null)
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
 
-  const { data: slotsData, isLoading: slotsLoading } = useBookingSlots(selectedDate)
+  const effectiveType = useMemo((): 'online' | 'in_person' | null => {
+    if (selectedType) return selectedType
+    if (!config?.consultation_mode) return null
+    if (config.consultation_mode === 'online') return 'online'
+    if (config.consultation_mode === 'in_person') return 'in_person'
+    return null
+  }, [selectedType, config])
+
+  // Filter locations by selected type
+  const filteredLocations = useMemo(() => {
+    if (!config?.locations) return []
+    if (!effectiveType) return config.locations
+    return config.locations.filter((l) =>
+      effectiveType === 'online' ? l.type === 'ONLINE' : l.type === 'PHYSICAL'
+    )
+  }, [config, effectiveType])
+
+  // Auto-select first matching location
+  const activeLocationId = useMemo(() => {
+    if (selectedLocationId && filteredLocations.some((l) => l.id === selectedLocationId)) {
+      return selectedLocationId
+    }
+    return filteredLocations[0]?.id ?? null
+  }, [filteredLocations, selectedLocationId])
+
+  const { data: slotsData, isLoading: slotsLoading } = useBookingSlots(selectedDate, activeLocationId ?? undefined)
 
   const calendarDays = useMemo(() => {
     const y = currentMonth.getFullYear()
@@ -70,19 +96,16 @@ export default function BookingScreen() {
     return days
   }, [currentMonth, config])
 
-  const effectiveType = useMemo(() => {
-    if (selectedType) return selectedType
-    if (!config?.consultation_mode) return null
-    if (config.consultation_mode === 'online') return 'online'
-    if (config.consultation_mode === 'in_person') return 'in_person'
-    return null
-  }, [selectedType, config])
-
   const canBook = canWrite && selectedDate && selectedSlot && effectiveType
   const showTypeSelector = config?.consultation_mode === 'both'
 
   const handleDateSelect = useCallback((date: string) => {
     setSelectedDate(date)
+    setSelectedSlot(null)
+  }, [])
+
+  const handleLocationSelect = useCallback((locId: string) => {
+    setSelectedLocationId(locId)
     setSelectedSlot(null)
   }, [])
 
@@ -94,6 +117,7 @@ export default function BookingScreen() {
         date: selectedDate,
         start_time: selectedSlot,
         type: effectiveType,
+        location_id: activeLocationId ?? undefined,
       })
       Alert.alert('Sucesso', result.message, [
         { text: 'OK', onPress: () => router.back() },
@@ -102,7 +126,7 @@ export default function BookingScreen() {
       const msg = err instanceof Error ? err.message : 'Erro ao solicitar agendamento.'
       Alert.alert('Erro', msg)
     }
-  }, [selectedDate, selectedSlot, effectiveType, requestBooking])
+  }, [selectedDate, selectedSlot, effectiveType, activeLocationId, requestBooking])
 
   if (configLoading) return <LoadingScreen />
 
@@ -186,6 +210,49 @@ export default function BookingScreen() {
           </View>
           </Card>
         </Animated.View>
+
+        {/* Location selector */}
+        {filteredLocations.length > 1 && selectedDate && (
+          <Animated.View entering={FadeInDown.delay(150).duration(400)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.md, marginLeft: 2 }}>
+              <MapPin size={14} color={t.primary} />
+              <Text style={[typography.headingSm, { color: t.text }]}>Local</Text>
+            </View>
+            <View style={{ gap: space.sm }}>
+              {filteredLocations.map((loc: BookingLocationItem) => (
+                <Pressable
+                  key={loc.id}
+                  onPress={() => handleLocationSelect(loc.id)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: space.md,
+                    padding: space.md,
+                    borderRadius: radius.lg,
+                    ...(activeLocationId === loc.id
+                      ? { backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primary }
+                      : { backgroundColor: t.surface, ...shadows.sm }),
+                  }}
+                >
+                  {loc.type === 'ONLINE'
+                    ? <Wifi size={16} color={activeLocationId === loc.id ? t.primary : t.textMuted} />
+                    : <MapPin size={16} color={activeLocationId === loc.id ? t.primary : t.textMuted} />
+                  }
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.labelMd, { color: activeLocationId === loc.id ? t.primary : t.text }]}>
+                      {loc.name}
+                    </Text>
+                    {loc.address && (
+                      <Text style={[typography.caption, { color: t.textMuted, marginTop: 1 }]} numberOfLines={1}>
+                        {loc.address}
+                      </Text>
+                    )}
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          </Animated.View>
+        )}
 
         {/* Time slots */}
         {selectedDate && (

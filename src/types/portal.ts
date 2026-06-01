@@ -187,6 +187,13 @@ export interface DiaryStreakResponse {
 // Appointments — GET /p/:code/appointments
 // ==========================================
 
+export interface PortalLocationSnapshot {
+  id: string
+  type: 'ONLINE' | 'PHYSICAL'
+  name: string
+  address: string | null
+}
+
 export interface PortalAppointment {
   id: string
   starts_at: string
@@ -195,7 +202,7 @@ export interface PortalAppointment {
   status: 'scheduled' | 'completed' | 'confirmed' | 'pending_approval' | 'canceled'
   meeting_provider: string | null
   meeting_url: string | null
-  location: string | null
+  location: PortalLocationSnapshot | null
   notes: string | null
 }
 
@@ -203,12 +210,19 @@ export interface PortalAppointment {
 // Booking Config — GET /p/:code/booking/config
 // ==========================================
 
+export interface BookingLocationItem {
+  id: string
+  type: 'ONLINE' | 'PHYSICAL'
+  name: string
+  address: string | null
+}
+
 export interface BookingConfig {
   booking_mode: 'direct' | 'approval' | 'disabled'
   consultation_mode: 'online' | 'in_person' | 'both' | null
   consultation_duration_minutes: number
   consultation_price_cents: number | null
-  addresses: Record<string, string>[] | null
+  locations: BookingLocationItem[]
   enabled_days: number[]
 }
 
@@ -235,6 +249,7 @@ export interface BookingRequestInput {
   date: string
   start_time: string
   type: 'online' | 'in_person'
+  location_id?: string
   notes?: string
 }
 
