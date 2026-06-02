@@ -89,11 +89,21 @@ export default function BookingScreen() {
       const dateStr = toDateStr(dt)
       const dayOfWeek = dt.getDay()
       const isPast = dateStr < today
-      const activeDays = effectiveType === 'online'
-        ? (config?.enabled_days_online ?? [])
-        : effectiveType === 'in_person'
-        ? (config?.enabled_days_in_person ?? [])
-        : (config?.enabled_days ?? [])
+      // When a specific location is selected, use its per-location enabled_days
+      let activeDays: number[]
+      if (activeLocationId) {
+        const loc = config?.locations.find((l) => l.id === activeLocationId)
+        activeDays = loc?.enabled_days?.length ? loc.enabled_days
+          : effectiveType === 'online' ? (config?.enabled_days_online ?? [])
+          : effectiveType === 'in_person' ? (config?.enabled_days_in_person ?? [])
+          : (config?.enabled_days ?? [])
+      } else {
+        activeDays = effectiveType === 'online'
+          ? (config?.enabled_days_online ?? [])
+          : effectiveType === 'in_person'
+          ? (config?.enabled_days_in_person ?? [])
+          : (config?.enabled_days ?? [])
+      }
       const isDayEnabled = activeDays.includes(dayOfWeek)
 
       days.push({
@@ -106,7 +116,7 @@ export default function BookingScreen() {
     }
 
     return days
-  }, [currentMonth, config, effectiveType])
+  }, [currentMonth, config, effectiveType, activeLocationId])
 
   const canBook = canWrite && selectedDate && selectedSlot && effectiveType
 

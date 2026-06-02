@@ -215,6 +215,7 @@ export interface BookingLocationItem {
   type: 'ONLINE' | 'PHYSICAL'
   name: string
   address: string | null
+  enabled_days: number[]
 }
 
 export interface ModeStatusEntry {
