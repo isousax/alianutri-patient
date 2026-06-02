@@ -225,6 +225,12 @@ export interface ModeStatusEntry {
 }
 
 export interface BookingConfig {
+  name: string
+  photo_url: string | null
+  specialty: string | null
+  crn: string | null
+  state: string | null
+  phone_professional: string | null
   booking_mode: 'direct' | 'approval' | 'disabled'
   consultation_mode: 'online' | 'in_person' | 'both' | null
   mode_status: {
