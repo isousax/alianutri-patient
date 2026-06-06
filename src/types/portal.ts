@@ -130,6 +130,7 @@ export interface PortalGoal {
   target_unit: string | null
   due_date: string | null
   created_at: string
+  updated_at: string | null
 }
 
 // ==========================================
@@ -153,6 +154,7 @@ export interface PortalFoodDiaryEntry {
   meal_index: number | null
   photo_url: string | null
   created_at: string
+  updated_at: string | null
 }
 
 // ==========================================
@@ -327,6 +329,7 @@ export interface WeightHistoryResponse {
 // ==========================================
 
 export interface SymptomLog {
+  id: string
   entry_date: string
   energy_level: number | null
   digestion: number | null
@@ -334,9 +337,12 @@ export interface SymptomLog {
   mood: number | null
   sleep_quality: number | null
   notes: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface SymptomLogInput {
+  id?: string
   date: string
   energy_level?: number
   digestion?: number

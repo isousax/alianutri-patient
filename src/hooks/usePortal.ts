@@ -100,6 +100,7 @@ export function useLogFoodDiary() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (entry: {
+      id?: string
       meal_type: string
       entry_date: string
       entry_time?: string
@@ -114,7 +115,7 @@ export function useLogFoodDiary() {
       meal_plan_id?: string
       meal_index?: number
       photo_url?: string
-    }) => portalApi.post<{ id: string; message: string }>('/food-diary', entry),
+    }) => portalApi.post<PortalFoodDiaryEntry>('/food-diary', entry),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'food-diary'] })
       qc.invalidateQueries({ queryKey: ['portal', 'diary-today'] })
@@ -291,8 +292,8 @@ export function useWaterIntake(date: string) {
 export function useLogWater() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { date: string; amount_ml: number }) =>
-      portalApi.post<{ id: string; total_ml: number }>('/water', input),
+    mutationFn: (input: { id?: string; date: string; amount_ml: number }) =>
+      portalApi.post<{ id: string; entry_date: string; amount_ml: number; created_at: string; total_ml: number }>('/water', input),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['portal', 'water', vars.date] })
       qc.invalidateQueries({ queryKey: ['portal', 'home'] })
@@ -318,8 +319,8 @@ export function useDeleteWater() {
 export function useLogWeight() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { date: string; weight_kg: number }) =>
-      portalApi.post<{ id: string; message: string }>('/weight', input),
+    mutationFn: (input: { id?: string; date: string; weight_kg: number }) =>
+      portalApi.post<{ id: string; entry_date: string; weight_kg: number; source: string; created_at: string }>('/weight', input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'weight-history'] })
       qc.invalidateQueries({ queryKey: ['portal', 'evolution'] })
@@ -351,7 +352,7 @@ export function useLogSymptoms() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SymptomLogInput) =>
-      portalApi.post<{ id: string; message: string }>('/symptoms', input),
+      portalApi.post<SymptomLog>('/symptoms', input),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['portal', 'symptoms', vars.date] })
     },
