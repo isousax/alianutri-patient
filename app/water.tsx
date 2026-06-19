@@ -27,6 +27,7 @@ import {
   useLogWater,
   useDeleteWater,
 } from "../src/hooks/usePortal";
+import type { WaterIntakeResponse } from "../src/types/portal";
 import { useSmartWaterGoal } from "../src/hooks/useSmartWaterGoal";
 import { ScreenHeader, Card } from "../src/components/ui";
 import {
@@ -82,7 +83,7 @@ export default function WaterScreen() {
 
   const apiGoal = data?.goal_ml ?? 2000;
   const total = data?.total_ml ?? 0;
-  const entries = data?.entries ?? [];
+  const entries: WaterIntakeResponse["entries"] = data?.entries ?? [];
 
   const { goal, hydration, weather, nutriSetCustomGoal } =
     useSmartWaterGoal(apiGoal);

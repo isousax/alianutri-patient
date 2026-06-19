@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useReducer, useEffect, useState } from "react";
+import { useMemo, useCallback, useReducer, useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -72,9 +72,11 @@ import type {
   PortalGoal,
   PortalEvolution,
   WeeklyAdherenceDay,
+  DiaryTimelineMeal,
 } from "../../src/types/portal";
 import { getTipOfTheDay } from "../../src/data/dailyTips";
 import { useSmartWaterGoal } from "../../src/hooks/useSmartWaterGoal";
+import * as Haptics from "expo-haptics";
 import {
   ProgressRing,
   Card,
@@ -149,6 +151,22 @@ export default function HomeScreen() {
     tick();
   }, [refetch, qc]);
 
+  // Celebração tátil ao fechar um anel (100%) — hooks sempre antes de returns
+  const prevDiary = useRef(0);
+  const prevWater = useRef(0);
+  useEffect(() => {
+    const dMeals = diaryToday?.meals ?? [];
+    const pct = dMeals.length > 0 ? dMeals.filter((m: DiaryTimelineMeal) => m.entry !== null).length / dMeals.length : 0;
+    if (pct >= 1 && prevDiary.current < 1) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    prevDiary.current = pct;
+  }, [diaryToday]);
+  useEffect(() => {
+    const total = waterData?.total_ml ?? 0;
+    const pct = waterGoal > 0 ? Math.min(total / waterGoal, 1) : 0;
+    if (pct >= 1 && prevWater.current < 1) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    prevWater.current = pct;
+  }, [waterData, waterGoal]);
+
   // ── Loading ──
   if (isLoading) return <LoadingScreen />;
 
@@ -177,7 +195,7 @@ export default function HomeScreen() {
   const GreetingIcon = greeting.icon;
   const streak = data.diary_streak ?? 0;
   const meals = diaryToday?.meals ?? [];
-  const loggedCount = meals.filter((m) => m.entry !== null).length;
+  const loggedCount = meals.filter((m: DiaryTimelineMeal) => m.entry !== null).length;
   const totalMeals = meals.length;
   const diaryPct = totalMeals > 0 ? loggedCount / totalMeals : 0;
   const activeGoals = (goals ?? [])

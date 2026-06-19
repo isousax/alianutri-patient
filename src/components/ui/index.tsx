@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   View, Text, Pressable, type ViewStyle, type TextStyle,
-  type PressableProps, ActivityIndicator,
+  type PressableProps, ActivityIndicator, StyleSheet,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChevronLeft, ChevronRight } from 'lucide-react-native'
@@ -12,8 +12,11 @@ import Animated, {
   useAnimatedStyle, interpolate, withRepeat,
 } from 'react-native-reanimated'
 import { router } from 'expo-router'
+import { LinearGradient } from 'expo-linear-gradient'
+import * as Haptics from 'expo-haptics'
 import { useThemeColors, type ThemeColors } from '../../stores/theme'
-import { shadows, radius, space, typography, SCREEN_PADDING } from '../../theme/tokens'
+import { shadows, radius, space, typography, SCREEN_PADDING, motion } from '../../theme/tokens'
+import { AliaMark } from '../Brand'
 
 // ══════════════════════════════════════════════════════
 //  CARD — The fundamental surface container
@@ -30,6 +33,8 @@ interface CardProps {
 
 export function Card({ children, style, padded = true, onPress, entering }: CardProps) {
   const t = useThemeColors()
+  const scale = useSharedValue(1)
+  const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
 
   const cardStyle: ViewStyle = {
     backgroundColor: t.surface,
@@ -44,13 +49,20 @@ export function Card({ children, style, padded = true, onPress, entering }: Card
   const Wrapper = entering ? Animated.View : View
 
   if (onPress) {
+    const handlePress = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+      onPress()
+    }
     return (
       <Wrapper {...(entering ? { entering } : {})}>
         <Pressable
-          onPress={onPress}
-          style={({ pressed }) => [cardStyle, pressed && { opacity: 0.92, transform: [{ scale: 0.985 }] }]}
+          onPress={handlePress}
+          onPressIn={() => { scale.value = withSpring(0.97, motion.spring) }}
+          onPressOut={() => { scale.value = withSpring(1, motion.spring) }}
         >
-          {children}
+          <Animated.View style={[cardStyle, pressStyle]}>
+            {children}
+          </Animated.View>
         </Pressable>
       </Wrapper>
     )
@@ -86,7 +98,7 @@ export function ScreenHeader({ title, subtitle, rightAction, onBack }: ScreenHea
       paddingBottom: space.md,
     }}>
       <Pressable
-        onPress={onBack ?? (() => router.back())}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onBack ? onBack() : router.back() }}
         hitSlop={12}
         style={{
           width: 36,
@@ -221,6 +233,8 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, iconBg, title, description, actionLabel, onAction }: EmptyStateProps) {
   const t = useThemeColors()
+  const aScale = useSharedValue(1)
+  const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: aScale.value }] }))
 
   return (
     <Animated.View
@@ -251,19 +265,22 @@ export function EmptyState({ icon, iconBg, title, description, actionLabel, onAc
       </Text>
       {actionLabel && onAction && (
         <Pressable
-          onPress={onAction}
-          style={{
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onAction() }}
+          onPressIn={() => { aScale.value = withSpring(0.96, motion.spring) }}
+          onPressOut={() => { aScale.value = withSpring(1, motion.spring) }}
+        >
+          <Animated.View style={[{
             marginTop: space.xl,
             paddingHorizontal: space['2xl'],
             paddingVertical: space.md,
             borderRadius: radius.lg,
             backgroundColor: t.primary,
             ...shadows.glow(t.primary),
-          }}
-        >
-          <Text style={[typography.labelMd, { color: t.primaryFg }]}>
-            {actionLabel}
-          </Text>
+          }, aStyle]}>
+            <Text style={[typography.labelMd, { color: t.primaryFg }]}>
+              {actionLabel}
+            </Text>
+          </Animated.View>
         </Pressable>
       )}
     </Animated.View>
@@ -289,7 +306,7 @@ export function ListRow({ icon, iconBg, title, subtitle, badge, onPress, rightCo
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={onPress ? () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onPress() } : undefined}
       disabled={!onPress}
       style={({ pressed }) => ({
         flexDirection: 'row',
@@ -404,7 +421,7 @@ export function StatChip({ icon, value, label, bg, textColor }: StatChipProps) {
 }
 
 // ══════════════════════════════════════════════════════
-//  SKELETON — Pulsing placeholder (improved)
+//  SKELETON — Shimmer placeholder (gradient sweep)
 // ══════════════════════════════════════════════════════
 
 interface SkeletonBlockProps {
@@ -416,22 +433,34 @@ interface SkeletonBlockProps {
 
 export function SkeletonBlock({ width, height, borderRadius: br = radius.sm, style }: SkeletonBlockProps) {
   const t = useThemeColors()
-  const pulse = useSharedValue(0)
+  const [w, setW] = useState(0)
+  const x = useSharedValue(0)
 
   useEffect(() => {
-    pulse.value = withRepeat(withTiming(1, { duration: 1000 }), -1, true)
+    x.value = withRepeat(withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.ease) }), -1, false)
   }, [])
 
-  const animStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(pulse.value, [0, 1], [0.3, 0.7]),
+  const sweepStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(x.value, [0, 1], [-w, w]) }],
   }))
 
   return (
-    <Animated.View style={[
-      { width, height, borderRadius: br, backgroundColor: t.borderLight },
-      animStyle,
-      style,
-    ]} />
+    <View
+      onLayout={(e) => setW(e.nativeEvent.layout.width)}
+      style={[
+        { width, height, borderRadius: br, backgroundColor: t.borderLight, overflow: 'hidden' },
+        style,
+      ]}
+    >
+      <Animated.View style={[StyleSheet.absoluteFillObject, sweepStyle]}>
+        <LinearGradient
+          colors={['transparent', t.surface, 'transparent']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={{ flex: 1, opacity: 0.6 }}
+        />
+      </Animated.View>
+    </View>
   )
 }
 
@@ -441,9 +470,20 @@ export function SkeletonBlock({ width, height, borderRadius: br = radius.sm, sty
 
 export function LoadingScreen() {
   const t = useThemeColors()
+  const pulse = useSharedValue(0)
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) }), -1, true)
+  }, [])
+  const markStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.7, 1]),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [0.97, 1.03]) }],
+  }))
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.background, alignItems: 'center', justifyContent: 'center' }} edges={['top']}>
-      <ActivityIndicator size="large" color={t.primary} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.background, alignItems: 'center', justifyContent: 'center', gap: space.xl }} edges={['top']}>
+      <Animated.View style={markStyle}>
+        <AliaMark size={68} />
+      </Animated.View>
+      <ActivityIndicator size="small" color={t.primary} />
     </SafeAreaView>
   )
 }

@@ -21,7 +21,8 @@ import Animated, {
 import { useThemeColors, type ThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
 import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useUploadDiaryPhoto, useFoodDiary } from '../../src/hooks/usePortal'
-import type { DiaryTimelineMeal } from '../../src/types/portal'
+import type { DiaryTimelineMeal, PortalFoodDiaryEntry } from '../../src/types/portal'
+import { SkeletonBlock } from '../../src/components/ui'
 
 // ── helpers ──
 
@@ -77,7 +78,7 @@ export default function DiaryScreen() {
   const isToday = date === todayStr()
   const streak = streakData?.streak ?? 0
   const mealPlan = diary?.meal_plan
-  const meals = diary?.meals ?? []
+  const meals: DiaryTimelineMeal[] = diary?.meals ?? []
   const loggedCount = meals.filter((m) => m.entry !== null).length
   const totalMeals = meals.length
   const allDone = totalMeals > 0 && loggedCount === totalMeals
@@ -321,8 +322,17 @@ export default function DiaryScreen() {
 
       {/* ── Content ── */}
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={t.primary} />
+        <View className="flex-1 px-5 pt-3" style={{ gap: 12 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} className="flex-row items-center py-2" style={{ gap: 12 }}>
+              <SkeletonBlock width={44} height={44} borderRadius={14} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <SkeletonBlock width="55%" height={14} />
+                <SkeletonBlock width="35%" height={11} />
+              </View>
+              <SkeletonBlock width={26} height={26} borderRadius={13} />
+            </View>
+          ))}
         </View>
       ) : !mealPlan || meals.length === 0 ? (
         <FreeDiary date={date} isToday={isToday} canWrite={canWrite} logEntry={logEntry} />
@@ -452,7 +462,7 @@ function FreeDiary({
   const { data: entries, refetch } = useFoodDiary(date)
   const { mutateAsync: deleteEntry } = useDeleteFoodDiary()
 
-  const dayEntries = entries ?? []
+  const dayEntries: PortalFoodDiaryEntry[] = entries ?? []
 
   const handleSave = useCallback(async () => {
     if (!description.trim()) {
@@ -522,7 +532,7 @@ function FreeDiary({
           <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-2">
             Refeições do dia ({dayEntries.length})
           </Text>
-          {dayEntries.map((entry: any) => {
+          {dayEntries.map((entry) => {
             const type = FREE_MEAL_TYPES.find((m) => m.value === entry.meal_type)
             return (
               <View
@@ -738,7 +748,7 @@ function CompletionCard({ t, justCompleted, streak }: { t: ThemeColors; justComp
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window')
 const CONFETTI_COUNT = 28
-const CONFETTI_COLORS = ['#16a34a', '#f59e0b', '#ef4444', '#3b82f6', '#a855f7', '#ec4899', '#14b8a6']
+const CONFETTI_COLORS = ['#10B981', '#34D399', '#14B8A6', '#6366F1', '#F59E0B', '#EC4899']
 
 function ConfettiPiece({ index, t }: { index: number; t: ThemeColors }) {
   const progress = useSharedValue(0)

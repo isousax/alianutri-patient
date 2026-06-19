@@ -1,5 +1,7 @@
 import { useAuthStore } from '../stores/auth'
 
+// A API existe apenas em produção — dev e prod apontam para o mesmo host.
+// (Pode sobrescrever via EXPO_PUBLIC_API_URL, se necessário.)
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.alianutri.com.br'
 
 class ApiError extends Error {

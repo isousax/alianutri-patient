@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Calendar, Clock, MapPin, Video, ChevronLeft, ChevronRight, Check, Info, Wifi } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { useBookingConfig, useBookingSlots, useRequestBooking } from '../src/hooks/usePortal'
@@ -56,14 +57,14 @@ export default function BookingScreen() {
   const filteredLocations = useMemo(() => {
     if (!config?.locations) return []
     if (!effectiveType) return config.locations
-    return config.locations.filter((l) =>
+    return config.locations.filter((l: BookingLocationItem) =>
       effectiveType === 'online' ? l.type === 'ONLINE' : l.type === 'PHYSICAL'
     )
   }, [config, effectiveType])
 
   // Auto-select first matching location
   const activeLocationId = useMemo(() => {
-    if (selectedLocationId && filteredLocations.some((l) => l.id === selectedLocationId)) {
+    if (selectedLocationId && filteredLocations.some((l: BookingLocationItem) => l.id === selectedLocationId)) {
       return selectedLocationId
     }
     return filteredLocations[0]?.id ?? null
@@ -92,7 +93,7 @@ export default function BookingScreen() {
       // When a specific location is selected, use its per-location enabled_days
       let activeDays: number[]
       if (activeLocationId) {
-        const loc = config?.locations.find((l) => l.id === activeLocationId)
+        const loc = config?.locations.find((l: BookingLocationItem) => l.id === activeLocationId)
         activeDays = loc?.enabled_days?.length ? loc.enabled_days
           : effectiveType === 'online' ? (config?.enabled_days_online ?? [])
           : effectiveType === 'in_person' ? (config?.enabled_days_in_person ?? [])
@@ -140,11 +141,13 @@ export default function BookingScreen() {
         type: effectiveType,
         location_id: activeLocationId ?? undefined,
       })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
       Alert.alert('Sucesso', result.message, [
         { text: 'OK', onPress: () => router.back() },
       ])
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao solicitar agendamento.'
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {})
       Alert.alert('Erro', msg)
     }
   }, [selectedDate, selectedSlot, effectiveType, activeLocationId, requestBooking])
@@ -308,7 +311,7 @@ export default function BookingScreen() {
                 {slotsData.slots.map((slot: BookingSlot) => (
                   <Pressable
                     key={slot.time}
-                    onPress={() => slot.available && setSelectedSlot(slot.time)}
+                    onPress={() => { if (slot.available) { Haptics.selectionAsync().catch(() => {}); setSelectedSlot(slot.time) } }}
                     disabled={!slot.available}
                     style={{
                       paddingHorizontal: space.lg,

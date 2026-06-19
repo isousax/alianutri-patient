@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { FileText, ChevronRight } from 'lucide-react-native'
 import { useThemeColors } from '../../src/stores/theme'
 import { useGuidelines, useGuidelineDetail } from '../../src/hooks/usePortal'
+import type { PortalGuidelineSummary } from '../../src/types/portal'
 import { Card, ScreenHeader, EmptyState, LoadingScreen } from '../../src/components/ui'
 import { radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
 
@@ -65,7 +66,7 @@ export default function GuidelinesScreen() {
           contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
-          {sections.map((section: any, idx: number) => (
+          {sections.map((section, idx) => (
             <View key={idx} style={{ marginBottom: space.xl }}>
               {section.heading ? (
                 <Text style={[typography.headingSm, { color: t.text, marginBottom: space.xs }]}>{section.heading}</Text>
@@ -100,7 +101,7 @@ export default function GuidelinesScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
       >
-        {guidelines.map((g) => (
+        {guidelines.map((g: PortalGuidelineSummary) => (
           <Card key={g.id} onPress={() => setSelectedId(g.id)}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{

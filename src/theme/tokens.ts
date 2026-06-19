@@ -227,6 +227,29 @@ export const haptic = {
   error: 'Error' as const,
 } as const
 
+// ── Brand gradients (for expo-linear-gradient) ──
+// Tríade: emerald (marca) · teal (dados/hidratação) · indigo (acento premium)
+
+export const gradients = {
+  brand: ['#10B981', '#14B8A6'] as const,      // emerald -> teal
+  brandDeep: ['#047857', '#0D9488'] as const,  // emerald-700 -> teal-600 (hero login)
+  premium: ['#10B981', '#6366F1'] as const,    // emerald -> indigo (toque "inteligente")
+  night: ['#04221A', '#020617'] as const,      // deep ink (splash/login escuro)
+  // very soft tri-tone wash for light backgrounds (onboarding)
+  mesh: ['#ECFDF5', '#F0FDFA', '#EEF2FF'] as const,   // emerald-50 -> teal-50 -> indigo-50
+  meshDark: ['#04221A', '#020617', '#0B1220'] as const,
+} as const
+
+// ── Glass / translucent surfaces (overlays & fixed headers; sem expo-blur) ──
+
+export const glass = {
+  lightSurface: 'rgba(255,255,255,0.72)',
+  lightBorder: 'rgba(15,23,42,0.06)',
+  darkSurface: 'rgba(15,23,42,0.72)',
+  darkBorder: 'rgba(255,255,255,0.08)',
+  scrim: 'rgba(2,6,23,0.45)',
+} as const
+
 // ── Date helpers (centralized, no more duplication) ──
 
 export function todayStr(): string {

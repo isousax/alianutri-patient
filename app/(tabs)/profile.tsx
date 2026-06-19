@@ -150,7 +150,7 @@ function WeightChart() {
   const t = useThemeColors()
   const { data: evolution } = useEvolution()
 
-  const points = (evolution ?? []).filter((e) => e.weight_kg !== null) as (PortalEvolution & { weight_kg: number })[]
+  const points = (evolution ?? []).filter((e: PortalEvolution) => e.weight_kg !== null) as (PortalEvolution & { weight_kg: number })[]
   if (points.length < 2) return null
 
   const W = SCREEN_W - SCREEN_PADDING * 2 - space.lg * 2

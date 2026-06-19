@@ -13,7 +13,7 @@ import { useChatMessages, useSendChatMessage, usePortalHome } from '../src/hooks
 import type { ChatMessage } from '../src/types/portal'
 import { SkeletonChatList } from '../src/components/Skeleton'
 import { ScreenHeader, EmptyState } from '../src/components/ui'
-import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
+import { radius, space, typography, SCREEN_PADDING, shadows } from '../src/theme/tokens'
 
 // ── helpers ──
 
@@ -279,6 +279,7 @@ function MessageBubble({ msg, t }: { msg: ChatMessage; t: ThemeColors }) {
           borderRadius: radius.xl,
           paddingHorizontal: space.md + 2,
           paddingVertical: space.sm + 2,
+          ...shadows.sm,
           ...(isPatient
             ? { backgroundColor: t.primary, borderBottomRightRadius: 6 }
             : { backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight, borderBottomLeftRadius: 6 }),

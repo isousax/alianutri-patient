@@ -11,6 +11,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { useThemeColors } from '../src/stores/theme'
 import { useLogWeight, useWeightHistory } from '../src/hooks/usePortal'
+import type { WeightLogEntry } from '../src/types/portal'
 import { ScreenHeader, Card, SectionLabel } from '../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../src/theme/tokens'
 
@@ -20,7 +21,7 @@ export default function WeightScreen() {
   const { data } = useWeightHistory()
   const { mutateAsync: logWeight, isPending } = useLogWeight()
 
-  const entries = data?.entries ?? []
+  const entries: WeightLogEntry[] = data?.entries ?? []
 
   const handleSave = useCallback(async () => {
     const kg = parseFloat(value.replace(',', '.'))

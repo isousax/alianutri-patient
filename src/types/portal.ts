@@ -67,6 +67,7 @@ export interface PortalMealPlanDetail extends PortalMealPlanSummary {
   total_protein_g: number | null
   total_carbs_g: number | null
   total_fat_g: number | null
+  total_fiber_g: number | null
   meals: unknown[]
   notes: string | null
   shopping_list: string | null
@@ -76,6 +77,15 @@ export interface PortalMealPlanDetail extends PortalMealPlanSummary {
 // ==========================================
 // Guidelines — GET /p/:code/guidelines
 // ==========================================
+
+// ── Shapes das refeições por método (espelha o que o web/back produz) ──
+export interface QuantFood { name?: string; food_description?: string; quantity?: string | number; unit?: string; kcal?: number }
+export interface QuantMeal { name?: string; time?: string; foods?: QuantFood[] }
+export interface EquivGroupFood { name: string; measure?: string }
+export interface EquivGroup { group?: string; groupLabel?: string; portions: number; kcal?: number; foods?: EquivGroupFood[] }
+export interface EquivMeal { name?: string; time?: string; groups?: EquivGroup[]; note?: string }
+export interface QualMeal { name?: string; time?: string; guidance?: string; items?: (string | { description: string })[] }
+export type PortalMeal = QuantMeal | EquivMeal | QualMeal
 
 export interface PortalGuidelineSummary {
   id: string

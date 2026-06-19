@@ -34,8 +34,9 @@ export default function GoalsScreen() {
 
   if (isLoading) return <LoadingScreen />
 
-  const active = (goals ?? []).filter((g) => g.status === 'active')
-  const completed = (goals ?? []).filter((g) => g.status === 'completed')
+  const goalList: PortalGoal[] = goals ?? []
+  const active = goalList.filter((g) => g.status === 'active')
+  const completed = goalList.filter((g) => g.status === 'completed')
 
   if (!goals || goals.length === 0) {
     return (

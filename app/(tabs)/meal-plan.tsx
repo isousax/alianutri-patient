@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Utensils, ChevronRight, Clock, ShoppingCart, X } from 'lucide-react-native'
+import { Utensils, ChevronRight, Clock, ShoppingCart, X, Scale, Replace, FileText } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../../src/stores/theme'
 import { useMealPlans, useMealPlanDetail } from '../../src/hooks/usePortal'
 import { Card, ScreenHeader, EmptyState, LoadingScreen } from '../../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
+import type { PortalMealPlanSummary, PortalMeal, QuantMeal, QuantFood, EquivMeal, EquivGroup, EquivGroupFood, QualMeal } from '../../src/types/portal'
+
+const asArray = <T,>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : [])
 
 export default function MealPlanScreen() {
   const t = useThemeColors()
@@ -14,6 +17,14 @@ export default function MealPlanScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [shoppingOpen, setShoppingOpen] = useState(false)
   const { data: detail, isLoading: loadingDetail } = useMealPlanDetail(selectedId)
+
+  // Método → acento da tríade (emerald / teal / indigo) + ícone
+  const methodMeta = (method: string) =>
+    method === 'qualitative'
+      ? { color: t.accent, bg: t.accentLight, label: 'Qualitativo', Icon: FileText }
+      : method === 'equivalents'
+      ? { color: t.info, bg: t.infoLight, label: 'Equivalentes', Icon: Replace }
+      : { color: t.primary, bg: t.primaryLight, label: 'Quantitativo', Icon: Scale }
 
   // ── Loading ──
   if (isLoading) return <LoadingScreen />
@@ -38,32 +49,60 @@ export default function MealPlanScreen() {
 
   // ── Detail view ──
   if (selectedId && detail) {
-    const meals = Array.isArray(detail.meals) ? detail.meals : []
+    const meals: PortalMeal[] = Array.isArray(detail.meals) ? (detail.meals as PortalMeal[]) : []
+    const dm = methodMeta(detail.method)
+    const MethodIcon = dm.Icon
     return (
       <View style={{ flex: 1, backgroundColor: t.background }}>
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <ScreenHeader title={detail.name} onBack={() => setSelectedId(null)} />
 
-          {detail.total_kcal ? (
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginHorizontal: SCREEN_PADDING,
-              marginBottom: space.lg,
-              paddingHorizontal: space.lg,
-              paddingVertical: space.sm + 2,
-              borderRadius: radius.lg,
-              backgroundColor: t.primaryLight,
-              gap: space.sm,
-            }}>
-              <Text style={[typography.captionBold, { color: t.primary }]}>
-                {detail.total_kcal} kcal
-              </Text>
-              {detail.total_protein_g ? <Text style={[typography.caption, { color: t.primary }]}>• P {detail.total_protein_g}g</Text> : null}
-              {detail.total_carbs_g ? <Text style={[typography.caption, { color: t.primary }]}>• C {detail.total_carbs_g}g</Text> : null}
-              {detail.total_fat_g ? <Text style={[typography.caption, { color: t.primary }]}>• G {detail.total_fat_g}g</Text> : null}
+          {/* Hero do plano — método-aware */}
+          <View style={{ marginHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
+            <View style={{ borderRadius: radius.xl, backgroundColor: dm.bg, padding: space.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 4, paddingRight: space.sm + 2, paddingVertical: 5, borderRadius: radius.full, backgroundColor: dm.color }}>
+                  <View style={{ width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.22)' }}>
+                    <MethodIcon size={11} color="#fff" />
+                  </View>
+                  <Text style={[typography.captionBold, { color: '#fff' }]}>{dm.label}</Text>
+                </View>
+                {meals.length > 0 ? (
+                  <Text style={[typography.caption, { color: dm.color }]}>{meals.length} {meals.length === 1 ? 'refeição' : 'refeições'}</Text>
+                ) : null}
+              </View>
+
+              {detail.total_kcal ? (
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginTop: space.md }}>
+                  <Text style={[typography.displaySm, { color: dm.color, fontWeight: '800' }]}>{detail.total_kcal}</Text>
+                  <Text style={[typography.caption, { color: dm.color, opacity: 0.8, marginBottom: 5 }]}>kcal / dia</Text>
+                </View>
+              ) : null}
+
+              {(detail.total_protein_g || detail.total_carbs_g || detail.total_fat_g) ? (
+                <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
+                  {detail.total_protein_g ? (
+                    <View style={{ flex: 1, alignItems: 'center', paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: t.surface }}>
+                      <Text style={[typography.captionBold, { color: t.text }]}>{detail.total_protein_g}g</Text>
+                      <Text style={[typography.overline, { color: t.textMuted, marginTop: 2 }]}>PROTEÍNA</Text>
+                    </View>
+                  ) : null}
+                  {detail.total_carbs_g ? (
+                    <View style={{ flex: 1, alignItems: 'center', paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: t.surface }}>
+                      <Text style={[typography.captionBold, { color: t.text }]}>{detail.total_carbs_g}g</Text>
+                      <Text style={[typography.overline, { color: t.textMuted, marginTop: 2 }]}>CARBO</Text>
+                    </View>
+                  ) : null}
+                  {detail.total_fat_g ? (
+                    <View style={{ flex: 1, alignItems: 'center', paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: t.surface }}>
+                      <Text style={[typography.captionBold, { color: t.text }]}>{detail.total_fat_g}g</Text>
+                      <Text style={[typography.overline, { color: t.textMuted, marginTop: 2 }]}>GORDURA</Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
-          ) : null}
+          </View>
 
           <ScrollView
             style={{ flex: 1 }}
@@ -71,29 +110,66 @@ export default function MealPlanScreen() {
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={t.primary} />}
           >
-            {meals.map((meal: any, idx: number) => (
+            {meals.map((meal, idx) => {
+              const qm = meal as QuantMeal
+              const em = meal as EquivMeal
+              const lm = meal as QualMeal
+              return (
               <Animated.View key={idx} entering={FadeInDown.duration(250).delay(idx * 50)}>
-                <Card style={{ marginBottom: space.lg }}>
+                <Card style={{ marginBottom: space.lg, overflow: 'hidden' }}>
+                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: dm.color, opacity: 0.55 }} />
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.sm + 2 }}>
                     <View style={{
-                      width: 28, height: 28, borderRadius: radius.sm,
+                      width: 28, height: 28, borderRadius: radius.full,
                       alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: t.primaryLight,
+                      backgroundColor: dm.bg,
                     }}>
-                      <Clock size={12} color={t.primary} />
+                      <Text style={[typography.captionBold, { color: dm.color }]}>{idx + 1}</Text>
                     </View>
                     <Text style={[typography.headingSm, { color: t.text, flex: 1 }]}>{meal.name || `Refeição ${idx + 1}`}</Text>
-                    {meal.time ? <Text style={[typography.caption, { color: t.textMuted }]}>{meal.time}</Text> : null}
+                    {meal.time ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space.sm, paddingVertical: 3, borderRadius: radius.full, backgroundColor: t.surfaceSecondary }}>
+                        <Clock size={10} color={t.textMuted} />
+                        <Text style={[typography.caption, { color: t.textMuted }]}>{meal.time}</Text>
+                      </View>
+                    ) : null}
                   </View>
-                  {Array.isArray(meal.foods) && meal.foods.map((food: any, fi: number) => (
+                  {/* Quantitativo */}
+                  {detail.method !== 'equivalents' && detail.method !== 'qualitative' && asArray<QuantFood>(qm.foods).map((food, fi) => (
                     <View key={fi} style={{ marginLeft: 28 + space.sm, marginBottom: 5, flexDirection: 'row', flexWrap: 'wrap' }}>
                       <Text style={[typography.bodySm, { color: t.textSecondary }]}>• {food.name || food.food_description}</Text>
                       {food.quantity ? <Text style={[typography.caption, { color: t.textMuted }]}> — {food.quantity}{food.unit ? ` ${food.unit}` : ''}</Text> : null}
                     </View>
                   ))}
+
+                  {/* Equivalentes — grupos × porções (+ alimentos opcionais) */}
+                  {detail.method === 'equivalents' && asArray<EquivGroup>(em.groups).map((g, gi) => (
+                    <View key={gi} style={{ marginLeft: 28 + space.sm, marginBottom: space.sm }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
+                        <Text style={[typography.bodySm, { color: t.text, fontWeight: '600', flex: 1 }]}>{g.groupLabel || g.group}</Text>
+                        <View style={{ paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.full, backgroundColor: dm.bg }}>
+                          <Text style={[typography.caption, { color: dm.color }]}>{g.portions} {Number(g.portions) === 1 ? 'porção' : 'porções'}</Text>
+                        </View>
+                      </View>
+                      {asArray<EquivGroupFood>(g.foods).map((fd, j) => (
+                        <Text key={j} style={[typography.caption, { color: t.textMuted, marginTop: 2 }]}>• {fd.name}{fd.measure ? ` (${fd.measure})` : ''}</Text>
+                      ))}
+                    </View>
+                  ))}
+
+                  {/* Qualitativo — descritivo */}
+                  {detail.method === 'qualitative' && (
+                    <View style={{ marginLeft: 28 + space.sm }}>
+                      {lm.guidance ? <Text style={[typography.bodySm, { color: t.textSecondary, lineHeight: 20 }]}>{lm.guidance}</Text> : null}
+                      {asArray<string | { description: string }>(lm.items).map((it, j) => (
+                        <Text key={j} style={[typography.bodySm, { color: t.textSecondary, marginTop: 2 }]}>• {typeof it === 'string' ? it : it.description}</Text>
+                      ))}
+                    </View>
+                  )}
                 </Card>
               </Animated.View>
-            ))}
+              )
+            })}
             {meals.length === 0 && (
               <Text style={[typography.bodyMd, { color: t.textMuted, textAlign: 'center', marginTop: space['5xl'] }]}>
                 Sem detalhes das refeições.
@@ -160,8 +236,9 @@ export default function MealPlanScreen() {
   }
 
   // ── Plan list ──
-  const activePlans = plans.filter((p) => p.status !== 'superseded')
-  const olderPlans = plans.filter((p) => p.status === 'superseded')
+  const planList: PortalMealPlanSummary[] = plans
+  const activePlans = planList.filter((p) => p.status !== 'superseded')
+  const olderPlans = planList.filter((p) => p.status === 'superseded')
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
@@ -179,31 +256,40 @@ export default function MealPlanScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
       >
-        {activePlans.map((plan, i) => (
+        {activePlans.map((plan, i) => {
+          const pm = methodMeta(plan.method)
+          const PlanIcon = pm.Icon
+          return (
           <Animated.View key={plan.id} entering={FadeInDown.duration(300).delay(i * 60)}>
             <Card onPress={() => setSelectedId(plan.id)} style={{ marginBottom: space.lg }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{
-                  width: 44, height: 44,
-                  borderRadius: radius.md,
+                  width: 46, height: 46,
+                  borderRadius: radius.lg,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: t.primaryLight,
+                  backgroundColor: pm.bg,
                   marginRight: space.md,
                 }}>
-                  <Utensils size={18} color={t.primary} />
+                  <PlanIcon size={18} color={pm.color} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[typography.headingSm, { color: t.text }]} numberOfLines={1}>{plan.name}</Text>
-                  <Text style={[typography.caption, { color: t.textMuted, marginTop: 3 }]}>
-                    {plan.total_kcal ? `${plan.total_kcal} kcal` : plan.method}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <View style={{ paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.full, backgroundColor: pm.bg }}>
+                      <Text style={[typography.overline, { color: pm.color }]}>{pm.label}</Text>
+                    </View>
+                    {plan.total_kcal ? (
+                      <Text style={[typography.caption, { color: t.textMuted }]}>{plan.total_kcal} kcal</Text>
+                    ) : null}
+                  </View>
                 </View>
                 <ChevronRight size={16} color={t.textMuted} />
               </View>
             </Card>
           </Animated.View>
-        ))}
+          )
+        })}
 
         {olderPlans.length > 0 && (
           <View style={{ marginTop: space.sm }}>

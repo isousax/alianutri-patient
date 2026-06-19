@@ -1,5 +1,5 @@
 import '../global.css'
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { QueryClient } from '@tanstack/react-query'
@@ -12,6 +12,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useAuthStore } from '../src/stores/auth'
 import { useNotifications } from '../src/hooks/useNotifications'
 import { useThemeStore, useTheme } from '../src/stores/theme'
+import { useOnboardingStore } from '../src/stores/onboarding'
+import { SplashGate } from '../src/components/SplashGate'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -40,32 +42,40 @@ export default function RootLayout() {
 
   const isHydrated = useAuthStore((s) => s.isHydrated)
   const hydrate = useAuthStore((s) => s.hydrate)
-
   const hydrateTheme = useThemeStore((s) => s.hydrateTheme)
+  const hydrateOnboarding = useOnboardingStore((s) => s.hydrateOnboarding)
+  const onboardingHydrated = useOnboardingStore((s) => s.hydrated)
 
   useEffect(() => {
     hydrate()
     hydrateTheme()
-  }, [hydrate, hydrateTheme])
-
-  useEffect(() => {
-    if ((fontsLoaded || fontError) && isHydrated) {
-      SplashScreen.hideAsync()
-    }
-  }, [fontsLoaded, fontError, isHydrated])
+    hydrateOnboarding()
+  }, [hydrate, hydrateTheme, hydrateOnboarding])
 
   useNotifications()
 
   const theme = useTheme()
+  const ready = (fontsLoaded || !!fontError) && isHydrated && onboardingHydrated
+  const [splashDone, setSplashDone] = useState(false)
 
-  if ((!fontsLoaded && !fontError) || !isHydrated) return null
+  // Esconde o splash nativo assim que a árvore JS pinta (o SplashGate assume).
+  const onRootLayout = useCallback(() => {
+    SplashScreen.hideAsync().catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {})
+  }, [ready])
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }} onLayout={onRootLayout}>
       <SafeAreaProvider>
         <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-          <StatusBar style={theme.dark ? 'light' : 'dark'} />
-          <Stack screenOptions={{ headerShown: false }} />
+          <StatusBar style={!splashDone ? 'light' : theme.dark ? 'light' : 'dark'} />
+          {ready && (
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }} />
+          )}
+          {!splashDone && <SplashGate ready={ready} onDone={() => setSplashDone(true)} />}
         </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

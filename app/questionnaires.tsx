@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, TextInput, Alert,
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ClipboardList, ChevronRight, CheckCircle2, Clock, Send, Circle, CheckCircle } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { useQuestionnaires, useQuestionnaireDetail, useAnswerQuestionnaire } from '../src/hooks/usePortal'
@@ -20,8 +21,9 @@ export default function QuestionnairesScreen() {
     return <AnswerForm questionnaire={selected} onBack={() => { setSelected(null); refetch() }} />
   }
 
-  const pending = (questionnaires ?? []).filter((q) => q.status === 'sent')
-  const answered = (questionnaires ?? []).filter((q) => q.status === 'answered')
+  const list: PortalQuestionnaire[] = questionnaires ?? []
+  const pending = list.filter((q) => q.status === 'sent')
+  const answered = list.filter((q) => q.status === 'answered')
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
@@ -123,15 +125,18 @@ function AnswerForm({ questionnaire, onBack }: { questionnaire: PortalQuestionna
 
   async function handleSubmit() {
     if (requiredCount > 0 && answeredRequired < requiredCount) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {})
       Alert.alert('Campos obrigatórios', `Responda todas as ${requiredCount} perguntas obrigatórias antes de enviar.`)
       return
     }
     try {
       await mutateAsync({ qId: questionnaire.id, responses })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
       Alert.alert('Sucesso', 'Questionário respondido com sucesso!', [
         { text: 'OK', onPress: onBack },
       ])
     } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {})
       Alert.alert('Erro', 'Não foi possível enviar as respostas.')
     }
   }

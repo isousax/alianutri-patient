@@ -84,8 +84,8 @@ const DEFAULT_THEME: AppTheme = {
     tabBarBorder: '#F1F5F9',
     tabBarInactive: '#94A3B8',
 
-    accent: '#F59E0B',        // amber-500
-    accentLight: '#FFFBEB',   // amber-50
+    accent: '#6366F1',        // indigo-500 (toques inteligentes)
+    accentLight: '#EEF2FF',   // indigo-50
 
     success: '#059669',       // emerald-600 (DIFFERENT from primary)
     successLight: '#D1FAE5',  // emerald-100
@@ -93,25 +93,25 @@ const DEFAULT_THEME: AppTheme = {
     warningLight: '#FEF3C7',  // amber-100
     error: '#EF4444',         // red-500
     errorLight: '#FEE2E2',    // red-100
-    info: '#3B82F6',          // blue-500
-    infoLight: '#DBEAFE',     // blue-100
+    info: '#14B8A6',          // teal-500 (hidratação/dados)
+    infoLight: '#CCFBF1',     // teal-100
   },
 }
 
 // ═══════════════════════════════════════════════════════
-//  AMETISTA — Violet on deep ink (premium, immersive)
-//  Inspired by: WHOOP dark UI + Linear depth
+//  NOTURNO — Emerald/Indigo on deep ink (premium, immersive)
+//  Inspired by: WHOOP dark UI + Linear depth (tríade)
 // ═══════════════════════════════════════════════════════
 
 const AMETHYST_THEME: AppTheme = {
   id: 'amethyst',
-  name: 'Ametista',
-  emoji: '💎',
+  name: 'Noturno',
+  emoji: '🌙',
   dark: true,
   colors: {
-    primary: '#A78BFA',       // violet-400 (bright on dark)
-    primaryLight: '#1E1B4B',  // indigo-950
-    primaryMuted: '#7C3AED',  // violet-600
+    primary: '#34D399',       // emerald-400 (bright on dark)
+    primaryLight: '#064E3B',  // emerald-900
+    primaryMuted: '#10B981',  // emerald-500
     primaryFg: '#FFFFFF',
 
     background: '#020617',    // slate-950
@@ -132,8 +132,8 @@ const AMETHYST_THEME: AppTheme = {
     tabBarBorder: '#1E293B',
     tabBarInactive: '#64748B',
 
-    accent: '#C4B5FD',        // violet-300
-    accentLight: '#1E1B4B',
+    accent: '#818CF8',        // indigo-400
+    accentLight: '#312E81',   // indigo-900
 
     success: '#34D399',       // emerald-400
     successLight: '#064E3B',  // emerald-900
@@ -141,8 +141,8 @@ const AMETHYST_THEME: AppTheme = {
     warningLight: '#78350F',  // amber-900
     error: '#F87171',         // red-400
     errorLight: '#7F1D1D',    // red-900
-    info: '#60A5FA',          // blue-400
-    infoLight: '#1E3A5F',
+    info: '#2DD4BF',          // teal-400
+    infoLight: '#134E4A',     // teal-900
   },
 }
 
@@ -189,8 +189,8 @@ const ROSE_THEME: AppTheme = {
     warningLight: '#FEF3C7',
     error: '#E11D48',         // rose-600
     errorLight: '#FFE4E6',    // rose-100
-    info: '#8B5CF6',          // violet-500
-    infoLight: '#EDE9FE',     // violet-100
+    info: '#6366F1',          // indigo-500
+    infoLight: '#EEF2FF',     // indigo-50
   },
 }
 

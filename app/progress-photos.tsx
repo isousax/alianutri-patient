@@ -15,7 +15,7 @@ import { useThemeColors } from '../src/stores/theme'
 import { useProgressPhotos, useUploadProgressPhoto, useDeleteProgressPhoto } from '../src/hooks/usePortal'
 import type { ProgressPhoto } from '../src/types/portal'
 import { useAuthStore } from '../src/stores/auth'
-import { ScreenHeader, EmptyState, SectionLabel } from '../src/components/ui'
+import { ScreenHeader, EmptyState, SectionLabel, SkeletonBlock } from '../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 const SCREEN_W = Dimensions.get('window').width
@@ -38,7 +38,7 @@ export default function ProgressPhotosScreen() {
   const [selectedCategory, setSelectedCategory] = useState('front')
   const [viewerPhoto, setViewerPhoto] = useState<ProgressPhoto | null>(null)
 
-  const photos = data?.photos ?? []
+  const photos: ProgressPhoto[] = data?.photos ?? []
 
   const handlePickPhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -184,8 +184,13 @@ export default function ProgressPhotosScreen() {
 
         {/* Photos grid by date */}
         {isLoading ? (
-          <View style={{ alignItems: 'center', marginTop: space['3xl'] }}>
-            <ActivityIndicator size="large" color={t.primary} />
+          <View style={{ marginTop: space.lg, gap: space.md }}>
+            {[0, 1].map((row) => (
+              <View key={row} style={{ flexDirection: 'row', gap: space.md }}>
+                <SkeletonBlock width="48%" height={180} borderRadius={radius.lg} />
+                <SkeletonBlock width="48%" height={180} borderRadius={radius.lg} />
+              </View>
+            ))}
           </View>
         ) : photos.length === 0 ? (
           <EmptyState
