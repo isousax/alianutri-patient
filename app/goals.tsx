@@ -1,9 +1,11 @@
-import { View, Text, ScrollView, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Target, CheckCircle2, Circle, Flag } from 'lucide-react-native'
+import { Target, CheckCircle2, Circle, Flag, Flame } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
 import { useThemeColors } from '../src/stores/theme'
-import { useGoals } from '../src/hooks/usePortal'
+import { useGoals, useToggleGoalCheckin } from '../src/hooks/usePortal'
+import { habitStreak, isCheckedToday, streakUnit, cadenceLabel } from '../src/lib/habit'
 import type { PortalGoal } from '../src/types/portal'
 import { ScreenHeader, Card, SectionLabel, EmptyState, LoadingScreen } from '../src/components/ui'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
@@ -89,6 +91,14 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
   const t = useThemeColors()
   const pct = progressPct(goal)
   const isCompleted = goal.status === 'completed'
+  const toggle = useToggleGoalCheckin()
+  const habit = goal.habit ?? null
+  const checkedToday = habit ? isCheckedToday(habit) : false
+  const streak = habit ? habitStreak(habit) : 0
+  const onToggle = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+    toggle.mutate(goal.id)
+  }
 
   const prioColor = goal.priority === 'high' ? t.error : goal.priority === 'medium' ? t.warning : t.textMuted
   const prioLabel = PRIORITY_LABELS[goal.priority] || goal.priority
@@ -152,6 +162,39 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
               backgroundColor: isCompleted ? t.success : t.primary,
             }} />
           </View>
+        </View>
+      )}
+      {habit && (
+        <View style={{ marginTop: space.md, marginLeft: 28 + space.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
+            {streak > 0 ? (
+              <>
+                <Flame size={14} color={t.warning} />
+                <Text style={[typography.captionBold, { color: t.text }]}>{streak}</Text>
+                <Text style={[typography.caption, { color: t.textMuted }]}>{streakUnit(habit, streak)} · {cadenceLabel(habit)}</Text>
+              </>
+            ) : (
+              <Text style={[typography.caption, { color: t.textMuted }]}>Hábito {cadenceLabel(habit)}</Text>
+            )}
+          </View>
+          {!isCompleted && (
+            <Pressable
+              onPress={onToggle}
+              disabled={toggle.isPending}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 5,
+                paddingHorizontal: 12, paddingVertical: 7,
+                borderRadius: radius.md,
+                backgroundColor: checkedToday ? t.successLight : t.primaryLight,
+                opacity: toggle.isPending ? 0.6 : 1,
+              }}
+            >
+              {checkedToday ? <CheckCircle2 size={15} color={t.success} /> : <Circle size={15} color={t.primary} />}
+              <Text style={[typography.captionBold, { color: checkedToday ? t.success : t.primary }]}>
+                {checkedToday ? 'Feito hoje' : 'Marcar hoje'}
+              </Text>
+            </Pressable>
+          )}
         </View>
       )}
     </Card>

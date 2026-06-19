@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { KeyRound, ArrowRight, ShieldCheck } from 'lucide-react-native'
@@ -14,6 +13,8 @@ import { AliaMark, AliaWordmark, GlowBlob } from '../src/components/Brand'
 
 const { width: SCREEN_W } = Dimensions.get('window')
 
+let __loginRenders = 0
+
 export default function LoginScreen() {
   const t = useThemeColors()
   const theme = useTheme()
@@ -24,6 +25,16 @@ export default function LoginScreen() {
   const setAuth = useAuthStore((s) => s.setAuth)
 
   const canSubmit = code.trim().length > 0 && !loading
+
+  // ───── DEBUG TECLADO: detectar remount vs re-render ─────
+  const instanceId = useRef(Math.random().toString(36).slice(2, 7)).current
+  __loginRenders += 1
+  console.log(`[LOGIN] render #${__loginRenders} inst=${instanceId} focused=${focused} loading=${loading} code="${code}"`)
+  useEffect(() => {
+    console.log(`[LOGIN] ✅ MOUNT inst=${instanceId}`)
+    return () => console.log(`[LOGIN] ❌ UNMOUNT inst=${instanceId}`)
+  }, [instanceId])
+  // ─────────────────────────────────────────────────────────
 
   async function handleLogin() {
     const trimmed = code.trim()
@@ -66,9 +77,6 @@ export default function LoginScreen() {
       setLoading(false)
     }
   }
-  console.log('LoginScreen render')
-  
-
   return (
     <View style={{ flex: 1, backgroundColor: theme.dark ? gradients.night[1] : gradients.brand[0] }}>
       <LinearGradient colors={theme.dark ? gradients.night : gradients.brand} start={{ x: 0.1, y: 0 }} end={{ x: 0.95, y: 0.8 }} style={{ flex: 1 }}>
@@ -78,23 +86,22 @@ export default function LoginScreen() {
 
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ flex: 1 }}
           >
             {/* ── Hero ── */}
             <View style={{ alignItems: 'center', paddingTop: space['5xl'], paddingBottom: space['4xl'] }}>
-              <Animated.View entering={FadeInDown.duration(600).delay(120)} style={{ alignItems: 'center' }}>
+              <View style={{ alignItems: 'center' }}>
                 <AliaMark size={88} glass glassTint="rgba(255,255,255,0.18)" leafFrom="#FFFFFF" leafTo="#D1FAE5" style={{ marginBottom: space.xl }} />
                 <AliaWordmark textOnly size={36} color={t.primaryFg} />
                 <Text style={[typography.bodyMd, { color: t.primaryFg, opacity: 0.66, marginTop: space.sm }]}>
                   Seu acompanhamento nutricional
                 </Text>
-              </Animated.View>
+              </View>
             </View>
 
             {/* ── Form card (folha branca subindo) ── */}
-            <Animated.View
-              entering={FadeInUp.duration(500).delay(320)}
+            <View
               style={{
                 flex: 1,
                 backgroundColor: t.background,
@@ -136,8 +143,8 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     autoCorrect={false}
                     accessibilityLabel="Código de acesso"
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
+                    onFocus={() => { console.log(`[LOGIN] 🔵 FOCUS inst=${instanceId}`); setFocused(true) }}
+                    onBlur={() => { console.log(`[LOGIN] 🔴 BLUR inst=${instanceId}`); setFocused(false) }}
                     style={[
                       typography.bodyLg,
                       { flex: 1, marginLeft: space.md, paddingVertical: space.lg, color: t.text },
@@ -195,7 +202,7 @@ export default function LoginScreen() {
                   Acesso seguro e criptografado
                 </Text>
               </View>
-            </Animated.View>
+            </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
       </LinearGradient>

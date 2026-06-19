@@ -58,6 +58,14 @@ export default function RootLayout() {
   const ready = (fontsLoaded || !!fontError) && isHydrated && onboardingHydrated
   const [splashDone, setSplashDone] = useState(false)
 
+  // ───── DEBUG TECLADO: a Stack remonta se `ready` oscilar? ─────
+  console.log(`[ROOT] render ready=${ready} fonts=${fontsLoaded} hydr=${isHydrated} onb=${onboardingHydrated} splashDone=${splashDone}`)
+  useEffect(() => {
+    console.log('[ROOT] ✅ MOUNT')
+    return () => console.log('[ROOT] ❌ UNMOUNT')
+  }, [])
+  // ──────────────────────────────────────────────────────────────
+
   // Esconde o splash nativo assim que a árvore JS pinta (o SplashGate assume).
   const onRootLayout = useCallback(() => {
     SplashScreen.hideAsync().catch(() => {})

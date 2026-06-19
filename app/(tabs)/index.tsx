@@ -35,6 +35,11 @@ import {
   Camera,
   CalendarPlus,
   LayoutGrid,
+  Trophy,
+  Award,
+  Star,
+  Lock,
+  Pill,
 } from "lucide-react-native";
 import Svg, {
   Rect as SvgRect,
@@ -73,7 +78,9 @@ import type {
   PortalEvolution,
   WeeklyAdherenceDay,
   DiaryTimelineMeal,
+  PortalHome,
 } from "../../src/types/portal";
+import { computeGamification, type BadgeIconKey } from "../../src/lib/gamification";
 import { getTipOfTheDay } from "../../src/data/dailyTips";
 import { useSmartWaterGoal } from "../../src/hooks/useSmartWaterGoal";
 import * as Haptics from "expo-haptics";
@@ -629,6 +636,14 @@ export default function HomeScreen() {
               })}
             </Card>
           </Animated.View>
+        )}
+
+        {/* ═══════ GAMIFICATION HUB (módulo gamification) ═══════ */}
+        {data.gamification_enabled && <ProgressHubCard home={data} />}
+
+        {/* ═══════ SUPLEMENTOS (módulo supplementation) ═══════ */}
+        {data.supplementation_enabled && data.supplements && data.supplements.items.length > 0 && (
+          <SupplementsCard supplements={data.supplements} />
         )}
 
         {/* ═══════ WEIGHT SPARKLINE ═══════ */}
@@ -1241,6 +1256,223 @@ function WeeklyAdherenceChart({ days }: { days: WeeklyAdherenceDay[] }) {
             );
           })}
         </View>
+      </Card>
+    </Animated.View>
+  );
+}
+
+// ── Gamification: hub de progresso (módulo gamification, gated por gamification_enabled) ──
+
+const BADGE_ICON: Record<BadgeIconKey, typeof Flame> = {
+  flame: Flame,
+  award: Award,
+  star: Star,
+  target: Target,
+  trophy: Trophy,
+  utensils: Utensils,
+  sparkles: Sparkles,
+};
+
+function ProgressHubCard({ home }: { home: PortalHome }) {
+  const t = useThemeColors();
+  const { data: goals } = useGoals();
+  const gam = computeGamification({
+    streak: home.diary_streak ?? 0,
+    loggedDays: home.logged_dates?.length ?? 0,
+    goals: goals ?? [],
+  });
+  const pct = Math.round((gam.xpInLevel / gam.xpPerLevel) * 100);
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(350).delay(140)}
+      style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}
+    >
+      <Card>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: space.md,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: radius.sm,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: t.primaryLight,
+              }}
+            >
+              <Trophy size={15} color={t.primary} />
+            </View>
+            <Text style={[typography.headingSm, { color: t.text, marginLeft: space.sm }]}>
+              Seu progresso
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Flame size={14} color={t.warning} />
+            <Text style={[typography.captionBold, { color: t.warning, marginLeft: 3 }]}>
+              {gam.streak} {gam.streak === 1 ? "dia" : "dias"}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            marginBottom: space.xs,
+          }}
+        >
+          <Text style={[typography.headingLg, { color: t.text }]}>Nível {gam.level}</Text>
+          <Text style={[typography.caption, { color: t.textMuted }]}>
+            {gam.xpInLevel}/{gam.xpPerLevel} XP
+          </Text>
+        </View>
+        <View
+          style={{
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: t.borderLight,
+            overflow: "hidden",
+            marginBottom: space.md,
+          }}
+        >
+          <View
+            style={{
+              height: 6,
+              borderRadius: 3,
+              width: `${Math.min(pct, 100)}%`,
+              backgroundColor: t.primary,
+            }}
+          />
+        </View>
+
+        <Text style={[typography.caption, { color: t.textMuted, marginBottom: space.sm }]}>
+          Conquistas · {gam.unlockedCount}/{gam.badges.length}
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4 }}>
+          {gam.badges.map((badge) => {
+            const Icon = BADGE_ICON[badge.icon];
+            return (
+              <View
+                key={badge.id}
+                style={{
+                  width: "33.33%",
+                  paddingHorizontal: 4,
+                  marginBottom: space.sm,
+                  alignItems: "center",
+                }}
+              >
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: radius.sm,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: badge.unlocked ? t.primaryLight : t.borderLight,
+                    opacity: badge.unlocked ? 1 : 0.6,
+                  }}
+                >
+                  {badge.unlocked ? (
+                    <Icon size={20} color={t.primary} />
+                  ) : (
+                    <Lock size={16} color={t.textMuted} />
+                  )}
+                </View>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    typography.caption,
+                    {
+                      color: badge.unlocked ? t.text : t.textMuted,
+                      marginTop: 4,
+                      textAlign: "center",
+                    },
+                  ]}
+                >
+                  {badge.label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </Card>
+    </Animated.View>
+  );
+}
+
+// ── Suplementos (módulo supplementation, gated por supplementation_enabled) ──
+
+function SupplementsCard({ supplements }: { supplements: NonNullable<PortalHome["supplements"]> }) {
+  const t = useThemeColors();
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(350).delay(170)}
+      style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}
+    >
+      <Card>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: space.md }}>
+          <View
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: radius.sm,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: t.primaryLight,
+            }}
+          >
+            <Pill size={15} color={t.primary} />
+          </View>
+          <Text style={[typography.headingSm, { color: t.text, marginLeft: space.sm }]}>
+            Suplementos
+          </Text>
+        </View>
+
+        {supplements.items.map((it, i) => (
+          <View
+            key={i}
+            style={{
+              paddingVertical: space.sm,
+              borderTopWidth: i === 0 ? 0 : 1,
+              borderTopColor: t.borderLight,
+            }}
+          >
+            <Text style={[typography.bodySm, { color: t.text, fontWeight: "600" }]}>{it.name}</Text>
+            {[it.dose, it.timing, it.frequency].some((x) => x) && (
+              <Text style={[typography.caption, { color: t.textMuted, marginTop: 2 }]}>
+                {[it.dose, it.timing, it.frequency].filter((x) => x).join(" · ")}
+              </Text>
+            )}
+            {it.cycling ? (
+              <Text style={[typography.caption, { color: t.textMuted, marginTop: 1 }]}>
+                Ciclagem: {it.cycling}
+              </Text>
+            ) : null}
+            {it.notes ? (
+              <Text style={[typography.caption, { color: t.textMuted, marginTop: 1 }]}>{it.notes}</Text>
+            ) : null}
+          </View>
+        ))}
+
+        {supplements.notes ? (
+          <Text
+            style={[
+              typography.caption,
+              { color: t.textMuted, marginTop: space.sm, fontStyle: "italic" },
+            ]}
+          >
+            {supplements.notes}
+          </Text>
+        ) : null}
       </Card>
     </Animated.View>
   );

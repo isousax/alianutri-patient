@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { portalApi } from '../services/api'
 import { compressImage } from '../lib/compressImage'
+import { todayISO } from '../lib/habit'
 import type {
   PortalHome,
   PortalProfile,
@@ -86,6 +87,37 @@ export function useGoals() {
   return useQuery({
     queryKey: ['portal', 'goals'],
     queryFn: () => portalApi.get<PortalGoal[]>('/goals'),
+  })
+}
+
+export function useToggleGoalCheckin() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (goalId: string) =>
+      portalApi.post<{ checked: boolean; checkins: string[]; message: string }>(`/goals/${goalId}/checkin`, {}),
+    // Otimista: reflete o check-in de hoje na hora e reconcilia ao concluir.
+    onMutate: async (goalId: string) => {
+      await qc.cancelQueries({ queryKey: ['portal', 'goals'] })
+      const prev = qc.getQueryData<PortalGoal[]>(['portal', 'goals'])
+      const today = todayISO()
+      qc.setQueryData<PortalGoal[]>(['portal', 'goals'], (old) =>
+        (old ?? []).map((g) => {
+          if (g.id !== goalId || !g.habit) return g
+          const has = g.habit.checkins.includes(today)
+          const checkins = has
+            ? g.habit.checkins.filter((d) => d !== today)
+            : [...g.habit.checkins, today].sort()
+          return { ...g, habit: { ...g.habit, checkins } }
+        }),
+      )
+      return { prev }
+    },
+    onError: (_err, _goalId, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['portal', 'goals'], ctx.prev)
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'goals'] })
+    },
   })
 }
 

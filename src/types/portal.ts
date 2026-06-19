@@ -2,6 +2,15 @@
 // Home — GET /p/:code/home
 // ==========================================
 
+export interface PortalSupplementItem {
+  name: string
+  dose: string
+  timing: string
+  frequency: string
+  cycling: string | null
+  notes: string | null
+}
+
 export interface PortalHome {
   patient: { id: string; name: string; photo_url: string | null }
   nutritionist: { name: string; photo_url: string | null } | null
@@ -16,6 +25,9 @@ export interface PortalHome {
   } | null
   diary_streak: number
   logged_dates: string[]
+  gamification_enabled?: boolean
+  supplementation_enabled?: boolean
+  supplements?: { items: PortalSupplementItem[]; notes: string | null } | null
   chat_unread: number
   pending_questionnaires: number
   features?: {
@@ -129,7 +141,14 @@ export interface PortalQuestionnaireDetail extends PortalQuestionnaire {
 // Goals — GET /p/:code/goals
 // ==========================================
 
+export interface PortalHabit {
+  cadence: 'daily' | 'weekly'
+  per_week?: number
+  checkins: string[]
+}
+
 export interface PortalGoal {
+  habit?: PortalHabit | null
   id: string
   type: 'weight' | 'measurement' | 'behavioral' | 'nutritional' | 'lab_value' | 'custom'
   title: string
