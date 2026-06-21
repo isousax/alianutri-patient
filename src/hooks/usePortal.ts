@@ -9,6 +9,8 @@ import type {
   PortalMealPlanDetail,
   PortalGuidelineSummary,
   PortalGuidelineDetail,
+  PortalDocumentSummary,
+  PortalDocumentDetail,
   PortalQuestionnaire,
   PortalQuestionnaireDetail,
   PortalGoal,
@@ -72,6 +74,21 @@ export function useGuidelineDetail(id: string | null) {
   return useQuery({
     queryKey: ['portal', 'guidelines', id],
     queryFn: () => portalApi.get<PortalGuidelineDetail>(`/guidelines/${id}`),
+    enabled: !!id,
+  })
+}
+
+export function useDocuments() {
+  return useQuery({
+    queryKey: ['portal', 'documents'],
+    queryFn: () => portalApi.get<PortalDocumentSummary[]>('/documents'),
+  })
+}
+
+export function useDocumentDetail(id: string | null) {
+  return useQuery({
+    queryKey: ['portal', 'documents', id],
+    queryFn: () => portalApi.get<PortalDocumentDetail>(`/documents/${id}`),
     enabled: !!id,
   })
 }

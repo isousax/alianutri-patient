@@ -6,6 +6,7 @@ import { useThemeColors } from '../../src/stores/theme'
 import { useGuidelines, useGuidelineDetail } from '../../src/hooks/usePortal'
 import type { PortalGuidelineSummary } from '../../src/types/portal'
 import { Card, ScreenHeader, EmptyState, LoadingScreen } from '../../src/components/ui'
+import { Markdown } from '../../src/components/Markdown'
 import { radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
 
 export default function GuidelinesScreen() {
@@ -37,49 +38,23 @@ export default function GuidelinesScreen() {
 
   // ── Detail view ──
   if (selectedId && detail) {
-    let sections: { heading?: string; text?: string; body?: string }[] = []
-    if (Array.isArray(detail.content)) {
-      sections = detail.content
-    } else {
-      const rawText = typeof detail.content === 'string'
-        ? detail.content
-        : (detail.content as Record<string, unknown>)?.text
-          ? String((detail.content as Record<string, unknown>).text)
-          : null
-      if (rawText) {
-        const parts = rawText.split(/^## /m).filter(Boolean)
-        sections = parts.map((part: string) => {
-          const newline = part.indexOf('\n')
-          if (newline > 0) {
-            return { heading: part.slice(0, newline).trim(), body: part.slice(newline + 1).trim() }
-          }
-          return { body: part.trim() }
-        })
-      }
-    }
+    const md = typeof detail.content === 'string'
+      ? detail.content
+      : (detail.content as Record<string, unknown>)?.text
+        ? String((detail.content as Record<string, unknown>).text)
+        : ''
 
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
         <ScreenHeader title={detail.title} onBack={() => setSelectedId(null)} />
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 40 }}
+          contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 40, paddingTop: space.md }}
           showsVerticalScrollIndicator={false}
         >
-          {sections.map((section, idx) => (
-            <View key={idx} style={{ marginBottom: space.xl }}>
-              {section.heading ? (
-                <Text style={[typography.headingSm, { color: t.text, marginBottom: space.xs }]}>{section.heading}</Text>
-              ) : null}
-              {section.text ? (
-                <Text style={[typography.bodyMd, { color: t.textSecondary, lineHeight: 22 }]}>{section.text}</Text>
-              ) : null}
-              {section.body ? (
-                <Text style={[typography.bodyMd, { color: t.textSecondary, lineHeight: 22 }]}>{section.body}</Text>
-              ) : null}
-            </View>
-          ))}
-          {sections.length === 0 && (
+          {md ? (
+            <Markdown text={md} />
+          ) : (
             <Text style={[typography.bodyMd, { color: t.textMuted, textAlign: 'center', marginTop: space['5xl'] }]}>
               Nenhum conteúdo disponível.
             </Text>

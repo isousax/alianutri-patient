@@ -113,6 +113,23 @@ export interface PortalGuidelineDetail extends PortalGuidelineSummary {
 }
 
 // ==========================================
+// Documents — GET /p/:code/documents (compartilhados pelo nutri)
+// ==========================================
+
+export interface PortalDocumentSummary {
+  id: string
+  name: string
+  type: string
+  created_at: string
+  shared_at: string | null
+}
+
+// GET /p/:code/documents/:id
+export interface PortalDocumentDetail extends PortalDocumentSummary {
+  content_html: string
+}
+
+// ==========================================
 // Questionnaires — GET /p/:code/questionnaires
 // ==========================================
 

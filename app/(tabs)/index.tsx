@@ -40,6 +40,7 @@ import {
   Star,
   Lock,
   Pill,
+  FileText,
 } from "lucide-react-native";
 import Svg, {
   Rect as SvgRect,
@@ -765,6 +766,7 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
     actions.push(
       { icon: <Camera size={18} color={t.primary} />, label: "Fotos", bg: t.primaryLight, route: "/progress-photos", folderIcon: <Camera size={10} color={t.primary} /> },
       { icon: <ClipboardList size={18} color={t.accent} />, label: "Quest.", bg: t.accentLight, route: "/questionnaires", folderIcon: <ClipboardList size={10} color={t.accent} /> },
+      { icon: <FileText size={18} color={t.info} />, label: "Documentos", bg: t.infoLight, route: "/documents", folderIcon: <FileText size={10} color={t.info} /> },
     );
     return actions;
   }, [canWrite, t]);
