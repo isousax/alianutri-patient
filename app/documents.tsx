@@ -6,7 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../src/stores/theme'
 import { useDocuments, useDocumentDetail } from '../src/hooks/usePortal'
 import type { PortalDocumentSummary } from '../src/types/portal'
-import { Card, ScreenHeader, EmptyState, LoadingScreen } from '../src/components/ui'
+import { Card, ScreenHeader, EmptyState, LoadingScreen, SkeletonList } from '../src/components/ui'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 const TYPE_LABELS: Record<string, string> = {
@@ -109,7 +109,7 @@ export default function DocumentsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
       <ScreenHeader title="Documentos" />
       {isLoading ? (
-        <LoadingScreen />
+        <SkeletonList />
       ) : !docs || docs.length === 0 ? (
         <EmptyState
           icon={<FileText size={28} color={t.primary} />}

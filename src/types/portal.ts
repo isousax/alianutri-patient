@@ -446,3 +446,67 @@ export interface PortalEvolution {
   fat_mass_kg: number | null
   created_at: string
 }
+
+// ==========================================
+// Diário / Feed social — GET/POST /p/:code/diary/posts
+// ==========================================
+
+export type DiaryPostType = 'meal' | 'exercise' | 'mood' | 'free'
+export type DiaryAiStatus = 'pending' | 'completed' | 'failed' | 'skipped' | 'not_food' | 'partial'
+
+export interface DiaryAiAnalysis {
+  meal_name?: string
+  calories?: number
+  protein_g?: number
+  carbs_g?: number
+  fat_g?: number
+  fiber_g?: number
+  confidence?: 'high' | 'medium' | 'low'
+  items?: Array<{ name: string; portion_g: number; calories: number; protein_g: number; carbs_g: number; fat_g: number }>
+  /** análise em texto livre (Gemini) quando a estruturação JSON falhou (partial) */
+  raw_text?: string
+}
+
+export type ReactionEmoji = '❤️' | '👏' | '💪' | '🔥' | '⭐'
+
+export interface DiaryPostReaction {
+  emoji: ReactionEmoji
+  author_type: string
+}
+
+export interface DiaryPostComment {
+  id: string
+  author_type: string
+  comment_text: string
+  created_at: string
+}
+
+export interface DiaryPost {
+  id: string
+  type: DiaryPostType
+  has_photo: boolean
+  caption: string | null
+  emoji: string | null
+  ai_status: DiaryAiStatus | null
+  ai_analysis: DiaryAiAnalysis | null
+  ai_error: string | null
+  created_at: string
+  reactions: DiaryPostReaction[]
+  comments: DiaryPostComment[]
+  /** post otimista (criado offline/enviando) — não veio do servidor ainda */
+  _local?: boolean
+  /** uri local da foto enquanto o post não sincronizou */
+  _localPhotoUri?: string | null
+}
+
+export interface DiaryFeedResponse {
+  posts: DiaryPost[]
+  next_cursor: string | null
+}
+
+export interface ChartsSummary {
+  nutrition: Array<{ date: string; calories: number; protein_g: number; carbs_g: number; fat_g: number }>
+  water: Array<{ date: string; total_ml: number }>
+  wellness: Array<{ date: string; energy: number }>
+  counts: { meal_photos: number; exercise_posts: number; nutri_reactions: number; nutri_comments: number }
+}

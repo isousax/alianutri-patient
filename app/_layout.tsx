@@ -11,9 +11,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useAuthStore } from '../src/stores/auth'
 import { useNotifications } from '../src/hooks/useNotifications'
+import { useReminders } from '../src/hooks/useReminders'
 import { useThemeStore, useTheme } from '../src/stores/theme'
 import { useOnboardingStore } from '../src/stores/onboarding'
 import { SplashGate } from '../src/components/SplashGate'
+import { XpToast } from '../src/components/ui'
+import { setupNetworkMonitoring } from '../src/lib/network'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -27,9 +30,25 @@ const queryClient = new QueryClient({
   },
 })
 
+// Dados clínicos/PII NÃO são persistidos em disco (AsyncStorage não é cifrado).
+// Carregam do backend a cada abertura (são leves; cobertos por skeletons).
+const CLINICAL_RESOURCES = new Set([
+  'home', 'profile', 'diary-posts', 'diary-post', 'diary-today', 'diary-streak',
+  'food-diary', 'weight-history', 'water', 'symptoms', 'evolution',
+  'meal-plans', 'progress-photos', 'chat', 'weekly-adherence',
+])
+
 const persistOptions = {
   persister: asyncStoragePersister,
   maxAge: 1000 * 60 * 60 * 24,
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query: { queryKey: readonly unknown[]; state: { status: string } }) => {
+      if (query.state.status !== 'success') return false
+      const key = query.queryKey
+      const resource = Array.isArray(key) && key.length > 1 ? String(key[1]) : ''
+      return !CLINICAL_RESOURCES.has(resource)
+    },
+  },
 }
 
 export default function RootLayout() {
@@ -47,24 +66,18 @@ export default function RootLayout() {
   const onboardingHydrated = useOnboardingStore((s) => s.hydrated)
 
   useEffect(() => {
+    setupNetworkMonitoring()
     hydrate()
     hydrateTheme()
     hydrateOnboarding()
   }, [hydrate, hydrateTheme, hydrateOnboarding])
 
   useNotifications()
+  useReminders()
 
   const theme = useTheme()
   const ready = (fontsLoaded || !!fontError) && isHydrated && onboardingHydrated
   const [splashDone, setSplashDone] = useState(false)
-
-  // ───── DEBUG TECLADO: a Stack remonta se `ready` oscilar? ─────
-  console.log(`[ROOT] render ready=${ready} fonts=${fontsLoaded} hydr=${isHydrated} onb=${onboardingHydrated} splashDone=${splashDone}`)
-  useEffect(() => {
-    console.log('[ROOT] ✅ MOUNT')
-    return () => console.log('[ROOT] ❌ UNMOUNT')
-  }, [])
-  // ──────────────────────────────────────────────────────────────
 
   // Esconde o splash nativo assim que a árvore JS pinta (o SplashGate assume).
   const onRootLayout = useCallback(() => {
@@ -83,6 +96,7 @@ export default function RootLayout() {
           {ready && (
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }} />
           )}
+          {ready && <XpToast />}
           {!splashDone && <SplashGate ready={ready} onDone={() => setSplashDone(true)} />}
         </PersistQueryClientProvider>
       </SafeAreaProvider>

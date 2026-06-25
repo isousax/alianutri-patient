@@ -4,6 +4,7 @@ import * as Device from 'expo-device'
 import Constants from 'expo-constants'
 import { portalApi } from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import { router } from 'expo-router'
 
 const isExpoGo = Constants.appOwnership === 'expo'
 
@@ -75,4 +76,31 @@ export function useNotifications() {
       })
       .catch(console.error)
   }, [accessCode])
+
+  // Deep-link: tocar numa notificação (curtida/comentário do nutri) abre o post.
+  useEffect(() => {
+    if (isExpoGo) return
+    let cancelled = false
+    let sub: { remove: () => void } | undefined
+    const openFromData = (data: unknown) => {
+      const postId = (data as { postId?: unknown } | null)?.postId
+      if (typeof postId === 'string') router.push(`/post/${postId}` as never)
+    }
+    ;(async () => {
+      const Notifications = await import('expo-notifications')
+      const last = await Notifications.getLastNotificationResponseAsync()
+      if (!cancelled && last) {
+        // pequeno delay pra garantir a árvore de navegação montada (cold start)
+        setTimeout(() => openFromData(last.notification.request.content.data), 500)
+      }
+      if (cancelled) return
+      sub = Notifications.addNotificationResponseReceivedListener((resp) => {
+        openFromData(resp.notification.request.content.data)
+      })
+    })().catch(() => {})
+    return () => {
+      cancelled = true
+      sub?.remove()
+    }
+  }, [])
 }

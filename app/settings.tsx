@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Alert, Linking, ScrollView } from 'react-native'
+import { View, Text, Pressable, Alert, Linking, ScrollView, Switch } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   LogOut, Bell, Shield, ChevronRight,
@@ -12,12 +12,16 @@ import { useThemeColors, useTheme, useThemeStore } from '../src/stores/theme'
 import { THEME_LIST, type AppTheme, type ThemeColors } from '../src/theme/themes'
 import { ScreenHeader, Card, SectionLabel, Divider } from '../src/components/ui'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
+import { REMINDERS } from '../src/lib/localNotifications'
+import { useRemindersStore } from '../src/stores/reminders'
 
 export default function SettingsScreen() {
   const t = useThemeColors()
   const theme = useTheme()
   const setTheme = useThemeStore((s) => s.setTheme)
   const logout = useAuthStore((s) => s.logout)
+  const reminderEnabled = useRemindersStore((s) => s.enabled)
+  const toggleReminder = useRemindersStore((s) => s.toggle)
 
   function handleLogout() {
     Alert.alert('Sair', 'Tem certeza que deseja sair?', [
@@ -85,6 +89,35 @@ export default function SettingsScreen() {
                 )
               })}
             </View>
+          </Card>
+        </Animated.View>
+
+        {/* ── Reminders section ── */}
+        <Animated.View entering={FadeInDown.duration(300).delay(100)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space['2xl'] }}>
+          <SectionLabel text="LEMBRETES" />
+          <Card padded={false}>
+            <View style={{ paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.xs }}>
+              <Text style={[typography.caption, { color: t.textSecondary }]}>
+                Lembretes diários pra manter o hábito — ligue só os que fizerem sentido pra você.
+              </Text>
+            </View>
+            {REMINDERS.map((r, i) => (
+              <View key={r.id}>
+                {i > 0 && <Divider inset={space.lg} />}
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.lg, paddingVertical: space.md }}>
+                  <Text style={[typography.labelMd, { color: t.text, flex: 1 }]}>{r.label}</Text>
+                  <Switch
+                    value={!!reminderEnabled[r.id]}
+                    onValueChange={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+                      toggleReminder(r.id)
+                    }}
+                    trackColor={{ false: t.surfacePressed, true: t.primary }}
+                    thumbColor={t.surface}
+                  />
+                </View>
+              </View>
+            ))}
           </Card>
         </Animated.View>
 

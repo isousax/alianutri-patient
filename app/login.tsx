@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions } from 'react-native'
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolateColor } from 'react-native-reanimated'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -13,28 +14,21 @@ import { AliaMark, AliaWordmark, GlowBlob } from '../src/components/Brand'
 
 const { width: SCREEN_W } = Dimensions.get('window')
 
-let __loginRenders = 0
-
 export default function LoginScreen() {
   const t = useThemeColors()
   const theme = useTheme()
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
-  const [focused, setFocused] = useState(false)
   const [error, setError] = useState('')
   const setAuth = useAuthStore((s) => s.setAuth)
 
   const canSubmit = code.trim().length > 0 && !loading
 
-  // ───── DEBUG TECLADO: detectar remount vs re-render ─────
-  const instanceId = useRef(Math.random().toString(36).slice(2, 7)).current
-  __loginRenders += 1
-  console.log(`[LOGIN] render #${__loginRenders} inst=${instanceId} focused=${focused} loading=${loading} code="${code}"`)
-  useEffect(() => {
-    console.log(`[LOGIN] ✅ MOUNT inst=${instanceId}`)
-    return () => console.log(`[LOGIN] ❌ UNMOUNT inst=${instanceId}`)
-  }, [instanceId])
-  // ─────────────────────────────────────────────────────────
+  // Foco animado via SharedValue — NÃO causa re-render (evita o loop FOCUS/BLUR).
+  const focusedSv = useSharedValue(0)
+  const inputWrapStyle = useAnimatedStyle(() => ({
+    borderColor: error ? t.error : interpolateColor(focusedSv.value, [0, 1], [t.borderLight, t.primary]),
+  }))
 
   async function handleLogin() {
     const trimmed = code.trim()
@@ -81,8 +75,8 @@ export default function LoginScreen() {
     <View style={{ flex: 1, backgroundColor: theme.dark ? gradients.night[1] : gradients.brand[0] }}>
       <LinearGradient colors={theme.dark ? gradients.night : gradients.brand} start={{ x: 0.1, y: 0 }} end={{ x: 0.95, y: 0.8 }} style={{ flex: 1 }}>
         {/* blobs de profundidade no hero */}
-        <GlowBlob size={SCREEN_W * 1.1} color="#2DD4BF" opacity={theme.dark ? 0.22 : 0.34} style={{ position: 'absolute', top: -SCREEN_W * 0.4, left: -SCREEN_W * 0.3 }} />
-        <GlowBlob size={SCREEN_W * 0.85} color="#818CF8" opacity={theme.dark ? 0.24 : 0.2} style={{ position: 'absolute', top: SCREEN_W * 0.1, right: -SCREEN_W * 0.35 }} />
+        <GlowBlob size={SCREEN_W * 1.1} color={gradients.brand[1]} opacity={theme.dark ? 0.22 : 0.34} style={{ position: 'absolute', top: -SCREEN_W * 0.4, left: -SCREEN_W * 0.3 }} />
+        <GlowBlob size={SCREEN_W * 0.85} color={gradients.premium[1]} opacity={theme.dark ? 0.24 : 0.2} style={{ position: 'absolute', top: SCREEN_W * 0.1, right: -SCREEN_W * 0.35 }} />
 
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <KeyboardAvoidingView
@@ -124,17 +118,15 @@ export default function LoginScreen() {
 
               {/* Input */}
               <View style={{ marginBottom: space.xl }}>
-                <View style={{
+                <Animated.View style={[{
                   flexDirection: 'row',
                   alignItems: 'center',
                   backgroundColor: t.surfaceSecondary,
                   borderRadius: radius.lg,
                   paddingHorizontal: space.lg,
                   borderWidth: 1.5,
-                  borderColor: error ? t.error : focused ? t.primary : t.borderLight,
-                  ...(focused && !error ? shadows.glow(t.primary) : shadows.none),
-                }}>
-                  <KeyRound size={18} color={error ? t.error : focused ? t.primary : t.textMuted} />
+                }, inputWrapStyle]}>
+                  <KeyRound size={18} color={error ? t.error : t.textMuted} />
                   <TextInput
                     value={code}
                     onChangeText={(v) => { setCode(v); if (error) setError('') }}
@@ -143,8 +135,8 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     autoCorrect={false}
                     accessibilityLabel="Código de acesso"
-                    onFocus={() => { console.log(`[LOGIN] 🔵 FOCUS inst=${instanceId}`); setFocused(true) }}
-                    onBlur={() => { console.log(`[LOGIN] 🔴 BLUR inst=${instanceId}`); setFocused(false) }}
+                    onFocus={() => { focusedSv.value = withTiming(1, { duration: 150 }) }}
+                    onBlur={() => { focusedSv.value = withTiming(0, { duration: 150 }) }}
                     style={[
                       typography.bodyLg,
                       { flex: 1, marginLeft: space.md, paddingVertical: space.lg, color: t.text },
@@ -153,7 +145,7 @@ export default function LoginScreen() {
                     returnKeyType="go"
                     onSubmitEditing={handleLogin}
                   />
-                </View>
+                </Animated.View>
                 {error ? (
                   <Text style={[typography.caption, { color: t.error, marginTop: space.sm, marginLeft: 4 }]}>{error}</Text>
                 ) : null}

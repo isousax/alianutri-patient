@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics'
 import { useThemeColors, type ThemeColors } from '../../stores/theme'
 import { shadows, radius, space, typography, SCREEN_PADDING, motion } from '../../theme/tokens'
 import { AliaMark } from '../Brand'
+import { AuroraBackground } from './AuroraBackground'
 
 // ══════════════════════════════════════════════════════
 //  CARD — The fundamental surface container
@@ -100,9 +101,11 @@ export function ScreenHeader({ title, subtitle, rightAction, onBack }: ScreenHea
       <Pressable
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onBack ? onBack() : router.back() }}
         hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Voltar"
         style={{
-          width: 36,
-          height: 36,
+          width: 40,
+          height: 40,
           borderRadius: radius.md,
           alignItems: 'center',
           justifyContent: 'center',
@@ -479,11 +482,13 @@ export function LoadingScreen() {
     transform: [{ scale: interpolate(pulse.value, [0, 1], [0.97, 1.03]) }],
   }))
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.background, alignItems: 'center', justifyContent: 'center', gap: space.xl }} edges={['top']}>
-      <Animated.View style={markStyle}>
-        <AliaMark size={68} />
-      </Animated.View>
-      <ActivityIndicator size="small" color={t.primary} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+      <AuroraBackground variant="hero" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.xl }}>
+        <Animated.View style={markStyle}>
+          <AliaMark size={68} />
+        </Animated.View>
+        <ActivityIndicator size="small" color={t.primary} />
+      </AuroraBackground>
     </SafeAreaView>
   )
 }
@@ -502,3 +507,38 @@ export function Divider({ inset = 0 }: { inset?: number }) {
     }} />
   )
 }
+
+// ══════════════════════════════════════════════════════
+//  SKELETON LIST — card-list loading placeholder
+// ══════════════════════════════════════════════════════
+
+export function SkeletonList({ count = 4 }: { count?: number }) {
+  const t = useThemeColors()
+  return (
+    <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space.lg, gap: space.md }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <View
+          key={i}
+          style={{ backgroundColor: t.surface, borderRadius: radius.xl, padding: space.lg, ...shadows.md }}
+        >
+          <SkeletonBlock width="55%" height={16} />
+          <SkeletonBlock width="88%" height={12} style={{ marginTop: space.md }} />
+          <SkeletonBlock width="40%" height={12} style={{ marginTop: space.xs }} />
+        </View>
+      ))}
+    </View>
+  )
+}
+
+// ══════════════════════════════════════════════════════
+//  RE-EXPORTS — "Aurora" design system primitives
+// ══════════════════════════════════════════════════════
+
+export { AuroraBackground, type AuroraVariant } from './AuroraBackground'
+export { Button, type ButtonVariant, type ButtonSize } from './Button'
+export { IconButton } from './IconButton'
+export { TextField } from './TextField'
+export { KeyboardAvoidingWrapper } from './KeyboardAvoidingWrapper'
+export { ReadOnlyBanner } from './ReadOnlyBanner'
+export { MacrosBar } from './MacrosBar'
+export { XpToast } from './XpToast'

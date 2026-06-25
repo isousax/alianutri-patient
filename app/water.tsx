@@ -22,6 +22,7 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 import { useThemeColors } from "../src/stores/theme";
+import { useFeaturesStore } from "../src/stores/features";
 import {
   useWaterIntake,
   useLogWater,
@@ -30,6 +31,7 @@ import {
 import type { WaterIntakeResponse } from "../src/types/portal";
 import { useSmartWaterGoal } from "../src/hooks/useSmartWaterGoal";
 import { ScreenHeader, Card } from "../src/components/ui";
+import { ReadOnlyBanner } from "../src/components/ui/ReadOnlyBanner";
 import {
   shadows,
   radius,
@@ -66,6 +68,7 @@ const CARD_WIDTH = (SCREEN_WIDTH - SCREEN_PADDING * 2) / 3.4;
 
 export default function WaterScreen() {
   const t = useThemeColors();
+  const canWrite = useFeaturesStore((s) => s.canWrite);
   const [date, setDate] = useState(todayStr());
   const isToday = date === todayStr();
   const [showHistory, setShowHistory] = useState(false);
@@ -127,6 +130,7 @@ export default function WaterScreen() {
 
   const handleAdd = useCallback(
     async (amount: number) => {
+      if (!canWrite) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       localBoostRef.current += amount;
       rerender((n) => n + 1);
@@ -149,11 +153,12 @@ export default function WaterScreen() {
         Alert.alert("Erro", "Não foi possível registrar.");
       }
     },
-    [date, logWater, displayTotal, goal],
+    [date, logWater, displayTotal, goal, canWrite],
   );
 
   const handleDelete = useCallback(
     async (id: string) => {
+      if (!canWrite) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       Alert.alert("Remover", "Remover este registro?", [
         { text: "Cancelar", style: "cancel" },
@@ -171,7 +176,7 @@ export default function WaterScreen() {
         },
       ]);
     },
-    [deleteWater, refetch],
+    [deleteWater, refetch, canWrite],
   );
 
   const ringColor = displayProgress >= 1 ? t.success : t.info;
@@ -193,7 +198,7 @@ export default function WaterScreen() {
           paddingBottom: space.sm,
         }}
       >
-        <Pressable onPress={() => setDate(shiftDate(date, -1))} hitSlop={12}>
+        <Pressable onPress={() => setDate(shiftDate(date, -1))} hitSlop={12} accessibilityRole="button" accessibilityLabel="Dia anterior">
           <ChevronLeft size={16} color={t.textMuted} />
         </Pressable>
         <Pressable onPress={() => setDate(todayStr())}>
@@ -205,6 +210,8 @@ export default function WaterScreen() {
           onPress={() => setDate(shiftDate(date, 1))}
           hitSlop={12}
           disabled={isToday}
+          accessibilityRole="button"
+          accessibilityLabel="Próximo dia"
         >
           <ChevronRight
             size={16}
@@ -218,6 +225,7 @@ export default function WaterScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
+        {!canWrite && <ReadOnlyBanner />}
         {/* Circular progress */}
         <Animated.View
           entering={FadeIn.duration(400)}
@@ -442,7 +450,7 @@ export default function WaterScreen() {
                 <Pressable
                   key={opt.ml}
                   onPress={() => handleAdd(opt.ml)}
-                  disabled={isLogging}
+                  disabled={isLogging || !canWrite}
                   style={({ pressed }) => ({
                     width: CARD_WIDTH,
                     alignItems: "center",
@@ -450,7 +458,7 @@ export default function WaterScreen() {
                     paddingHorizontal: space.xs,
                     borderRadius: radius.xl,
                     backgroundColor: t.surface,
-                    opacity: pressed ? 0.85 : 1,
+                    opacity: pressed ? 0.85 : canWrite ? 1 : 0.45,
                     transform: [{ scale: pressed ? 0.96 : 1 }],
                     ...shadows.md,
                   })}
@@ -585,8 +593,12 @@ export default function WaterScreen() {
                         <Pressable
                           onPress={() => handleDelete(entry.id)}
                           hitSlop={8}
+                          disabled={!canWrite}
                         >
-                          <Trash2 size={14} color={t.textMuted} />
+                          <Trash2
+                            size={14}
+                            color={canWrite ? t.textMuted : t.borderLight}
+                          />
                         </Pressable>
                       )}
                     </View>

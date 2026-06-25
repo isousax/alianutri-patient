@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
-import { Platform, StyleSheet, View } from 'react-native'
-import { Tabs } from 'expo-router'
+import { Platform, StyleSheet, View, Pressable, Alert } from 'react-native'
+import { Tabs, router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { Home, Utensils, FileText, BookOpen, User, type LucideIcon } from 'lucide-react-native'
+import { Home, Utensils, FileText, BookOpen, User, Plus, type LucideIcon } from 'lucide-react-native'
 import { useTheme, useThemeColors } from '../../src/stores/theme'
+import { useFeaturesStore } from '../../src/stores/features'
 import { radius, shadows, motion } from '../../src/theme/tokens'
 
 const ICON_SIZE = 22
@@ -57,6 +58,49 @@ function TabIcon({ Icon, focused }: { Icon: LucideIcon; focused: boolean }) {
         <Icon size={ICON_SIZE} color={t.primaryFg} strokeWidth={2.4} />
       </Animated.View>
     </View>
+  )
+}
+
+// Botão central "+" do tab bar — abre o menu de criação rápida (não navega).
+function CreateFab() {
+  const t = useThemeColors()
+  const canWrite = useFeaturesStore((s) => s.canWrite)
+  const handlePress = () => {
+    if (!canWrite) {
+      Alert.alert('Somente leitura', 'Seu acesso está em modo leitura. Fale com seu nutricionista para ativar os registros.')
+      return
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
+    Alert.alert('Criar', undefined, [
+      { text: '📸 Postar no diário', onPress: () => router.push('/post-compose' as never) },
+      { text: '💧 Registrar água', onPress: () => router.push('/water' as never) },
+      { text: '⚖️ Registrar peso', onPress: () => router.push('/weight' as never) },
+      { text: 'Cancelar', style: 'cancel' },
+    ])
+  }
+  return (
+    <Pressable
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={canWrite ? 'Criar nova postagem ou registro' : 'Criação indisponível (somente leitura)'}
+      style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <View
+        style={{
+          width: 50,
+          height: 50,
+          borderRadius: 25,
+          backgroundColor: canWrite ? t.primary : t.textMuted,
+          opacity: canWrite ? 1 : 0.5,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 14,
+          ...(canWrite ? shadows.glow(t.primary) : {}),
+        }}
+      >
+        <Plus size={26} color={t.primaryFg} strokeWidth={2.5} />
+      </View>
+    </Pressable>
   )
 }
 
@@ -114,6 +158,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="create"
+        options={{
+          title: '',
+          tabBarButton: () => <CreateFab />,
+        }}
+      />
+      <Tabs.Screen
         name="diary"
         options={{
           title: 'Diário',
@@ -123,8 +174,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="guidelines"
         options={{
-          title: 'Orientações',
-          tabBarIcon: ({ focused }) => <TabIcon Icon={FileText} focused={focused} />,
+          href: null,
         }}
       />
       <Tabs.Screen

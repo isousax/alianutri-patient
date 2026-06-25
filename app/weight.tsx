@@ -10,13 +10,16 @@ import * as Haptics from 'expo-haptics'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { useThemeColors } from '../src/stores/theme'
+import { useFeaturesStore } from '../src/stores/features'
 import { useLogWeight, useWeightHistory } from '../src/hooks/usePortal'
 import type { WeightLogEntry } from '../src/types/portal'
 import { ScreenHeader, Card, SectionLabel } from '../src/components/ui'
+import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../src/theme/tokens'
 
 export default function WeightScreen() {
   const t = useThemeColors()
+  const canWrite = useFeaturesStore((s) => s.canWrite)
   const [value, setValue] = useState('')
   const { data } = useWeightHistory()
   const { mutateAsync: logWeight, isPending } = useLogWeight()
@@ -24,6 +27,7 @@ export default function WeightScreen() {
   const entries: WeightLogEntry[] = data?.entries ?? []
 
   const handleSave = useCallback(async () => {
+    if (!canWrite) return
     const kg = parseFloat(value.replace(',', '.'))
     if (isNaN(kg) || kg < 20 || kg > 400) {
       Alert.alert('Peso inválido', 'Informe um valor entre 20 e 400 kg.')
@@ -37,7 +41,7 @@ export default function WeightScreen() {
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar.')
     }
-  }, [value, logWeight])
+  }, [value, logWeight, canWrite])
 
   // Sparkline
   const points = [...entries].reverse()
@@ -128,6 +132,7 @@ export default function WeightScreen() {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          {!canWrite && <ReadOnlyBanner />}
           {/* Input card */}
           <Animated.View entering={FadeIn.duration(300)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.lg, marginBottom: space.lg }}>
             <Card>
@@ -138,6 +143,7 @@ export default function WeightScreen() {
                 <TextInput
                   value={value}
                   onChangeText={setValue}
+                  editable={canWrite}
                   placeholder="Ex: 72,5"
                   placeholderTextColor={t.textMuted}
                   keyboardType="decimal-pad"
@@ -159,16 +165,16 @@ export default function WeightScreen() {
               </View>
               <Pressable
                 onPress={handleSave}
-                disabled={isPending || !value.trim()}
+                disabled={isPending || !value.trim() || !canWrite}
                 style={{
                   marginTop: space.lg,
                   paddingVertical: space.md,
                   borderRadius: radius.lg,
                   alignItems: 'center',
-                  backgroundColor: value.trim() ? t.primary : t.borderLight,
+                  backgroundColor: value.trim() && canWrite ? t.primary : t.borderLight,
                 }}
               >
-                <Text style={[typography.labelMd, { color: value.trim() ? t.primaryFg : t.textMuted }]}>
+                <Text style={[typography.labelMd, { color: value.trim() && canWrite ? t.primaryFg : t.textMuted }]}>
                   {isPending ? 'Salvando...' : 'Registrar peso'}
                 </Text>
               </Pressable>

@@ -4,10 +4,12 @@ import { Target, CheckCircle2, Circle, Flag, Flame } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { useThemeColors } from '../src/stores/theme'
+import { useFeaturesStore } from '../src/stores/features'
 import { useGoals, useToggleGoalCheckin } from '../src/hooks/usePortal'
 import { habitStreak, isCheckedToday, streakUnit, cadenceLabel } from '../src/lib/habit'
 import type { PortalGoal } from '../src/types/portal'
-import { ScreenHeader, Card, SectionLabel, EmptyState, LoadingScreen } from '../src/components/ui'
+import { ScreenHeader, Card, SectionLabel, EmptyState, SkeletonList } from '../src/components/ui'
+import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -32,9 +34,17 @@ function progressPct(goal: PortalGoal): number | null {
 
 export default function GoalsScreen() {
   const t = useThemeColors()
+  const canWrite = useFeaturesStore((s) => s.canWrite)
   const { data: goals, isLoading, refetch, isRefetching } = useGoals()
 
-  if (isLoading) return <LoadingScreen />
+  if (isLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+        <ScreenHeader title="Metas" />
+        <SkeletonList />
+      </SafeAreaView>
+    )
+  }
 
   const goalList: PortalGoal[] = goals ?? []
   const active = goalList.filter((g) => g.status === 'active')
@@ -62,6 +72,11 @@ export default function GoalsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
       >
+        {!canWrite && (
+          <View style={{ marginHorizontal: -SCREEN_PADDING }}>
+            <ReadOnlyBanner />
+          </View>
+        )}
         {active.length > 0 && (
           <>
             <SectionLabel text={`ATIVAS (${active.length})`} />
@@ -89,6 +104,7 @@ export default function GoalsScreen() {
 
 function GoalCard({ goal }: { goal: PortalGoal }) {
   const t = useThemeColors()
+  const canWrite = useFeaturesStore((s) => s.canWrite)
   const pct = progressPct(goal)
   const isCompleted = goal.status === 'completed'
   const toggle = useToggleGoalCheckin()
@@ -96,6 +112,7 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
   const checkedToday = habit ? isCheckedToday(habit) : false
   const streak = habit ? habitStreak(habit) : 0
   const onToggle = () => {
+    if (!canWrite) return
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
     toggle.mutate(goal.id)
   }
@@ -180,13 +197,13 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
           {!isCompleted && (
             <Pressable
               onPress={onToggle}
-              disabled={toggle.isPending}
+              disabled={toggle.isPending || !canWrite}
               style={{
                 flexDirection: 'row', alignItems: 'center', gap: 5,
                 paddingHorizontal: 12, paddingVertical: 7,
                 borderRadius: radius.md,
                 backgroundColor: checkedToday ? t.successLight : t.primaryLight,
-                opacity: toggle.isPending ? 0.6 : 1,
+                opacity: toggle.isPending || !canWrite ? 0.6 : 1,
               }}
             >
               {checkedToday ? <CheckCircle2 size={15} color={t.success} /> : <Circle size={15} color={t.primary} />}

@@ -12,10 +12,12 @@ import { Image } from 'expo-image'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient'
 import { useThemeColors } from '../src/stores/theme'
+import { useFeaturesStore } from '../src/stores/features'
 import { useProgressPhotos, useUploadProgressPhoto, useDeleteProgressPhoto } from '../src/hooks/usePortal'
 import type { ProgressPhoto } from '../src/types/portal'
 import { useAuthStore } from '../src/stores/auth'
 import { ScreenHeader, EmptyState, SectionLabel, SkeletonBlock } from '../src/components/ui'
+import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 const SCREEN_W = Dimensions.get('window').width
@@ -31,6 +33,7 @@ const CATEGORIES = [
 
 export default function ProgressPhotosScreen() {
   const t = useThemeColors()
+  const canWrite = useFeaturesStore((s) => s.canWrite)
   const accessCode = useAuthStore((s) => s.accessCode)
   const { data, isLoading } = useProgressPhotos()
   const { mutateAsync: upload, isPending: isUploading } = useUploadProgressPhoto()
@@ -41,6 +44,7 @@ export default function ProgressPhotosScreen() {
   const photos: ProgressPhoto[] = data?.photos ?? []
 
   const handlePickPhoto = useCallback(async () => {
+    if (!canWrite) return
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') {
       Alert.alert('Permissão necessária', 'Precisamos de acesso às fotos.')
@@ -66,9 +70,10 @@ export default function ProgressPhotosScreen() {
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar a foto.')
     }
-  }, [upload, selectedCategory])
+  }, [upload, selectedCategory, canWrite])
 
   const handleTakePhoto = useCallback(async () => {
+    if (!canWrite) return
     const { status } = await ImagePicker.requestCameraPermissionsAsync()
     if (status !== 'granted') {
       Alert.alert('Permissão necessária', 'Precisamos de acesso à câmera.')
@@ -93,7 +98,7 @@ export default function ProgressPhotosScreen() {
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar a foto.')
     }
-  }, [upload, selectedCategory])
+  }, [upload, selectedCategory, canWrite])
 
   // Group photos by date
   const groupedByDate = photos.reduce<Record<string, typeof photos>>((acc, photo) => {
@@ -110,6 +115,7 @@ export default function ProgressPhotosScreen() {
       <ScreenHeader title="Fotos de Progresso" />
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        {!canWrite && <ReadOnlyBanner />}
         {/* Category selector */}
         <Animated.View entering={FadeIn.duration(300)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.sm, marginBottom: space.lg }}>
           <SectionLabel text="CATEGORIA" />
@@ -141,7 +147,7 @@ export default function ProgressPhotosScreen() {
           <View style={{ flexDirection: 'row', gap: space.md }}>
             <Pressable
               onPress={handleTakePhoto}
-              disabled={isUploading}
+              disabled={isUploading || !canWrite}
               style={{
                 flex: 1,
                 flexDirection: 'row',
@@ -149,7 +155,7 @@ export default function ProgressPhotosScreen() {
                 justifyContent: 'center',
                 paddingVertical: space.md + 2,
                 borderRadius: radius.lg,
-                backgroundColor: t.primary,
+                backgroundColor: canWrite ? t.primary : t.borderLight,
                 ...shadows.sm,
               }}
             >
@@ -157,14 +163,14 @@ export default function ProgressPhotosScreen() {
                 <ActivityIndicator color={t.primaryFg} size="small" />
               ) : (
                 <>
-                  <Camera size={18} color={t.primaryFg} />
-                  <Text style={[typography.labelMd, { color: t.primaryFg, marginLeft: space.sm }]}>Tirar foto</Text>
+                  <Camera size={18} color={canWrite ? t.primaryFg : t.textMuted} />
+                  <Text style={[typography.labelMd, { color: canWrite ? t.primaryFg : t.textMuted, marginLeft: space.sm }]}>Tirar foto</Text>
                 </>
               )}
             </Pressable>
             <Pressable
               onPress={handlePickPhoto}
-              disabled={isUploading}
+              disabled={isUploading || !canWrite}
               style={{
                 flex: 1,
                 flexDirection: 'row',
@@ -173,6 +179,7 @@ export default function ProgressPhotosScreen() {
                 paddingVertical: space.md + 2,
                 borderRadius: radius.lg,
                 backgroundColor: t.surface,
+                opacity: canWrite ? 1 : 0.5,
                 ...shadows.sm,
               }}
             >
@@ -253,7 +260,7 @@ export default function ProgressPhotosScreen() {
           {/* Top bar */}
           <SafeAreaView edges={['top']}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SCREEN_PADDING, paddingTop: space.sm, paddingBottom: space.md }}>
-              <Pressable onPress={() => setViewerPhoto(null)} hitSlop={16} style={{ padding: space.sm }}>
+              <Pressable onPress={() => setViewerPhoto(null)} hitSlop={16} accessibilityRole="button" accessibilityLabel="Fechar" style={{ padding: space.sm }}>
                 <X size={22} color="#fff" />
               </Pressable>
               <View style={{ alignItems: 'center', flex: 1 }}>
@@ -270,6 +277,7 @@ export default function ProgressPhotosScreen() {
               </View>
               <Pressable
                 onPress={() => {
+                  if (!canWrite) return
                   if (!viewerPhoto) return
                   Alert.alert('Excluir foto', 'Deseja excluir esta foto de progresso?', [
                     { text: 'Cancelar', style: 'cancel' },
@@ -287,7 +295,10 @@ export default function ProgressPhotosScreen() {
                   ])
                 }}
                 hitSlop={16}
-                style={{ padding: space.sm }}
+                disabled={!canWrite}
+                accessibilityRole="button"
+                accessibilityLabel="Excluir foto"
+                style={{ padding: space.sm, opacity: canWrite ? 1 : 0.35 }}
               >
                 <Trash2 size={20} color="#ef4444" />
               </Pressable>

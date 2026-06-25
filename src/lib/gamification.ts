@@ -24,21 +24,48 @@ export interface GamificationState {
   unlockedCount: number
 }
 
-const XP_PER_LEVEL = 150
+// Curva de níveis — XP acumulado para alcançar cada nível (1..8).
+// Iniciante · Comprometido · Dedicado · Focado · Disciplinado · Transformador · Inspiração · Lenda
+const LEVEL_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2500, 4000]
+
+function levelFromXp(xp: number): { level: number; xpInLevel: number; xpPerLevel: number } {
+  let level = 1
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (xp >= LEVEL_THRESHOLDS[i]) {
+      level = i + 1
+      break
+    }
+  }
+  const floor = LEVEL_THRESHOLDS[level - 1]
+  if (level >= LEVEL_THRESHOLDS.length) {
+    // Nível máximo: barra cheia.
+    return { level, xpInLevel: 1, xpPerLevel: 1 }
+  }
+  const ceil = LEVEL_THRESHOLDS[level]
+  return { level, xpInLevel: xp - floor, xpPerLevel: ceil - floor }
+}
 
 export function computeGamification(params: {
   streak: number
   loggedDays: number
   goals: PortalGoal[]
+  mealPhotoCount?: number
+  exercisePostCount?: number
+  nutriLikeCount?: number
+  nutriCommentCount?: number
 }): GamificationState {
-  const { streak, loggedDays, goals } = params
+  const {
+    streak, loggedDays, goals,
+    mealPhotoCount = 0, exercisePostCount = 0, nutriLikeCount = 0, nutriCommentCount = 0,
+  } = params
   const goalsActive = goals.filter((g) => g.status === 'active').length
   const goalsCompleted = goals.filter((g) => g.status === 'completed').length
   const habitCheckins = goals.reduce((n, g) => n + (g.habit?.checkins?.length ?? 0), 0)
 
-  const xp = streak * 10 + loggedDays * 8 + goalsActive * 20 + goalsCompleted * 80 + habitCheckins * 4
-  const level = Math.floor(xp / XP_PER_LEVEL) + 1
-  const xpInLevel = xp % XP_PER_LEVEL
+  const xp =
+    streak * 10 + loggedDays * 8 + goalsActive * 20 + goalsCompleted * 80 + habitCheckins * 4 +
+    nutriLikeCount * 5 + nutriCommentCount * 10
+  const { level, xpInLevel, xpPerLevel } = levelFromXp(xp)
 
   const b = (id: string, label: string, hint: string, icon: BadgeIconKey, unlocked: boolean): Badge =>
     ({ id, label, hint, icon, unlocked })
@@ -53,13 +80,16 @@ export function computeGamification(params: {
     b('firstGoal', 'Com foco', '1ª meta definida', 'target', goalsActive + goalsCompleted >= 1),
     b('goalDone', 'Missão cumprida', 'Concluiu uma meta', 'star', goalsCompleted >= 1),
     b('habit', 'Constância', '10 check-ins de hábito', 'sparkles', habitCheckins >= 10),
+    b('photographer', 'Fotógrafo', '30 fotos de refeição', 'utensils', mealPhotoCount >= 30),
+    b('athlete', 'Atleta', '10 registros de exercício', 'target', exercisePostCount >= 10),
+    b('nutriFav', 'Favorito do Nutri', '20 curtidas do seu nutri', 'star', nutriLikeCount >= 20),
   ]
 
   return {
     level,
     xp,
     xpInLevel,
-    xpPerLevel: XP_PER_LEVEL,
+    xpPerLevel,
     streak,
     badges,
     unlockedCount: badges.filter((x) => x.unlocked).length,

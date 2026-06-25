@@ -69,11 +69,15 @@ import { useFeaturesStore } from "../../src/stores/features";
 import {
   usePortalHome,
   useDiaryToday,
+  useChartsSummary,
+  useRecentPosts,
   useGoals,
   useEvolution,
   useWaterIntake,
   useWeeklyAdherence,
 } from "../../src/hooks/usePortal";
+import { useLevelUp } from "../../src/hooks/useLevelUp";
+import { useAchievementUnlock } from "../../src/hooks/useAchievementUnlock";
 import type {
   PortalGoal,
   PortalEvolution,
@@ -90,7 +94,13 @@ import {
   Card,
   EmptyState,
   LoadingScreen,
+  AuroraBackground,
 } from "../../src/components/ui";
+import { HomeHeader } from "../../src/components/home/HomeHeader";
+import { DailyRingsRow } from "../../src/components/home/DailyRingsRow";
+import { MiniPostCard } from "../../src/components/home/MiniPostCard";
+import { GoalsPreview } from "../../src/components/home/GoalsPreview";
+import { LevelUpCelebration, CelebrationModal } from "../../src/components/home/LevelUpCelebration";
 import {
   radius,
   shadows,
@@ -102,30 +112,6 @@ import {
 } from "../../src/theme/tokens";
 
 const { width: SCREEN_W } = Dimensions.get("window");
-
-function getGreeting(): { text: string; icon: typeof Sun } {
-  const h = new Date().getHours();
-  if (h < 12) return { text: "Bom dia", icon: Sun };
-  if (h < 18) return { text: "Boa tarde", icon: CloudSun };
-  return { text: "Boa noite", icon: Moon };
-}
-
-function goalProgress(goal: PortalGoal): number {
-  if (
-    goal.target_value == null ||
-    goal.current_value == null ||
-    goal.target_value === 0
-  )
-    return 0;
-  const lowerIsBetter = goal.type === "weight" || goal.type === "measurement";
-  if (lowerIsBetter && goal.current_value > goal.target_value) {
-    const ceiling = goal.target_value * 1.3;
-    const total = ceiling - goal.target_value;
-    const done = ceiling - goal.current_value;
-    return Math.max(0, Math.min(done / total, 1));
-  }
-  return Math.min(goal.current_value / goal.target_value, 1);
-}
 
 export default function HomeScreen() {
   const t = useThemeColors();
@@ -142,6 +128,9 @@ export default function HomeScreen() {
   const today = useMemo(todayStr, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: diaryToday } = useDiaryToday(today);
+  const { data: chartsToday } = useChartsSummary(1);
+  const aiCalories = Math.round((chartsToday?.nutrition ?? []).reduce((s, d) => s + (d.calories || 0), 0));
+  const { data: recentPosts } = useRecentPosts(3);
   const { data: goals } = useGoals();
   const { data: evolution } = useEvolution();
   const { data: waterData } = useWaterIntake(today);
@@ -175,6 +164,25 @@ export default function HomeScreen() {
     prevWater.current = pct;
   }, [waterData, waterGoal]);
 
+  // Celebrações de gamificação — level-up e conquistas desbloqueadas
+  const gam = useMemo(
+    () =>
+      data
+        ? computeGamification({
+            streak: data.diary_streak ?? 0,
+            loggedDays: data.logged_dates?.length ?? 0,
+            goals: goals ?? [],
+            mealPhotoCount: chartsToday?.counts?.meal_photos,
+            exercisePostCount: chartsToday?.counts?.exercise_posts,
+            nutriLikeCount: chartsToday?.counts?.nutri_reactions,
+            nutriCommentCount: chartsToday?.counts?.nutri_comments,
+          })
+        : null,
+    [data, goals, chartsToday],
+  );
+  const { celebrateLevel, dismiss: dismissLevelUp } = useLevelUp(gam?.level ?? null);
+  const { newBadge, dismiss: dismissBadge } = useAchievementUnlock(gam?.badges ?? []);
+
   // ── Loading ──
   if (isLoading) return <LoadingScreen />;
 
@@ -199,8 +207,6 @@ export default function HomeScreen() {
 
   // ── Derived data ──
   const displayName = data.patient.name?.split(" ")[0] || "Paciente";
-  const greeting = getGreeting();
-  const GreetingIcon = greeting.icon;
   const streak = data.diary_streak ?? 0;
   const meals = diaryToday?.meals ?? [];
   const loggedCount = meals.filter((m: DiaryTimelineMeal) => m.entry !== null).length;
@@ -239,116 +245,13 @@ export default function HomeScreen() {
         }
       >
         {/* ═══════ GREETING HEADER ═══════ */}
-        <Animated.View
-          entering={FadeIn.duration(400)}
-          style={{
-            paddingHorizontal: SCREEN_PADDING + 4,
-            paddingTop: space.lg,
-            paddingBottom: space.xl,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: space.xs,
-            }}
-          >
-            <GreetingIcon size={14} color={t.primary} strokeWidth={2} />
-            <Text
-              style={[typography.labelSm, { color: t.primary, marginLeft: 6 }]}
-            >
-              {greeting.text}
-            </Text>
-            {weather && (
-              <Text
-                style={[
-                  typography.caption,
-                  { color: t.textMuted, marginLeft: space.sm },
-                ]}
-              >
-                {weather.icon} {Math.round(weather.temperature)}°C
-              </Text>
-            )}
-          </View>
-          <Text style={[typography.displayMd, { color: t.text }]}>
-            {displayName}
-          </Text>
-          {data.nutritionist?.name && (
-            <Text
-              style={[typography.caption, { color: t.textMuted, marginTop: 4 }]}
-            >
-              com {data.nutritionist.name}
-            </Text>
-          )}
-        </Animated.View>
-
-        {/* ═══════ STREAK + CHAT BADGE ═══════ */}
-        {(streak > 0 || chatUnread > 0) && (
-          <Animated.View
-            entering={FadeInDown.duration(350).delay(50)}
-            style={{
-              flexDirection: "row",
-              paddingHorizontal: SCREEN_PADDING,
-              marginBottom: space.lg,
-              gap: space.sm,
-            }}
-          >
-            {streak > 0 && (
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingHorizontal: space.md,
-                  paddingVertical: space.sm,
-                  borderRadius: radius.lg,
-                  backgroundColor: t.warningLight,
-                }}
-              >
-                <Flame size={14} color={t.warning} />
-                <Text
-                  style={[
-                    typography.labelMd,
-                    { color: t.warning, marginLeft: 4 },
-                  ]}
-                >
-                  {streak}
-                </Text>
-                <Text
-                  style={[
-                    typography.caption,
-                    { color: t.warning, marginLeft: 3, opacity: 0.8 },
-                  ]}
-                >
-                  dia{streak > 1 ? "s" : ""}
-                </Text>
-              </View>
-            )}
-            {chatUnread > 0 && (
-              <Pressable
-                onPress={() => router.push("/chat")}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingHorizontal: space.md,
-                  paddingVertical: space.sm,
-                  borderRadius: radius.lg,
-                  backgroundColor: t.primaryLight,
-                }}
-              >
-                <MessageCircle size={14} color={t.primary} />
-                <Text
-                  style={[
-                    typography.labelMd,
-                    { color: t.primary, marginLeft: 4 },
-                  ]}
-                >
-                  {chatUnread} {chatUnread === 1 ? "mensagem" : "mensagens"}
-                </Text>
-              </Pressable>
-            )}
-          </Animated.View>
-        )}
+        <HomeHeader
+          displayName={displayName}
+          nutritionistName={data.nutritionist?.name ?? null}
+          weather={weather ?? null}
+          streak={streak}
+          chatUnread={chatUnread}
+        />
 
         {/* ═══════ PENDING QUESTIONNAIRES (urgent) ═══════ */}
         {pendingQ > 0 && (
@@ -403,241 +306,44 @@ export default function HomeScreen() {
         )}
 
         {/* ═══════ DAILY FOCUS — Twin progress rings ═══════ */}
-        <Animated.View
-          entering={FadeInDown.duration(400).delay(120)}
-          style={{
-            paddingHorizontal: SCREEN_PADDING,
-            marginBottom: space.xl,
-          }}
-        >
-          <View style={{ flexDirection: "row", gap: space.md }}>
-            {/* Meals ring */}
-            <Card
-              style={{
-                flex: 1,
-                alignItems: "center",
-                paddingVertical: space.xl,
-              }}
-              onPress={() => router.push("/(tabs)/diary")}
-            >
-              <ProgressRing
-                progress={diaryPct}
-                size={80}
-                strokeWidth={7}
-                color={diaryPct >= 1 ? t.success : t.primary}
-                trackColor={t.borderLight}
-              >
-                <Utensils
-                  size={20}
-                  color={diaryPct >= 1 ? t.success : t.primary}
-                  strokeWidth={1.8}
-                />
-              </ProgressRing>
-              <View
-                style={{
-                  marginTop: space.md,
-                  alignItems: "center",
-                  minHeight: 42,
-                  justifyContent: "flex-start",
-                }}
-              >
-                <Text
-                  style={[
-                    typography.headingSm,
-                    {
-                      color: t.text,
-                      textAlign: "center",
-                    },
-                  ]}
-                >
-                  Refeições
-                </Text>
-
-                <Text
-                  style={[
-                    typography.caption,
-                    {
-                      color: t.textMuted,
-                      marginTop: 2,
-                      textAlign: "center",
-                    },
-                  ]}
-                >
-                  {totalMeals > 0
-                    ? loggedCount === totalMeals
-                      ? "Completo!"
-                      : `${loggedCount} de ${totalMeals}`
-                    : "Sem plano"}
-                </Text>
-              </View>
-            </Card>
-
-            {/* Water ring */}
-            <Card
-              style={{
-                flex: 1,
-                alignItems: "center",
-                paddingVertical: space.xl,
-              }}
-              onPress={() => router.push("/water" as never)}
-            >
-              <ProgressRing
-                progress={waterPct}
-                size={80}
-                strokeWidth={7}
-                color={waterPct >= 1 ? t.success : t.info}
-                trackColor={t.borderLight}
-              >
-                <Droplets
-                  size={20}
-                  color={waterPct >= 1 ? t.success : t.info}
-                  strokeWidth={1.8}
-                />
-              </ProgressRing>
-              <View
-                style={{
-                  marginTop: space.md,
-                  alignItems: "center",
-                  minHeight: 42,
-                  justifyContent: "flex-start",
-                }}
-              >
-                <Text
-                  style={[
-                    typography.headingSm,
-                    {
-                      color: t.text,
-                      textAlign: "center",
-                    },
-                  ]}
-                >
-                  Hidratação
-                </Text>
-
-                <Text
-                  style={[
-                    typography.caption,
-                    {
-                      color: t.textMuted,
-                      marginTop: 2,
-                      textAlign: "center",
-                    },
-                  ]}
-                >
-                  {waterTotal > 0
-                    ? `${fmtWater(waterTotal)} / ${fmtWater(waterGoal)}`
-                    : "Sem registro"}
-                </Text>
-              </View>
-            </Card>
-          </View>
-        </Animated.View>
+        <DailyRingsRow
+          diaryPct={diaryPct}
+          loggedCount={loggedCount}
+          totalMeals={totalMeals}
+          waterPct={waterPct}
+          waterTotal={waterTotal}
+          waterGoal={waterGoal}
+          aiCalories={aiCalories}
+        />
 
         {/* ═══════ QUICK ACTIONS — 4-column icon grid + folder ═══════ */}
         <QuickActionsGrid canWrite={canWrite} />
+
+        {/* ═══════ FEED PREVIEW — últimos posts do diário ═══════ */}
+        {recentPosts && recentPosts.posts.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(350).delay(160)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: space.sm }}>
+              <Text style={[typography.headingSm, { color: t.text }]}>Seu Diário</Text>
+              <Pressable onPress={() => router.push("/feed" as never)} accessibilityRole="button" accessibilityLabel="Ver diário completo" hitSlop={8}>
+                <Text style={[typography.labelSm, { color: t.primary }]}>Ver tudo</Text>
+              </Pressable>
+            </View>
+            <Card>
+              {recentPosts.posts.slice(0, 3).map((p, i) => (
+                <View key={p.id}>
+                  {i > 0 ? <View style={{ height: 1, backgroundColor: t.borderLight, marginVertical: 2 }} /> : null}
+                  <MiniPostCard post={p} onPress={() => router.push(`/post/${p.id}` as never)} />
+                </View>
+              ))}
+            </Card>
+          </Animated.View>
+        )}
 
         {/* ═══════ NEXT APPOINTMENT ═══════ */}
         {apt && <AppointmentCard apt={apt} />}
 
         {/* ═══════ ACTIVE GOALS ═══════ */}
-        {activeGoals.length > 0 && (
-          <Animated.View
-            entering={FadeInDown.duration(350).delay(240)}
-            style={{
-              paddingHorizontal: SCREEN_PADDING,
-              marginBottom: space.lg,
-            }}
-          >
-            <Card onPress={() => router.push("/goals")}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: space.md,
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <View
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: radius.sm,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: t.successLight,
-                    }}
-                  >
-                    <Target size={14} color={t.success} />
-                  </View>
-                  <Text
-                    style={[
-                      typography.headingSm,
-                      { color: t.text, marginLeft: space.sm },
-                    ]}
-                  >
-                    Metas
-                  </Text>
-                </View>
-                <ChevronRight size={16} color={t.textMuted} />
-              </View>
-              {activeGoals.map((goal: PortalGoal, i: number) => {
-                const progress = goalProgress(goal);
-                return (
-                  <View
-                    key={goal.id}
-                    style={i > 0 ? { marginTop: space.md } : undefined}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <Text
-                        style={[
-                          typography.labelMd,
-                          { color: t.text, flex: 1, marginRight: space.sm },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {goal.title}
-                      </Text>
-                      <Text
-                        style={[
-                          typography.captionBold,
-                          { color: progress >= 1 ? t.success : t.primary },
-                        ]}
-                      >
-                        {Math.round(progress * 100)}%
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: t.borderLight,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <View
-                        style={{
-                          height: 6,
-                          borderRadius: 3,
-                          width: `${Math.min(progress * 100, 100)}%`,
-                          backgroundColor:
-                            progress >= 1 ? t.success : t.primary,
-                        }}
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-            </Card>
-          </Animated.View>
-        )}
+        <GoalsPreview goals={activeGoals} />
 
         {/* ═══════ GAMIFICATION HUB (módulo gamification) ═══════ */}
         {data.gamification_enabled && <ProgressHubCard home={data} />}
@@ -669,6 +375,21 @@ export default function HomeScreen() {
           />
         )}
       </ScrollView>
+
+      {celebrateLevel != null ? (
+        <LevelUpCelebration level={celebrateLevel} onDismiss={dismissLevelUp} />
+      ) : newBadge != null ? (
+        <CelebrationModal
+          icon={(() => {
+            const BadgeIcon = BADGE_ICON[newBadge.icon];
+            return <BadgeIcon size={52} color={t.primaryFg} />;
+          })()}
+          eyebrow="Conquista desbloqueada"
+          title={newBadge.label}
+          subtitle={newBadge.hint}
+          onDismiss={dismissBadge}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -757,16 +478,19 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
     const actions: ActionDef[] = [
       { icon: <Scale size={18} color={t.accent} />, label: "Peso", bg: t.accentLight, route: "/weight", folderIcon: <Scale size={10} color={t.accent} /> },
       { icon: <Target size={18} color={t.success} />, label: "Metas", bg: t.successLight, route: "/goals", folderIcon: <Target size={10} color={t.success} /> },
-      { icon: <Heart size={18} color="#EC4899" />, label: "Bem-estar", bg: "#FDF2F8", route: "/wellness", folderIcon: <Heart size={10} color="#EC4899" /> },
+      { icon: <Heart size={18} color={t.error} />, label: "Bem-estar", bg: t.errorLight, route: "/wellness", folderIcon: <Heart size={10} color={t.error} /> },
       { icon: <MessageCircle size={18} color={t.info} />, label: "Chat", bg: t.infoLight, route: "/chat", folderIcon: <MessageCircle size={10} color={t.info} /> },
     ];
     if (canWrite) {
       actions.push({ icon: <CalendarPlus size={18} color={t.primary} />, label: "Agendar", bg: t.primaryLight, route: "/booking", folderIcon: <CalendarPlus size={10} color={t.primary} /> });
     }
     actions.push(
+      { icon: <LayoutGrid size={18} color={t.accent} />, label: "Feed", bg: t.accentLight, route: "/feed", folderIcon: <LayoutGrid size={10} color={t.accent} /> },
+      { icon: <BarChart3 size={18} color={t.success} />, label: "Evolução", bg: t.successLight, route: "/evolution", folderIcon: <BarChart3 size={10} color={t.success} /> },
       { icon: <Camera size={18} color={t.primary} />, label: "Fotos", bg: t.primaryLight, route: "/progress-photos", folderIcon: <Camera size={10} color={t.primary} /> },
       { icon: <ClipboardList size={18} color={t.accent} />, label: "Quest.", bg: t.accentLight, route: "/questionnaires", folderIcon: <ClipboardList size={10} color={t.accent} /> },
       { icon: <FileText size={18} color={t.info} />, label: "Documentos", bg: t.infoLight, route: "/documents", folderIcon: <FileText size={10} color={t.info} /> },
+      { icon: <FileText size={18} color={t.warning} />, label: "Orientações", bg: t.warningLight, route: "/guidelines", folderIcon: <FileText size={10} color={t.warning} /> },
     );
     return actions;
   }, [canWrite, t]);
@@ -1278,10 +1002,15 @@ const BADGE_ICON: Record<BadgeIconKey, typeof Flame> = {
 function ProgressHubCard({ home }: { home: PortalHome }) {
   const t = useThemeColors();
   const { data: goals } = useGoals();
+  const { data: charts } = useChartsSummary(1);
   const gam = computeGamification({
     streak: home.diary_streak ?? 0,
     loggedDays: home.logged_dates?.length ?? 0,
     goals: goals ?? [],
+    mealPhotoCount: charts?.counts?.meal_photos,
+    exercisePostCount: charts?.counts?.exercise_posts,
+    nutriLikeCount: charts?.counts?.nutri_reactions,
+    nutriCommentCount: charts?.counts?.nutri_comments,
   });
   const pct = Math.round((gam.xpInLevel / gam.xpPerLevel) * 100);
 
@@ -1290,7 +1019,8 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
       entering={FadeInDown.duration(350).delay(140)}
       style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}
     >
-      <Card>
+      <Card padded={false}>
+        <AuroraBackground variant="subtle" style={{ borderRadius: radius.xl, padding: space.lg }}>
         <View
           style={{
             flexDirection: "row",
@@ -1406,6 +1136,7 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
             );
           })}
         </View>
+        </AuroraBackground>
       </Card>
     </Animated.View>
   );
@@ -1520,7 +1251,7 @@ function WeightSparkline({ evolution }: { evolution: PortalEvolution[] }) {
       entering={FadeInDown.duration(350).delay(280)}
       style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}
     >
-      <Card onPress={() => router.push("/(tabs)/profile")}>
+      <Card onPress={() => router.push("/evolution" as never)}>
         <View
           style={{
             flexDirection: "row",

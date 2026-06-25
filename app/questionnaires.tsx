@@ -8,7 +8,7 @@ import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { useQuestionnaires, useQuestionnaireDetail, useAnswerQuestionnaire } from '../src/hooks/usePortal'
 import type { PortalQuestionnaire, PortalQuestionItem } from '../src/types/portal'
-import { ScreenHeader, Card, EmptyState, LoadingScreen, SectionLabel } from '../src/components/ui'
+import { ScreenHeader, Card, EmptyState, LoadingScreen, SectionLabel, SkeletonList } from '../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 export default function QuestionnairesScreen() {
@@ -30,7 +30,7 @@ export default function QuestionnairesScreen() {
       <ScreenHeader title="Questionários" />
 
       {isLoading ? (
-        <LoadingScreen />
+        <SkeletonList />
       ) : !questionnaires || questionnaires.length === 0 ? (
         <EmptyState
           icon={<ClipboardList size={28} color={t.primary} />}

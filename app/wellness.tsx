@@ -7,8 +7,10 @@ import { Check, Send } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOutUp } from 'react-native-reanimated'
 import { useThemeColors } from '../src/stores/theme'
+import { useFeaturesStore } from '../src/stores/features'
 import { useSymptoms, useLogSymptoms } from '../src/hooks/usePortal'
 import { ScreenHeader } from '../src/components/ui'
+import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../src/theme/tokens'
 
 const CATEGORIES = [
@@ -72,6 +74,7 @@ type SymptomKey = 'energy_level' | 'mood' | 'sleep_quality' | 'digestion' | 'blo
 
 export default function WellnessScreen() {
   const t = useThemeColors()
+  const canWrite = useFeaturesStore((s) => s.canWrite)
   const today = todayStr()
   const { data: existing } = useSymptoms(today)
   const { mutateAsync: logSymptoms, isPending } = useLogSymptoms()
@@ -110,6 +113,7 @@ export default function WellnessScreen() {
   const filledCount = Object.values(values).filter((v) => v !== null).length
 
   const handleSave = useCallback(async () => {
+    if (!canWrite) return
     if (filledCount === 0) {
       Alert.alert('Preencha ao menos um campo', 'Selecione como você está se sentindo hoje.')
       return
@@ -131,13 +135,14 @@ export default function WellnessScreen() {
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar.')
     }
-  }, [filledCount, values, today, logSymptoms])
+  }, [filledCount, values, today, logSymptoms, canWrite])
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
       <ScreenHeader title="Bem-estar" />
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          {!canWrite && <ReadOnlyBanner />}
           <Animated.View entering={FadeIn.duration(300)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.sm }}>
             <Text style={[typography.bodyMd, { color: t.textMuted, lineHeight: 22, marginBottom: space.lg }]}>
               Como você está se sentindo hoje? Seu nutricionista usa essas informações para ajustar seu plano.
@@ -158,6 +163,7 @@ export default function WellnessScreen() {
                     <Pressable
                       key={opt.value}
                       onPress={() => handleSelect(cat.key, opt.value)}
+                      disabled={!canWrite}
                       style={{
                         flex: 1,
                         alignItems: 'center',
@@ -166,6 +172,7 @@ export default function WellnessScreen() {
                         backgroundColor: selected ? t.primaryLight : t.surface,
                         borderWidth: selected ? 1.5 : 1,
                         borderColor: selected ? t.primary : t.borderLight,
+                        opacity: canWrite ? 1 : 0.5,
                       }}
                     >
                       <Text style={{ fontSize: 18 }}>{opt.emoji}</Text>
@@ -186,7 +193,7 @@ export default function WellnessScreen() {
           <Animated.View entering={FadeInDown.duration(300).delay(300)} style={{ paddingHorizontal: SCREEN_PADDING }}>
             <Pressable
               onPress={handleSave}
-              disabled={isPending || filledCount === 0}
+              disabled={isPending || filledCount === 0 || !canWrite}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -194,16 +201,16 @@ export default function WellnessScreen() {
                 gap: space.sm,
                 paddingVertical: space.md + 2,
                 borderRadius: radius.xl,
-                backgroundColor: filledCount > 0 ? t.primary : t.borderLight,
-                ...shadows.glow(filledCount > 0 ? t.primary : 'transparent'),
+                backgroundColor: filledCount > 0 && canWrite ? t.primary : t.borderLight,
+                ...shadows.glow(filledCount > 0 && canWrite ? t.primary : 'transparent'),
               }}
             >
               {isPending ? (
                 <Text style={[typography.labelMd, { color: t.primaryFg }]}>Salvando...</Text>
               ) : (
                 <>
-                  <Send size={14} color={filledCount > 0 ? t.primaryFg : t.textMuted} />
-                  <Text style={[typography.labelMd, { color: filledCount > 0 ? t.primaryFg : t.textMuted }]}>
+                  <Send size={14} color={filledCount > 0 && canWrite ? t.primaryFg : t.textMuted} />
+                  <Text style={[typography.labelMd, { color: filledCount > 0 && canWrite ? t.primaryFg : t.textMuted }]}>
                     {saved ? 'Atualizar registro' : 'Salvar registro'}
                   </Text>
                 </>

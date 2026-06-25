@@ -5,7 +5,7 @@ import { Utensils, ChevronRight, Clock, ShoppingCart, X, Scale, Replace, FileTex
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../../src/stores/theme'
 import { useMealPlans, useMealPlanDetail } from '../../src/hooks/usePortal'
-import { Card, ScreenHeader, EmptyState, LoadingScreen } from '../../src/components/ui'
+import { Card, ScreenHeader, EmptyState, SkeletonList } from '../../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
 import type { PortalMealPlanSummary, PortalMeal, QuantMeal, QuantFood, EquivMeal, EquivGroup, EquivGroupFood, QualMeal } from '../../src/types/portal'
 
@@ -27,7 +27,16 @@ export default function MealPlanScreen() {
       : { color: t.primary, bg: t.primaryLight, label: 'Quantitativo', Icon: Scale }
 
   // ── Loading ──
-  if (isLoading) return <LoadingScreen />
+  if (isLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space.lg, paddingBottom: space.md }}>
+          <Text style={[typography.displaySm, { color: t.text }]}>Plano alimentar</Text>
+        </View>
+        <SkeletonList />
+      </SafeAreaView>
+    )
+  }
 
   // ── Empty state ──
   if (!plans || plans.length === 0) {
@@ -196,6 +205,8 @@ export default function MealPlanScreen() {
           }}>
             <Pressable
               onPress={() => setShoppingOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Lista de compras"
               style={{ width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' }}
             >
               <ShoppingCart size={22} color="#fff" />

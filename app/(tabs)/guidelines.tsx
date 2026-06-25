@@ -5,7 +5,7 @@ import { FileText, ChevronRight } from 'lucide-react-native'
 import { useThemeColors } from '../../src/stores/theme'
 import { useGuidelines, useGuidelineDetail } from '../../src/hooks/usePortal'
 import type { PortalGuidelineSummary } from '../../src/types/portal'
-import { Card, ScreenHeader, EmptyState, LoadingScreen } from '../../src/components/ui'
+import { Card, ScreenHeader, EmptyState, SkeletonList } from '../../src/components/ui'
 import { Markdown } from '../../src/components/Markdown'
 import { radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
 
@@ -16,7 +16,16 @@ export default function GuidelinesScreen() {
   const { data: detail, isLoading: loadingDetail } = useGuidelineDetail(selectedId)
 
   // ── Loading ──
-  if (isLoading) return <LoadingScreen />
+  if (isLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space.lg, paddingBottom: space.md }}>
+          <Text style={[typography.displaySm, { color: t.text }]}>Orientações</Text>
+        </View>
+        <SkeletonList />
+      </SafeAreaView>
+    )
+  }
 
   // ── Empty state ──
   if (!guidelines || guidelines.length === 0) {

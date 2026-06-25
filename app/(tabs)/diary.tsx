@@ -20,9 +20,13 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useThemeColors, type ThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
+import { useAuthStore } from '../../src/stores/auth'
 import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useUploadDiaryPhoto, useFoodDiary } from '../../src/hooks/usePortal'
 import type { DiaryTimelineMeal, PortalFoodDiaryEntry } from '../../src/types/portal'
 import { SkeletonBlock } from '../../src/components/ui'
+import { typography, space } from '../../src/theme/tokens'
+
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://api.alianutri.com.br'
 
 // ── helpers ──
 
@@ -278,18 +282,24 @@ export default function DiaryScreen() {
 
       {/* ── Date nav ── */}
       <View className="flex-row items-center justify-center gap-4 pb-3">
-        <Pressable onPress={() => setDate(shiftDate(date, -1))} hitSlop={12}>
+        <Pressable onPress={() => setDate(shiftDate(date, -1))} hitSlop={12} accessibilityRole="button" accessibilityLabel="Dia anterior">
           <ChevronLeft size={20} color={t.textSecondary} />
         </Pressable>
-        <Pressable onPress={() => setDate(todayStr())}>
+        <Pressable onPress={() => setDate(todayStr())} accessibilityRole="button" accessibilityLabel="Ir para hoje">
           <Text style={{ color: t.text }} className="text-sm font-sans-semibold">
             {isToday ? 'Hoje' : fmtDate(date)}
           </Text>
         </Pressable>
-        <Pressable onPress={() => setDate(shiftDate(date, 1))} hitSlop={12} disabled={isToday}>
+        <Pressable onPress={() => setDate(shiftDate(date, 1))} hitSlop={12} disabled={isToday} accessibilityRole="button" accessibilityLabel="Próximo dia">
           <ChevronRight size={20} color={isToday ? t.border : t.textSecondary} />
         </Pressable>
       </View>
+
+      {!isToday && (
+        <Text style={[typography.caption, { color: t.textMuted, textAlign: 'center', marginVertical: space.sm }]}>
+          Registros só podem ser feitos no dia atual.
+        </Text>
+      )}
 
       {/* ── Progress bar ── */}
       {totalMeals > 0 && (
@@ -513,7 +523,7 @@ function FreeDiary({
         </Text>
       </Animated.View>
 
-      {isToday && (
+      {isToday && canWrite && (
         <Animated.View entering={FadeInDown.duration(300).delay(100)} className="px-5 mb-4">
           <Pressable
             onPress={() => setShowModal(true)}
@@ -625,7 +635,7 @@ function FreeDiary({
 
               <Pressable
                 onPress={handleSave}
-                disabled={isSaving || !description.trim()}
+                disabled={isSaving || !description.trim() || !canWrite}
                 className="py-3.5 rounded-xl items-center"
                 style={{ backgroundColor: description.trim() ? t.primary : t.borderLight }}
               >
@@ -941,6 +951,7 @@ function CompactLoggedRow({
   canWrite: boolean
   t: ThemeColors
 }) {
+  const accessCode = useAuthStore((s) => s.accessCode)
   const status = meal.entry?.compliance_status
   return (
     <View className="mb-1.5">
@@ -976,7 +987,7 @@ function CompactLoggedRow({
           {meal.entry?.photo_url && (
             <View className="rounded-xl overflow-hidden mb-2">
               <Image
-                source={{ uri: meal.entry.photo_url }}
+                source={{ uri: `${API_BASE}/p/${accessCode}/diary/photo/${meal.entry.id}` }}
                 style={{ width: '100%', height: 140 }}
                 contentFit="cover"
                 className="rounded-xl"

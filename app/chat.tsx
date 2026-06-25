@@ -9,10 +9,12 @@ import * as Haptics from 'expo-haptics'
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated'
 import { useQueryClient } from '@tanstack/react-query'
 import { useThemeColors, type ThemeColors } from '../src/stores/theme'
+import { useFeaturesStore } from '../src/stores/features'
 import { useChatMessages, useSendChatMessage, usePortalHome } from '../src/hooks/usePortal'
 import type { ChatMessage } from '../src/types/portal'
 import { SkeletonChatList } from '../src/components/Skeleton'
 import { ScreenHeader, EmptyState } from '../src/components/ui'
+import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { radius, space, typography, SCREEN_PADDING, shadows } from '../src/theme/tokens'
 
 // ── helpers ──
@@ -78,6 +80,7 @@ function chatItemKey(item: ChatListItem): string {
 
 export default function ChatScreen() {
   const t = useThemeColors()
+  const canWrite = useFeaturesStore((s) => s.canWrite)
   const qc = useQueryClient()
   const [text, setText] = useState('')
   const flatListRef = useRef<FlatList>(null)
@@ -113,12 +116,13 @@ export default function ChatScreen() {
   }, [chatList.length])
 
   const handleSend = useCallback(async () => {
+    if (!canWrite) return
     const content = text.trim()
     if (!content || send.isPending) return
     setText('')
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     await send.mutateAsync(content)
-  }, [text, send])
+  }, [text, send, canWrite])
 
   const renderItem = useCallback(({ item }: { item: ChatListItem }) => {
     if (item.type === 'separator') {
@@ -150,6 +154,8 @@ export default function ChatScreen() {
             </View>
           }
         />
+
+        {!canWrite && <ReadOnlyBanner />}
 
         {/* Messages */}
         {isLoading ? (
@@ -201,6 +207,7 @@ export default function ChatScreen() {
           <TextInput
             value={text}
             onChangeText={setText}
+            editable={canWrite}
             placeholder="Digite sua mensagem..."
             placeholderTextColor={t.textMuted}
             multiline
@@ -221,17 +228,19 @@ export default function ChatScreen() {
           />
           <Pressable
             onPress={handleSend}
-            disabled={!text.trim() || send.isPending}
+            disabled={!text.trim() || send.isPending || !canWrite}
+            accessibilityRole="button"
+            accessibilityLabel="Enviar mensagem"
             style={{
               padding: space.sm + 2,
               borderRadius: radius.lg,
-              backgroundColor: text.trim() && !send.isPending ? t.primary : t.borderLight,
+              backgroundColor: text.trim() && !send.isPending && canWrite ? t.primary : t.borderLight,
             }}
           >
             {send.isPending ? (
               <ActivityIndicator size="small" color={t.primaryFg} />
             ) : (
-              <Send size={18} color={text.trim() ? t.primaryFg : t.textMuted} />
+              <Send size={18} color={text.trim() && canWrite ? t.primaryFg : t.textMuted} />
             )}
           </Pressable>
         </View>
