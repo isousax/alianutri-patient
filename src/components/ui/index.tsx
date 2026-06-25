@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   View, Text, Pressable, type ViewStyle, type TextStyle,
-  type PressableProps, ActivityIndicator, StyleSheet,
+  type PressableProps, ActivityIndicator, StyleSheet, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChevronLeft, ChevronRight } from 'lucide-react-native'
@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { useThemeColors, type ThemeColors } from '../../stores/theme'
 import { shadows, radius, space, typography, SCREEN_PADDING, motion } from '../../theme/tokens'
-import { AliaMark } from '../Brand'
+
 import { AuroraBackground } from './AuroraBackground'
 
 // ══════════════════════════════════════════════════════
@@ -485,7 +485,7 @@ export function LoadingScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
       <AuroraBackground variant="hero" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.xl }}>
         <Animated.View style={markStyle}>
-          <AliaMark size={68} />
+          <Image source={require("../../../assets/alianutriIconWhite.png")} style={{ width: 68, height: 68 }} resizeMode="contain" />
         </Animated.View>
         <ActivityIndicator size="small" color={t.primary} />
       </AuroraBackground>

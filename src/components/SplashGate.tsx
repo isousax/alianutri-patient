@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { StyleSheet, AccessibilityInfo, View, Dimensions } from 'react-native'
+import { StyleSheet, AccessibilityInfo, View, Dimensions, Image } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withSpring, withDelay, withRepeat,
@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useThemeColors, useTheme } from '../stores/theme'
 import { gradients, space } from '../theme/tokens'
-import { AliaMark, BrandRing, GlowBlob, AliaWordmark } from './Brand'
+import { BrandRing, GlowBlob, AliaWordmark } from './Brand'
 
 /** Duração mínima do intro de marca. */
 const INTRO_DURATION = 4000
@@ -115,7 +115,7 @@ export function SplashGate({ ready, onDone }: { ready: boolean; onDone: () => vo
             <BrandRing size={RING_SIZE} strokeWidth={3} from="#FFFFFF" to={theme.dark ? '#818CF8' : '#A7F3D0'} trackColor="rgba(255,255,255,0.14)" />
           </Animated.View>
           <Animated.View style={markStyle}>
-            <AliaMark size={MARK_SIZE} glass glassTint="rgba(255,255,255,0.18)" leafFrom="#FFFFFF" leafTo="#D1FAE5" />
+            <Image source={require("../../assets/alianutriIconWhite.png")} style={{ width: MARK_SIZE, height: MARK_SIZE }} resizeMode="contain" />
           </Animated.View>
         </View>
 
