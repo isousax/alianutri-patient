@@ -91,7 +91,8 @@ export interface PortalMealPlanDetail extends PortalMealPlanSummary {
 // ==========================================
 
 // ── Shapes das refeições por método (espelha o que o web/back produz) ──
-export interface QuantFood { name?: string; food_description?: string; quantity?: string | number; unit?: string; kcal?: number }
+export interface QuantFoodSubstitute { name?: string; quantity?: string | number; unit?: string }
+export interface QuantFood { name?: string; food_description?: string; quantity?: string | number; unit?: string; kcal?: number; substitutes?: QuantFoodSubstitute[] }
 export interface QuantMeal { name?: string; time?: string; foods?: QuantFood[] }
 export interface EquivGroupFood { name: string; measure?: string }
 export interface EquivGroup { group?: string; groupLabel?: string; portions: number; kcal?: number; foods?: EquivGroupFood[] }

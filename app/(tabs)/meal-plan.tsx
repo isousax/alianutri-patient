@@ -7,7 +7,7 @@ import { useThemeColors } from '../../src/stores/theme'
 import { useMealPlans, useMealPlanDetail } from '../../src/hooks/usePortal'
 import { Card, ScreenHeader, EmptyState, SkeletonList } from '../../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
-import type { PortalMealPlanSummary, PortalMeal, QuantMeal, QuantFood, EquivMeal, EquivGroup, EquivGroupFood, QualMeal } from '../../src/types/portal'
+import type { PortalMealPlanSummary, PortalMeal, QuantMeal, QuantFood, QuantFoodSubstitute, EquivMeal, EquivGroup, EquivGroupFood, QualMeal } from '../../src/types/portal'
 
 const asArray = <T,>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : [])
 
@@ -144,12 +144,22 @@ export default function MealPlanScreen() {
                     ) : null}
                   </View>
                   {/* Quantitativo */}
-                  {detail.method !== 'equivalents' && detail.method !== 'qualitative' && asArray<QuantFood>(qm.foods).map((food, fi) => (
-                    <View key={fi} style={{ marginLeft: 28 + space.sm, marginBottom: 5, flexDirection: 'row', flexWrap: 'wrap' }}>
-                      <Text style={[typography.bodySm, { color: t.textSecondary }]}>• {food.name || food.food_description}</Text>
-                      {food.quantity ? <Text style={[typography.caption, { color: t.textMuted }]}> — {food.quantity}{food.unit ? ` ${food.unit}` : ''}</Text> : null}
-                    </View>
-                  ))}
+                  {detail.method !== 'equivalents' && detail.method !== 'qualitative' && asArray<QuantFood>(qm.foods).map((food, fi) => {
+                    const subs = asArray<QuantFoodSubstitute>(food.substitutes)
+                    return (
+                      <View key={fi} style={{ marginLeft: 28 + space.sm, marginBottom: 5 }}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                          <Text style={[typography.bodySm, { color: t.textSecondary }]}>• {food.name || food.food_description}</Text>
+                          {food.quantity ? <Text style={[typography.caption, { color: t.textMuted }]}> — {food.quantity}{food.unit ? ` ${food.unit}` : ''}</Text> : null}
+                        </View>
+                        {subs.length > 0 ? (
+                          <Text style={[typography.caption, { color: t.primary, marginLeft: 12, marginTop: 1 }]}>
+                            ou: {subs.map((s) => `${s.name ?? ''}${s.quantity ? ` (${s.quantity}${s.unit ? ` ${s.unit}` : ''})` : ''}`).filter(Boolean).join('   ·   ')}
+                          </Text>
+                        ) : null}
+                      </View>
+                    )
+                  })}
 
                   {/* Equivalentes — grupos × porções (+ alimentos opcionais) */}
                   {detail.method === 'equivalents' && asArray<EquivGroup>(em.groups).map((g, gi) => (
