@@ -26,7 +26,7 @@ import { useFeaturesStore } from '../src/stores/features'
 import { useAuthStore } from '../src/stores/auth'
 import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useUploadDiaryPhoto, useFoodDiary } from '../src/hooks/usePortal'
 import type { DiaryTimelineMeal, PortalFoodDiaryEntry } from '../src/types/portal'
-import { SkeletonBlock } from '../src/components/ui'
+import { ScreenHeader, SkeletonBlock } from '../src/components/ui'
 import { typography, space } from '../src/theme/tokens'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://api.alianutri.com.br'
@@ -273,14 +273,7 @@ export default function DiaryScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
       {/* ── Header ── */}
-      <View className="px-5 pt-4 pb-2">
-        <View className="flex-row items-center" style={{ gap: 8 }}>
-          <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Voltar">
-            <ChevronLeft size={24} color={t.text} />
-          </Pressable>
-          <Text style={{ color: t.text }} className="text-xl font-sans-bold">Diário alimentar</Text>
-        </View>
-      </View>
+      <ScreenHeader title="Diário alimentar" />
 
       {/* ── Date nav ── */}
       <View className="flex-row items-center justify-center gap-4 pb-3">

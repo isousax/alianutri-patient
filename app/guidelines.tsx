@@ -19,9 +19,7 @@ export default function GuidelinesScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space.lg, paddingBottom: space.md }}>
-          <Text style={[typography.displaySm, { color: t.text }]}>Orientações</Text>
-        </View>
+        <ScreenHeader title="Orientações" />
         <SkeletonList />
       </SafeAreaView>
     )
@@ -31,9 +29,7 @@ export default function GuidelinesScreen() {
   if (!guidelines || guidelines.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space.lg, paddingBottom: space.md }}>
-          <Text style={[typography.displaySm, { color: t.text }]}>Orientações</Text>
-        </View>
+        <ScreenHeader title="Orientações" />
         <EmptyState
           icon={<FileText size={28} color={t.primary} />}
           title="Sem orientações"
@@ -76,9 +72,7 @@ export default function GuidelinesScreen() {
   // ── List view ──
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space.lg, paddingBottom: space.md }}>
-        <Text style={[typography.displaySm, { color: t.text }]}>Orientações</Text>
-      </View>
+      <ScreenHeader title="Orientações" />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 40, gap: space.lg }}

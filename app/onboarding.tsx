@@ -10,7 +10,7 @@ import { useThemeColors } from '../src/stores/theme'
 import { useAuthStore } from '../src/stores/auth'
 import { useOnboardingStore } from '../src/stores/onboarding'
 import { useRemindersStore } from '../src/stores/reminders'
-import { REMINDERS, rescheduleReminders, type ReminderDef } from '../src/lib/localNotifications'
+import { REMINDER_TOGGLES, rescheduleReminders, type ReminderToggle } from '../src/lib/localNotifications'
 import { radius, space, typography, shadows, gradients } from '../src/theme/tokens'
 import { Avatar } from '../src/components/ui'
 import { GlowBlob } from '../src/components/Brand'
@@ -32,7 +32,7 @@ function StepDots({ step }: { step: number }) {
 }
 
 // Linha de lembrete com toggle (usa os defaults smart do store, todos ON).
-function ReminderRow({ def }: { def: ReminderDef }) {
+function ReminderRow({ def }: { def: ReminderToggle }) {
   const t = useThemeColors()
   const enabled = useRemindersStore((s) => s.enabled[def.id] ?? false)
   const toggle = useRemindersStore((s) => s.toggle)
@@ -120,7 +120,7 @@ export default function OnboardingScreen() {
                 Já deixei os principais ligados — a maior alavanca pra criar o hábito. Ajuste como preferir.
               </Text>
             </View>
-            {REMINDERS.map((r) => (
+            {REMINDER_TOGGLES.map((r) => (
               <ReminderRow key={r.id} def={r} />
             ))}
           </Animated.View>

@@ -2,12 +2,13 @@ import { View, Text, ScrollView, Pressable, RefreshControl, Dimensions } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   Ruler, Weight, Phone, Mail,
-  Settings, Calendar, TrendingDown, TrendingUp,
+  Settings, Calendar, TrendingDown, TrendingUp, ChevronLeft,
 } from 'lucide-react-native'
 import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
+import * as Haptics from 'expo-haptics'
 import { usePortalProfile, useEvolution } from '../src/hooks/usePortal'
 import type { PortalEvolution } from '../src/types/portal'
 import { useThemeColors } from '../src/stores/theme'
@@ -45,14 +46,32 @@ export default function ProfileScreen() {
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
           paddingHorizontal: SCREEN_PADDING,
           paddingTop: space.md,
           paddingBottom: space.xs,
         }}>
           <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); router.back() }}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Voltar"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: radius.md,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: t.surfaceSecondary,
+            }}
+          >
+            <ChevronLeft size={20} color={t.text} />
+          </Pressable>
+          <Pressable
             onPress={() => router.push('/settings')}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Configurações"
             style={{
               width: 38,
               height: 38,

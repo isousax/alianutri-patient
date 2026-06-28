@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import { Droplets, Check, ChevronRight, Utensils, Scale, Smile, Camera, Dumbbell, Pencil, type LucideIcon } from 'lucide-react-native'
+import { Droplets, Check, Utensils, Scale, Smile, Camera, Dumbbell, Pencil, type LucideIcon } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, fmtWater, todayStr } from '../../theme/tokens'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -20,6 +20,16 @@ const ACTION_ICONS: Record<CreateActionId, LucideIcon> = {
   progress: Camera,
   exercise: Dumbbell,
   note: Pencil,
+}
+
+// Rótulos curtos para os tiles do grid (o label completo vai na acessibilidade).
+const SHORT_LABEL: Record<CreateActionId, string> = {
+  meal: 'Refeição',
+  weight: 'Peso',
+  mood: 'Humor',
+  progress: 'Progresso',
+  exercise: 'Exercício',
+  note: 'Anotação',
 }
 
 interface RegistroSheetProps {
@@ -109,60 +119,48 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
             </View>
           </View>
 
-          {/* Demais registros */}
-          <View style={{ height: 1, backgroundColor: t.borderLight, marginBottom: space.xs }} />
-          {CREATE_ACTIONS.map((a, i) => {
-            const Icon = ACTION_ICONS[a.id]
-            const color = actionColors[a.id]
-            return (
-              <View key={a.id}>
-                {i > 0 ? <View style={{ height: 1, backgroundColor: t.borderLight }} /> : null}
-                <Pressable
-                  onPress={() => go(a.route)}
-                  accessibilityRole="button"
-                  accessibilityLabel={a.label}
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingVertical: space.md,
-                    paddingRight: space.lg + 26,
-                    opacity: pressed ? 0.6 : 1,
-                  })}
-                >
-                  <View
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: radius.md,
+          {/* Demais registros — grid de atalhos */}
+          <View style={{ height: 1, backgroundColor: t.borderLight, marginBottom: space.md }} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -space.xs }}>
+            {CREATE_ACTIONS.map((a) => {
+              const Icon = ACTION_ICONS[a.id]
+              const color = actionColors[a.id]
+              return (
+                <View key={a.id} style={{ width: '33.333%', padding: space.xs }}>
+                  <Pressable
+                    onPress={() => go(a.route)}
+                    accessibilityRole="button"
+                    accessibilityLabel={a.label}
+                    style={({ pressed }) => ({
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: color + '22',
-                      marginRight: space.md,
-                    }}
+                      paddingVertical: space.md,
+                      paddingHorizontal: space.xs,
+                      borderRadius: radius.lg,
+                      backgroundColor: t.surfaceSecondary,
+                      opacity: pressed ? 0.6 : 1,
+                    })}
                   >
-                    <Icon size={20} color={color} />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[typography.labelLg, { color: t.text }]}>{a.label}</Text>
-                    <Text style={[typography.caption, { color: t.textMuted }]}>{a.description}</Text>
-                  </View>
-                  <View
-                    pointerEvents="none"
-                    style={{
-                      position: 'absolute',
-                      right: space.xs,
-                      top: 0,
-                      bottom: 0,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <ChevronRight size={18} color={t.textMuted} />
-                  </View>
-                </Pressable>
-              </View>
-            )
-          })}
+                    <View
+                      style={{
+                        width: 46,
+                        height: 46,
+                        borderRadius: radius.md,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: color + '22',
+                        marginBottom: space.sm,
+                      }}
+                    >
+                      <Icon size={22} color={color} />
+                    </View>
+                    <Text style={[typography.captionBold, { color: t.text }]} numberOfLines={1}>
+                      {SHORT_LABEL[a.id]}
+                    </Text>
+                  </Pressable>
+                </View>
+              )
+            })}
+          </View>
         </>
       )}
     </BottomSheet>

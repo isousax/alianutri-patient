@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, Dimensions } from 'react-native'
 import { TrendingDown, TrendingUp, Minus, LineChart as LineChartIcon } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../../stores/theme'
-import { useWeightHistory, useEvolution, useChartsSummary } from '../../hooks/usePortal'
+import { useWeightHistory, useEvolution, useChartsSummary, usePortalProfile } from '../../hooks/usePortal'
 import { Card, EmptyState, MacrosBar } from '../ui'
 import { LineChart, type LineChartPoint } from '../charts/LineChart'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
@@ -31,7 +31,7 @@ const PERIODS: { id: Period; label: string }[] = [
 
 const EMPTY_DESC: Record<Metric, string> = {
   weight: 'Registre seu peso para acompanhar sua evolução aqui.',
-  bmi: 'Os dados aparecem após avaliações do seu nutricionista.',
+  bmi: 'Registre seu peso para acompanhar seu IMC ao longo do tempo.',
   fat: 'Os dados aparecem após avaliações do seu nutricionista.',
   nutrition: 'Tire fotos das suas refeições para acompanhar seus macros aqui!',
   water: 'Registre sua água para ver o histórico de hidratação.',
@@ -50,6 +50,14 @@ function withinPeriod(iso: string, days: Period): boolean {
   return Date.now() - ts <= days * 86400000
 }
 
+// Faixas de IMC (OMS) para o selo de classificação.
+function bmiCategory(v: number): { label: string; key: 'low' | 'ok' | 'over' | 'obese' } {
+  if (v < 18.5) return { label: 'Abaixo do peso', key: 'low' }
+  if (v < 25) return { label: 'Peso saudável', key: 'ok' }
+  if (v < 30) return { label: 'Sobrepeso', key: 'over' }
+  return { label: 'Obesidade', key: 'obese' }
+}
+
 export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number }) {
   const t = useThemeColors()
   const [metric, setMetric] = useState<Metric>('weight')
@@ -57,6 +65,7 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
   const { data: weightData } = useWeightHistory()
   const { data: evolution } = useEvolution()
   const { data: charts } = useChartsSummary(period === 0 ? 365 : period)
+  const { data: profile } = usePortalProfile()
 
   const series = useMemo<{ points: LineChartPoint[]; unit: string; decimals: number }>(() => {
     if (metric === 'weight') {
@@ -65,14 +74,33 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
         .sort((a, b) => a.entry_date.localeCompare(b.entry_date))
       return { points: entries.map((e) => ({ label: fmtDayMonth(e.entry_date), value: e.weight_kg })), unit: 'kg', decimals: 1 }
     }
-    if (metric === 'bmi' || metric === 'fat') {
-      const field = metric === 'bmi' ? 'bmi' : 'body_fat_pct'
+    if (metric === 'bmi') {
+      // IMC calculado a partir do peso registrado × altura do perfil; a medição
+      // do nutricionista (evolution.bmi) tem precedência quando existe na data.
+      const heightM = profile?.height_cm ? profile.height_cm / 100 : null
+      const byDate = new Map<string, number>()
+      if (heightM && heightM > 0) {
+        for (const w of weightData?.entries ?? []) {
+          if (w.weight_kg != null && withinPeriod(w.entry_date, period)) {
+            byDate.set(w.entry_date, w.weight_kg / (heightM * heightM))
+          }
+        }
+      }
+      for (const e of evolution ?? []) {
+        if (e.bmi != null && withinPeriod(e.evaluation_date, period)) {
+          byDate.set(e.evaluation_date, e.bmi)
+        }
+      }
+      const sorted = [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+      return { points: sorted.map(([date, value]) => ({ label: fmtDayMonth(date), value })), unit: '', decimals: 1 }
+    }
+    if (metric === 'fat') {
       const entries = [...(evolution ?? [])]
-        .filter((e) => e[field] != null && withinPeriod(e.evaluation_date, period))
+        .filter((e) => e.body_fat_pct != null && withinPeriod(e.evaluation_date, period))
         .sort((a, b) => a.evaluation_date.localeCompare(b.evaluation_date))
       return {
-        points: entries.map((e) => ({ label: fmtDayMonth(e.evaluation_date), value: e[field] as number })),
-        unit: metric === 'fat' ? '%' : '',
+        points: entries.map((e) => ({ label: fmtDayMonth(e.evaluation_date), value: e.body_fat_pct as number })),
+        unit: '%',
         decimals: 1,
       }
     }
@@ -86,7 +114,7 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
     }
     const pts = (charts?.wellness ?? []).map((d) => ({ label: fmtDayMonth(d.date), value: d.energy }))
     return { points: pts, unit: '', decimals: 1 }
-  }, [metric, period, weightData, evolution, charts])
+  }, [metric, period, weightData, evolution, charts, profile])
 
   const points = series.points
   const current = points.length ? points[points.length - 1].value : null
@@ -112,6 +140,12 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
   const chartWidth = Dimensions.get('window').width - SCREEN_PADDING * 2 - space.lg * 2
   const fmtVal = (v: number) => `${v.toFixed(series.decimals).replace('.', ',')}${series.unit ? ` ${series.unit}` : ''}`
   const currentLabel = metric === 'nutrition' || metric === 'water' ? 'Último dia' : 'Atual'
+  const bmiCat = metric === 'bmi' && current != null ? bmiCategory(current) : null
+  const bmiCatColor = !bmiCat ? t.textMuted
+    : bmiCat.key === 'ok' ? t.success
+    : bmiCat.key === 'low' ? t.info
+    : bmiCat.key === 'over' ? t.warning
+    : t.error
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: bottomPadding }} showsVerticalScrollIndicator={false}>
@@ -171,6 +205,9 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
               <View>
                 <Text style={[typography.caption, { color: t.textMuted }]}>{currentLabel}</Text>
                 <Text style={[typography.displaySm, { color: t.text }]}>{current != null ? fmtVal(current) : '—'}</Text>
+                {bmiCat && (
+                  <Text style={[typography.captionBold, { color: bmiCatColor, marginTop: 2 }]}>{bmiCat.label}</Text>
+                )}
               </View>
               {delta != null && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space.sm, paddingVertical: 4, borderRadius: radius.md, backgroundColor: t.surfaceSecondary }}>

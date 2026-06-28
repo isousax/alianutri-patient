@@ -3,12 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const KEY = 'alianutri_reminders'
 const DEFAULTS: Record<string, boolean> = {
-  breakfast: true,
-  lunch: true,
+  meals: true,
   water: true,
-  dinner: true,
-  weight: true,
   streak: true,
+  weight: true,
 }
 
 interface RemindersState {

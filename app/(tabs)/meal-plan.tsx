@@ -154,7 +154,7 @@ export default function MealPlanScreen() {
                   <View style={{ width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.22)' }}>
                     <MethodIcon size={11} color="#fff" />
                   </View>
-                  <Text style={[typography.captionBold, { color: '#fff' }]}>{dm.label}</Text>
+                  <Text style={[typography.captionBold, { color: '#fff' }]}>Seu plano</Text>
                 </View>
                 {meals.length > 0 ? (
                   <Text style={[typography.caption, { color: dm.color }]}>{meals.length} {meals.length === 1 ? 'refeição' : 'refeições'}</Text>
@@ -424,11 +424,8 @@ export default function MealPlanScreen() {
                   <Text style={[typography.headingSm, { color: t.text }]} numberOfLines={1}>{plan.name}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <View style={{ paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.full, backgroundColor: pm.bg }}>
-                      <Text style={[typography.overline, { color: pm.color }]}>{pm.label}</Text>
+                      <Text style={[typography.overline, { color: pm.color }]}>{plan.total_kcal ? `${plan.total_kcal} kcal/dia` : 'Plano alimentar'}</Text>
                     </View>
-                    {plan.total_kcal ? (
-                      <Text style={[typography.caption, { color: t.textMuted }]}>{plan.total_kcal} kcal</Text>
-                    ) : null}
                   </View>
                 </View>
                 <ChevronRight size={16} color={t.textMuted} />
@@ -468,7 +465,7 @@ export default function MealPlanScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={[typography.labelMd, { color: t.textSecondary }]} numberOfLines={1}>{plan.name}</Text>
                     <Text style={[typography.caption, { color: t.textMuted, marginTop: 2 }]}>
-                      {plan.total_kcal ? `${plan.total_kcal} kcal` : plan.method}
+                      {plan.total_kcal ? `${plan.total_kcal} kcal` : 'Plano anterior'}
                     </Text>
                   </View>
                   <ChevronRight size={14} color={t.borderLight} />

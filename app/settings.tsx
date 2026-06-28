@@ -12,7 +12,7 @@ import { useThemeColors, useTheme, useThemeStore } from '../src/stores/theme'
 import { THEME_LIST, type AppTheme, type ThemeColors } from '../src/theme/themes'
 import { ScreenHeader, Card, SectionLabel, Divider } from '../src/components/ui'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
-import { REMINDERS } from '../src/lib/localNotifications'
+import { REMINDER_TOGGLES } from '../src/lib/localNotifications'
 import { useRemindersStore } from '../src/stores/reminders'
 import { confirm } from '../src/stores/confirm'
 
@@ -102,11 +102,14 @@ export default function SettingsScreen() {
                 Lembretes diários pra manter o hábito — ligue só os que fizerem sentido pra você.
               </Text>
             </View>
-            {REMINDERS.map((r, i) => (
+            {REMINDER_TOGGLES.map((r, i) => (
               <View key={r.id}>
                 {i > 0 && <Divider inset={space.lg} />}
                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.lg, paddingVertical: space.md }}>
-                  <Text style={[typography.labelMd, { color: t.text, flex: 1 }]}>{r.label}</Text>
+                  <View style={{ flex: 1, paddingRight: space.md }}>
+                    <Text style={[typography.labelMd, { color: t.text }]}>{r.label}</Text>
+                    <Text style={[typography.caption, { color: t.textMuted, marginTop: 2 }]}>{r.description}</Text>
+                  </View>
                   <Switch
                     value={!!reminderEnabled[r.id]}
                     onValueChange={() => {

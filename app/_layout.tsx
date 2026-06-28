@@ -58,6 +58,13 @@ function OfflineQueueSync() {
   return null
 }
 
+// (Re)agenda lembretes locais a partir do plano/meta reais. Precisa rodar
+// DENTRO do QueryClientProvider porque consome o cache do React Query.
+function RemindersSync() {
+  useReminders()
+  return null
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -80,7 +87,6 @@ export default function RootLayout() {
   }, [hydrate, hydrateTheme, hydrateOnboarding])
 
   useNotifications()
-  useReminders()
 
   const theme = useTheme()
   const ready = (fontsLoaded || !!fontError) && isHydrated && onboardingHydrated
@@ -106,6 +112,7 @@ export default function RootLayout() {
           {ready && <XpToast />}
           {ready && <FeedbackOverlays />}
           {ready && <OfflineQueueSync />}
+          {ready && <RemindersSync />}
           {!splashDone && <SplashGate ready={ready} onDone={() => setSplashDone(true)} />}
         </PersistQueryClientProvider>
       </SafeAreaProvider>
