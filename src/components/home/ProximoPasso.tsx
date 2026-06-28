@@ -86,6 +86,7 @@ export function ProximoPasso({
           flexDirection: 'row',
           alignItems: 'center',
           padding: space.lg,
+          paddingRight: interactive ? space.lg + 26 : space.lg,
           borderRadius: radius.xl,
           backgroundColor: accentLight,
           opacity: pressed && interactive ? 0.85 : 1,
@@ -120,7 +121,17 @@ export function ProximoPasso({
           </Text>
         </View>
         {interactive ? (
-          <View style={{ alignSelf: 'center', marginLeft: space.sm }}>
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              right: space.lg,
+              top: 0,
+              bottom: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             <ChevronRight size={18} color={accent} />
           </View>
         ) : null}

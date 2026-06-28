@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useEffect } from 'react'
 import { View, Text, Pressable, Modal, ScrollView, Dimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import Animated, {
   FadeIn,
   useSharedValue,
@@ -70,7 +70,7 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
 
   return (
     <Modal visible transparent statusBarTranslucent animationType="none" onRequestClose={close}>
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      <GestureHandlerRootView style={{ flex: 1, justifyContent: 'flex-end' }}>
         {/* Backdrop */}
         <Animated.View
           entering={FadeIn.duration(200)}
@@ -128,7 +128,7 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
             {children}
           </ScrollView>
         </Animated.View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   )
 }

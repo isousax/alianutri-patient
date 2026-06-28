@@ -6,6 +6,7 @@ import {
   Pressable,
   RefreshControl,
   Dimensions,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,7 +17,6 @@ import {
   ClipboardList,
   Target,
   ChevronRight,
-  ChevronUp,
   MapPin,
   Video,
   Flame,
@@ -37,7 +37,6 @@ import {
   Lock,
   Pill,
   FileText,
-  MoreHorizontal,
   X,
 } from "lucide-react-native";
 import Svg, {
@@ -50,6 +49,8 @@ import Svg, {
 } from "react-native-svg";
 import Animated, {
   FadeIn,
+  FadeInUp,
+  ZoomIn,
   FadeInDown,
   SlideInDown,
   useSharedValue,
@@ -239,7 +240,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: t.background }}
-      edges={["top"]}
+      edges={[]}
     >
       <ScrollView
         style={{ flex: 1 }}
@@ -376,17 +377,12 @@ const GRID_GAP = space.md;
 const GRID_ITEM_W =
   (SCREEN_W - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
 
-// 5 slots numa única linha: 4 ações principais + "Mais".
-const QUICK_COLS = 5;
-const QUICK_ITEM_W =
-  (SCREEN_W - SCREEN_PADDING * 2 - GRID_GAP * (QUICK_COLS - 1)) / QUICK_COLS;
-
 function QuickAction({
   icon,
   label,
   bg,
   onPress,
-  width = GRID_ITEM_W,
+  width,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -399,7 +395,7 @@ function QuickAction({
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        width,
+        ...(width != null ? { width } : { flex: 1, minWidth: 0 }),
         alignItems: "center",
         paddingVertical: space.md,
         marginBottom: space.xs,
@@ -435,51 +431,72 @@ function QuickAction({
   );
 }
 
-// ── Quick Actions Grid (4 ações + "Mais" inline) ──
+// ── Quick Actions Grid (4 ações + folder "Mais" estilo iOS) ──
+
+const FOLDER_SPRING = { damping: 16, stiffness: 200, mass: 0.8 };
 
 type ActionDef = {
   icon: React.ReactNode;
   label: string;
   bg: string;
   route: string;
+  folderIcon?: React.ReactNode;
 };
 
 function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
   const t = useThemeColors();
-  const [expanded, setExpanded] = useState(false);
+  const [folderOpen, setFolderOpen] = useState(false);
 
   // 4 ações principais (sempre visíveis). Removidos da grade: Chat (vive no
   // hub Nutri), Peso e Como me sinto (migraram para o "+"), Diário (já é tab).
   const mainActions: ActionDef[] = useMemo(
-    () => [
-      { icon: <Camera size={18} color={t.primary} />, label: "Registrar progresso", bg: t.primaryLight, route: "/progress-photos" },
-      { icon: <BarChart3 size={18} color={t.success} />, label: "Evolução", bg: t.successLight, route: "/evolution" },
-      { icon: <Target size={18} color={t.accent} />, label: "Metas", bg: t.accentLight, route: "/goals" },
-      { icon: <ClipboardList size={18} color={t.info} />, label: "Questionários", bg: t.infoLight, route: "/questionnaires" },
-    ],
-    [t],
+  () => [
+    { icon: <Camera size={18} color={t.primary} />, label: "Registrar \nprogresso", bg: t.primaryLight, route: "/progress-photos" },
+    { icon: <BarChart3 size={18} color={t.success} />, label: "Evolução", bg: t.successLight, route: "/evolution" },
+    { icon: <Target size={18} color={t.accent} />, label: "Metas", bg: t.accentLight, route: "/goals" },
+    { icon: <CalendarPlus size={18} color={t.primary} />, label: "Agendar", bg: t.primaryLight, route: "/booking" },
+  ],
+  [t],
+);
+
+const moreActions: ActionDef[] = useMemo(() => {
+  const actions: ActionDef[] = [];
+
+  actions.push(
+    {
+      icon: <ClipboardList size={22} color={t.info} />,
+      label: "Quest.",
+      bg: t.infoLight,
+      route: "/questionnaires",
+      folderIcon: <ClipboardList size={10} color={t.info} />,
+    },
+    {
+      icon: <FileText size={22} color={t.info} />,
+      label: "Docs.",
+      bg: t.infoLight,
+      route: "/documents",
+      folderIcon: <FileText size={10} color={t.info} />,
+    },
+    {
+      icon: <FileText size={22} color={t.warning} />,
+      label: "Orientações",
+      bg: t.warningLight,
+      route: "/guidelines",
+      folderIcon: <FileText size={10} color={t.warning} />,
+    },
   );
 
-  const moreActions: ActionDef[] = useMemo(() => {
-    const actions: ActionDef[] = [];
-    if (canWrite) {
-      actions.push({ icon: <CalendarPlus size={18} color={t.primary} />, label: "Agendar", bg: t.primaryLight, route: "/booking" });
-    }
-    actions.push(
-      { icon: <FileText size={18} color={t.info} />, label: "Documentos", bg: t.infoLight, route: "/documents" },
-      { icon: <FileText size={18} color={t.warning} />, label: "Orientações", bg: t.warningLight, route: "/guidelines" },
-    );
-    return actions;
-  }, [canWrite, t]);
+  return actions;
+}, [t]);
 
   const go = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     router.push(route as never);
   };
 
-  const toggleMore = () => {
+  const openFolder = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setExpanded((v) => !v);
+    setFolderOpen(true);
   };
 
   return (
@@ -487,6 +504,7 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
       entering={FadeInDown.duration(350).delay(160)}
       style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.xl }}
     >
+      {/* Linha única: 4 ações + folder "Mais" (flex → sempre cabe na viewport) */}
       <View style={{ flexDirection: "row", columnGap: GRID_GAP }}>
         {mainActions.map((a) => (
           <QuickAction
@@ -494,19 +512,18 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
             icon={a.icon}
             label={a.label}
             bg={a.bg}
-            width={QUICK_ITEM_W}
             onPress={() => go(a.route)}
           />
         ))}
 
-        {/* Slot "Mais" — expande DENTRO do card (sem overlay) */}
+        {/* Folder "Mais" — abre overlay estilo iOS (não empurra o conteúdo) */}
         <Pressable
-          onPress={toggleMore}
+          onPress={openFolder}
           accessibilityRole="button"
-          accessibilityState={{ expanded }}
-          accessibilityLabel={expanded ? "Mostrar menos ações" : "Mostrar mais ações"}
+          accessibilityLabel="Mostrar mais ações"
           style={({ pressed }) => ({
-            width: QUICK_ITEM_W,
+            flex: 1,
+            minWidth: 0,
             alignItems: "center",
             paddingVertical: space.md,
             marginBottom: space.xs,
@@ -523,53 +540,132 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
               backgroundColor: t.surfaceSecondary,
               alignItems: "center",
               justifyContent: "center",
+              flexDirection: "row",
+              flexWrap: "wrap",
+              padding: 6,
+              gap: 2,
             }}
           >
-            {expanded ? (
-              <ChevronUp size={20} color={t.textSecondary} />
-            ) : (
-              <MoreHorizontal size={20} color={t.textSecondary} />
-            )}
+            {moreActions.slice(0, 4).map((a, i) => (
+              <View
+                key={i}
+                style={{
+                  width: 15,
+                  height: 15,
+                  borderRadius: 5,
+                  backgroundColor: a.bg,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {a.folderIcon}
+              </View>
+            ))}
           </View>
           <View style={{ height: 30, justifyContent: "center", marginTop: space.xs + 2 }}>
             <Text
               style={[
                 typography.captionBold,
-                { color: t.textSecondary, textAlign: "center", fontSize: 10.5, lineHeight: 13 },
+                { color: t.textMuted, textAlign: "center", fontSize: 10.5, lineHeight: 13 },
               ]}
               numberOfLines={1}
             >
-              {expanded ? "Menos" : "Mais"}
+              Mais
             </Text>
           </View>
         </Pressable>
       </View>
 
-      {/* Expansão inline — ações secundárias no mesmo bloco */}
-      {expanded && (
-        <Animated.View
-          entering={FadeInDown.duration(220)}
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            columnGap: GRID_GAP,
-            rowGap: space.xs,
-            marginTop: space.sm,
-          }}
+      {/* Folder overlay — Apple-style (Modal + ZoomIn) */}
+      <Modal
+        visible={folderOpen}
+        transparent
+        statusBarTranslucent
+        animationType="none"
+        onRequestClose={() => setFolderOpen(false)}
+      >
+        <Pressable
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+          onPress={() => setFolderOpen(false)}
         >
-          {moreActions.map((a) => (
-            <QuickAction
-              key={a.route}
-              icon={a.icon}
-              label={a.label}
-              bg={a.bg}
-              width={QUICK_ITEM_W}
-              onPress={() => go(a.route)}
-            />
-          ))}
-        </Animated.View>
-      )}
+          <Animated.View
+            entering={FadeIn.duration(250)}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)" }}
+          />
+          <Animated.View
+            entering={ZoomIn.springify()
+              .damping(FOLDER_SPRING.damping)
+              .stiffness(FOLDER_SPRING.stiffness)
+              .mass(FOLDER_SPRING.mass)}
+          >
+            <Pressable
+              onPress={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: t.surface,
+                borderRadius: 24,
+                paddingTop: space.xl,
+                paddingBottom: space.xl + 4,
+                paddingHorizontal: space.lg,
+                width: SCREEN_W * 0.72,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.18,
+                shadowRadius: 32,
+                elevation: 24,
+              }}
+            >
+              <View style={{ alignItems: "center", marginBottom: space.xl }}>
+                <View style={{ width: 40, height: 3.5, borderRadius: 2, backgroundColor: t.primary, opacity: 0.25 }} />
+              </View>
 
+              <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: space.xl }}>
+                {moreActions.map((a, i) => (
+                  <Animated.View
+                    key={a.route}
+                    entering={FadeInUp.springify().damping(12).stiffness(150).mass(0.5).delay(100 + i * 80)}
+                  >
+                    <Pressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        setFolderOpen(false);
+                        setTimeout(() => router.push(a.route as never), 180);
+                      }}
+                      style={({ pressed }) => ({
+                        alignItems: "center",
+                        paddingVertical: space.sm,
+                        paddingHorizontal: space.sm,
+                        borderRadius: radius.xl,
+                        backgroundColor: pressed ? t.borderLight : "transparent",
+                        transform: [{ scale: pressed ? 0.88 : 1 }],
+                      })}
+                    >
+                      <View
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: 18,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: a.bg,
+                          marginBottom: space.sm,
+                        }}
+                      >
+                        {a.icon}
+                      </View>
+                      <Text
+                        style={[typography.captionBold, { color: t.text, textAlign: "center", fontSize: 11, lineHeight: 14 }]}
+                        numberOfLines={2}
+                      >
+                        {a.label}
+                      </Text>
+                    </Pressable>
+                  </Animated.View>
+                ))}
+              </View>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
     </Animated.View>
   );
 }

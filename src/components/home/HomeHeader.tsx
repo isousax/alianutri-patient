@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import { Sun, CloudSun, Moon, Flame, MessageCircle, Lightbulb } from 'lucide-react-native'
@@ -26,6 +27,7 @@ interface HomeHeaderProps {
 
 export function HomeHeader({ displayName, nutritionistName, weather, streak, chatUnread, photoUrl, onTipPress }: HomeHeaderProps) {
   const t = useThemeColors()
+  const insets = useSafeAreaInsets()
   const greeting = getGreeting()
   const GreetingIcon = greeting.Icon
 
@@ -42,9 +44,9 @@ export function HomeHeader({ displayName, nutritionistName, weather, streak, cha
         />
         <Animated.View
           entering={FadeIn.duration(400)}
-          style={{ paddingHorizontal: SCREEN_PADDING + 4, paddingTop: space.lg, paddingBottom: space.xl }}
+          style={{ paddingHorizontal: SCREEN_PADDING + 4, paddingTop: insets.top + space.lg, paddingBottom: space.xl }}
         >
-          <View style={{ position: 'absolute', top: space.lg, right: SCREEN_PADDING, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+          <View style={{ position: 'absolute', top: insets.top + space.lg, right: SCREEN_PADDING, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
             {onTipPress ? (
               <Pressable
                 onPress={onTipPress}

@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react'
 import { create } from 'zustand'
 
 export interface ActionSheetItem {
   label: string
   destructive?: boolean
+  icon?: ReactNode
   onPress?: () => void
 }
 

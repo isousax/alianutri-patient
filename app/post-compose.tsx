@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { View, Text, ScrollView, Pressable, TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
-import { Camera, Utensils, Dumbbell, Smile, Pencil, Sparkles, X } from 'lucide-react-native'
+import { Camera, Utensils, Dumbbell, Smile, Pencil, Sparkles, X, Images } from 'lucide-react-native'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { toast } from '../src/stores/toast'
@@ -27,6 +27,7 @@ export default function PostComposeScreen() {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const { mutateAsync: createPost, isPending } = useCreatePost()
+  const scrollRef = useRef<ScrollView>(null)
   const params = useLocalSearchParams<{ type?: string }>()
   const validTypes: DiaryPostType[] = ['meal', 'exercise', 'mood', 'free']
   const initialType: DiaryPostType = validTypes.includes(params.type as DiaryPostType)
@@ -59,11 +60,11 @@ export default function PostComposeScreen() {
     showActionSheet({
       title: 'Adicionar foto',
       options: [
-        { label: 'Tirar foto', onPress: () => pick('camera') },
-        { label: 'Escolher da galeria', onPress: () => pick('library') },
+        { label: 'Tirar foto', icon: <Camera size={20} color={t.primary} />, onPress: () => pick('camera') },
+        { label: 'Escolher da galeria', icon: <Images size={20} color={t.primary} />, onPress: () => pick('library') },
       ],
     })
-  }, [pick])
+  }, [pick, t])
 
   const canPublish = canWrite && !isPending && (!!photoUri || !!caption.trim() || (type === 'mood' && !!mood))
 
@@ -87,7 +88,7 @@ export default function PostComposeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
       <ScreenHeader title="Nova postagem" />
       <KeyboardAvoidingWrapper>
-        <ScrollView contentContainerStyle={{ padding: SCREEN_PADDING, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scrollRef} contentContainerStyle={{ padding: SCREEN_PADDING, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {!canWrite && <ReadOnlyBanner />}
 
           {/* Foto */}
@@ -165,6 +166,7 @@ export default function PostComposeScreen() {
             placeholder={type === 'mood' ? 'Como você está se sentindo?' : 'Escreva uma legenda (opcional)'}
             placeholderTextColor={t.textMuted}
             multiline
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
             style={[typography.bodyLg, { color: t.text, backgroundColor: t.surfaceSecondary, borderRadius: radius.lg, padding: space.lg, minHeight: 90, textAlignVertical: 'top', marginBottom: space.lg }]}
           />
 
