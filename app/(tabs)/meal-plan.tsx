@@ -1,15 +1,27 @@
 import { useState } from 'react'
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Utensils, ChevronRight, Clock, ShoppingCart, X, Scale, Replace, FileText } from 'lucide-react-native'
+import { Utensils, ChevronRight, Clock, ShoppingCart, X, Scale, Replace, FileText, Check, Undo2 } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../../src/stores/theme'
-import { useMealPlans, useMealPlanDetail } from '../../src/hooks/usePortal'
+import * as Haptics from 'expo-haptics'
+import { useMealPlans, useMealPlanDetail, useDiaryToday, useLogFoodDiary, useDeleteFoodDiary } from '../../src/hooks/usePortal'
+import { useFeaturesStore } from '../../src/stores/features'
+import { toast } from '../../src/stores/toast'
 import { Card, ScreenHeader, EmptyState, SkeletonList } from '../../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
 import type { PortalMealPlanSummary, PortalMeal, QuantMeal, QuantFood, QuantFoodSubstitute, EquivMeal, EquivGroup, EquivGroupFood, QualMeal } from '../../src/types/portal'
 
 const asArray = <T,>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : [])
+
+const todayStr = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const nowTime = () => {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
 
 export default function MealPlanScreen() {
   const t = useThemeColors()
@@ -17,6 +29,12 @@ export default function MealPlanScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [shoppingOpen, setShoppingOpen] = useState(false)
   const { data: detail, isLoading: loadingDetail } = useMealPlanDetail(selectedId)
+  const canWrite = useFeaturesStore((s) => s.canWrite)
+  const today = todayStr()
+  const { data: diaryToday } = useDiaryToday(today)
+  const { mutateAsync: logEntry } = useLogFoodDiary()
+  const { mutateAsync: deleteEntry } = useDeleteFoodDiary()
+  const [busyIdx, setBusyIdx] = useState<number | null>(null)
 
   // Método → acento da tríade (emerald / teal / indigo) + ícone
   const methodMeta = (method: string) =>
@@ -61,6 +79,68 @@ export default function MealPlanScreen() {
     const meals: PortalMeal[] = Array.isArray(detail.meals) ? (detail.meals as PortalMeal[]) : []
     const dm = methodMeta(detail.method)
     const MethodIcon = dm.Icon
+    // "Plano acionável": registrar adesão inline quando este for o plano ativo de hoje.
+    const isActiveToday = !!diaryToday?.meal_plan && diaryToday.meal_plan.id === detail.id
+    const todayMeals = diaryToday?.meals ?? []
+    const loggedToday = todayMeals.filter((m) => m.entry).length
+    const progress = todayMeals.length > 0 ? loggedToday / todayMeals.length : 0
+    const planId = detail.id
+    const handleFollow = async (idx: number, fallbackName: string) => {
+      if (busyIdx !== null) return
+      const tm = todayMeals.find((m) => m.meal_index === idx)
+      setBusyIdx(idx)
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+        await logEntry({
+          meal_type: 'other',
+          entry_date: today,
+          entry_time: nowTime(),
+          food_description: tm?.foods?.map((f) => f.name).join(', ') || tm?.meal_name || fallbackName,
+          compliance_status: 'followed',
+          meal_plan_id: planId,
+          meal_index: idx,
+        })
+      } catch {
+        toast.error('Não foi possível registrar.')
+      } finally {
+        setBusyIdx(null)
+      }
+    }
+    const handlePartial = async (idx: number, fallbackName: string) => {
+      if (busyIdx !== null) return
+      const tm = todayMeals.find((m) => m.meal_index === idx)
+      setBusyIdx(idx)
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        await logEntry({
+          meal_type: 'other',
+          entry_date: today,
+          entry_time: nowTime(),
+          food_description: `${tm?.meal_name || fallbackName} (parcial)`,
+          compliance_status: 'partial',
+          meal_plan_id: planId,
+          meal_index: idx,
+          notes: 'Segui parcialmente',
+        })
+      } catch {
+        toast.error('Não foi possível registrar.')
+      } finally {
+        setBusyIdx(null)
+      }
+    }
+    const handleUndo = async (idx: number) => {
+      const tm = todayMeals.find((m) => m.meal_index === idx)
+      if (!tm?.entry || busyIdx !== null) return
+      setBusyIdx(idx)
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        await deleteEntry(tm.entry.id)
+      } catch {
+        toast.error('Não foi possível desfazer.')
+      } finally {
+        setBusyIdx(null)
+      }
+    }
     return (
       <View style={{ flex: 1, backgroundColor: t.background }}>
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
@@ -113,6 +193,19 @@ export default function MealPlanScreen() {
             </View>
           </View>
 
+          {isActiveToday && todayMeals.length > 0 && (
+            <View style={{ marginHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Text style={[typography.captionBold, { color: t.text }]}>Adesão de hoje</Text>
+                <Text style={[typography.caption, { color: t.textMuted }]}>{loggedToday}/{todayMeals.length} registradas</Text>
+              </View>
+              <View style={{ flexDirection: 'row', height: 6, borderRadius: 3, backgroundColor: t.surfaceSecondary, overflow: 'hidden' }}>
+                <View style={{ flex: Math.max(progress, 0.0001), backgroundColor: dm.color }} />
+                <View style={{ flex: Math.max(1 - progress, 0) }} />
+              </View>
+            </View>
+          )}
+
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 80 }}
@@ -123,6 +216,10 @@ export default function MealPlanScreen() {
               const qm = meal as QuantMeal
               const em = meal as EquivMeal
               const lm = meal as QualMeal
+              const tm = todayMeals.find((m) => m.meal_index === idx)
+              const entry = tm?.entry
+              const status = entry?.compliance_status
+              const busy = busyIdx === idx
               return (
               <Animated.View key={idx} entering={FadeInDown.duration(250).delay(idx * 50)}>
                 <Card style={{ marginBottom: space.lg, overflow: 'hidden' }}>
@@ -150,7 +247,11 @@ export default function MealPlanScreen() {
                       <View key={fi} style={{ marginLeft: 28 + space.sm, marginBottom: 5 }}>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                           <Text style={[typography.bodySm, { color: t.textSecondary }]}>• {food.name || food.food_description}</Text>
-                          {food.quantity ? <Text style={[typography.caption, { color: t.textMuted }]}> — {food.quantity}{food.unit ? ` ${food.unit}` : ''}</Text> : null}
+                          {food.measure ? (
+                            <Text style={[typography.caption, { color: t.textMuted }]}> — {food.measure.label}{food.quantity ? ` (${food.quantity}${food.unit ? ` ${food.unit}` : ''})` : ''}</Text>
+                          ) : food.quantity ? (
+                            <Text style={[typography.caption, { color: t.textMuted }]}> — {food.quantity}{food.unit ? ` ${food.unit}` : ''}</Text>
+                          ) : null}
                         </View>
                         {subs.length > 0 ? (
                           <Text style={[typography.caption, { color: t.primary, marginLeft: 12, marginTop: 1 }]}>
@@ -185,6 +286,31 @@ export default function MealPlanScreen() {
                       ))}
                     </View>
                   )}
+
+                  {isActiveToday && (entry ? (
+                    <View style={{ marginLeft: 28 + space.sm, marginTop: space.md, flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: space.sm + 2, paddingVertical: 5, borderRadius: radius.full, backgroundColor: status === 'partial' ? t.warningLight : t.primaryLight }}>
+                        <Check size={13} color={status === 'partial' ? t.warning : t.primary} />
+                        <Text style={[typography.caption, { color: status === 'partial' ? t.warning : t.primary, fontWeight: '600' }]}>{status === 'partial' ? 'Parcial' : 'Seguida'}</Text>
+                      </View>
+                      {canWrite && (
+                        <Pressable onPress={() => handleUndo(idx)} disabled={busy} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: space.sm }}>
+                          {busy ? <ActivityIndicator size="small" color={t.textMuted} /> : <Undo2 size={12} color={t.textMuted} />}
+                          <Text style={[typography.caption, { color: t.textMuted }]}>Desfazer</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  ) : canWrite ? (
+                    <View style={{ marginLeft: 28 + space.sm, marginTop: space.md, flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                      <Pressable onPress={() => handleFollow(idx, meal.name || `Refeição ${idx + 1}`)} disabled={busy} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: space.sm + 1, paddingHorizontal: space.lg, borderRadius: radius.lg, backgroundColor: dm.color }}>
+                        {busy ? <ActivityIndicator size="small" color="#fff" /> : <Check size={15} color="#fff" />}
+                        <Text style={[typography.labelMd, { color: '#fff' }]}>Segui</Text>
+                      </Pressable>
+                      <Pressable onPress={() => handlePartial(idx, meal.name || `Refeição ${idx + 1}`)} disabled={busy} style={{ paddingVertical: space.sm + 1, paddingHorizontal: space.md, borderRadius: radius.lg, backgroundColor: t.surfaceSecondary }}>
+                        <Text style={[typography.labelMd, { color: t.textSecondary }]}>Parcial</Text>
+                      </Pressable>
+                    </View>
+                  ) : null)}
                 </Card>
               </Animated.View>
               )

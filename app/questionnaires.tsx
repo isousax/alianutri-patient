@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { View, Text, ScrollView, Pressable, ActivityIndicator, TextInput, Alert, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, Pressable, ActivityIndicator, TextInput, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ClipboardList, ChevronRight, CheckCircle2, Clock, Send, Circle, CheckCircle } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
+import { toast } from '../src/stores/toast'
 import { useQuestionnaires, useQuestionnaireDetail, useAnswerQuestionnaire } from '../src/hooks/usePortal'
 import type { PortalQuestionnaire, PortalQuestionItem } from '../src/types/portal'
 import { ScreenHeader, Card, EmptyState, LoadingScreen, SectionLabel, SkeletonList } from '../src/components/ui'
@@ -126,18 +127,17 @@ function AnswerForm({ questionnaire, onBack }: { questionnaire: PortalQuestionna
   async function handleSubmit() {
     if (requiredCount > 0 && answeredRequired < requiredCount) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {})
-      Alert.alert('Campos obrigatórios', `Responda todas as ${requiredCount} perguntas obrigatórias antes de enviar.`)
+      toast.error(`Responda as ${requiredCount} perguntas obrigatórias antes de enviar.`)
       return
     }
     try {
       await mutateAsync({ qId: questionnaire.id, responses })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
-      Alert.alert('Sucesso', 'Questionário respondido com sucesso!', [
-        { text: 'OK', onPress: onBack },
-      ])
+      toast.success('Questionário enviado!')
+      onBack()
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {})
-      Alert.alert('Erro', 'Não foi possível enviar as respostas.')
+      toast.error('Não foi possível enviar as respostas.')
     }
   }
 
@@ -284,8 +284,8 @@ function AnswerForm({ questionnaire, onBack }: { questionnaire: PortalQuestionna
                         })}
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2 }}>
-                        <Text style={[typography.caption, { color: t.textMuted, fontSize: 9 }]}>Muito ruim</Text>
-                        <Text style={[typography.caption, { color: t.textMuted, fontSize: 9 }]}>Excelente</Text>
+                        <Text style={[typography.caption, { color: t.textMuted, fontSize: 11 }]}>Muito ruim</Text>
+                        <Text style={[typography.caption, { color: t.textMuted, fontSize: 11 }]}>Excelente</Text>
                       </View>
                     </View>
                   )}

@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Alert, Linking, ScrollView, Switch } from 'react-native'
+import { View, Text, Pressable, Linking, ScrollView, Switch } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   LogOut, Bell, Shield, ChevronRight,
@@ -14,6 +14,7 @@ import { ScreenHeader, Card, SectionLabel, Divider } from '../src/components/ui'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 import { REMINDERS } from '../src/lib/localNotifications'
 import { useRemindersStore } from '../src/stores/reminders'
+import { confirm } from '../src/stores/confirm'
 
 export default function SettingsScreen() {
   const t = useThemeColors()
@@ -24,17 +25,17 @@ export default function SettingsScreen() {
   const toggleReminder = useRemindersStore((s) => s.toggle)
 
   function handleLogout() {
-    Alert.alert('Sair', 'Tem certeza que deseja sair?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Sair',
-        style: 'destructive',
-        onPress: () => {
-          logout()
-          router.replace('/login')
-        },
+    confirm({
+      title: 'Sair',
+      message: 'Tem certeza que deseja sair?',
+      cancelLabel: 'Cancelar',
+      confirmLabel: 'Sair',
+      destructive: true,
+      onConfirm: () => {
+        logout()
+        router.replace('/login')
       },
-    ])
+    })
   }
 
   function handleThemeSelect(id: AppTheme['id']) {

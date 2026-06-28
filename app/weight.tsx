@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import {
-  View, Text, ScrollView, Pressable, Alert, TextInput, Dimensions, KeyboardAvoidingView, Platform,
+  View, Text, ScrollView, Pressable, TextInput, Dimensions, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
@@ -11,6 +11,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
+import { toast } from '../src/stores/toast'
 import { useLogWeight, useWeightHistory } from '../src/hooks/usePortal'
 import type { WeightLogEntry } from '../src/types/portal'
 import { ScreenHeader, Card, SectionLabel } from '../src/components/ui'
@@ -30,16 +31,16 @@ export default function WeightScreen() {
     if (!canWrite) return
     const kg = parseFloat(value.replace(',', '.'))
     if (isNaN(kg) || kg < 20 || kg > 400) {
-      Alert.alert('Peso inválido', 'Informe um valor entre 20 e 400 kg.')
+      toast.error('Informe um peso entre 20 e 400 kg.')
       return
     }
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       await logWeight({ date: todayStr(), weight_kg: kg })
       setValue('')
-      Alert.alert('Peso registrado!', `${kg.toFixed(1).replace('.', ',')} kg salvo com sucesso.`)
+      toast.success(`${kg.toFixed(1).replace('.', ',')} kg registrado!`)
     } catch {
-      Alert.alert('Erro', 'Não foi possível salvar.')
+      toast.error('Não foi possível salvar.')
     }
   }, [value, logWeight, canWrite])
 

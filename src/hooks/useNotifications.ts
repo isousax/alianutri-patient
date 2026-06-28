@@ -84,7 +84,9 @@ export function useNotifications() {
     let sub: { remove: () => void } | undefined
     const openFromData = (data: unknown) => {
       const postId = (data as { postId?: unknown } | null)?.postId
-      if (typeof postId === 'string') router.push(`/post/${postId}` as never)
+      if (typeof postId === 'string') { router.push(`/post/${postId}` as never); return }
+      const screen = (data as { screen?: unknown } | null)?.screen
+      if (screen === 'diary') router.push('/diary')
     }
     ;(async () => {
       const Notifications = await import('expo-notifications')

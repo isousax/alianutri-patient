@@ -1,43 +1,34 @@
 import { useMemo } from 'react'
 import { useWeather } from './useWeather'
-import { usePortalProfile } from './usePortal'
-import { calculateHydrationGoal, type HydrationResult } from '../lib/hydration'
+import { weatherBonusMl, hydrationMessage } from '../lib/hydration'
+
+export type WaterGoalSource = 'nutri' | 'baseline' | 'default'
 
 /**
- * Single source of truth for the resolved water goal.
+ * Meta de água exibida. A FONTE ÚNICA é o servidor (`goal_ml` + `goal_source`):
+ *  - 'nutri'    → meta prescrita pelo nutricionista
+ *  - 'baseline' → calculada pelo peso no backend (peso × 35)
+ *  - 'default'  → 2000ml (sem peso nem meta do nutri)
  *
- * Priority:
- *  1. Nutritionist-defined goal (apiGoal ≠ 2000)
- *  2. Smart goal (weight × climate) when personalized
- *  3. API default (2000ml fallback)
- *
- * Both the home screen and the water screen consume this hook
- * so the displayed goal is always consistent.
+ * O clima é um ajuste EFÊMERO do dia ("+X ml hoje"), apenas sugerido — NÃO entra
+ * na meta oficial. Assim Home, tela de Água e a análise do nutri batem entre si.
  */
-export function useSmartWaterGoal(apiGoalMl: number) {
+export function useSmartWaterGoal(apiGoalMl: number, goalSource?: WaterGoalSource) {
   const { data: weather } = useWeather()
-  const { data: profile } = usePortalProfile()
 
-  const hydration: HydrationResult = useMemo(() => calculateHydrationGoal(
-    {
-      weight_kg: profile?.weight_kg,
-      height_cm: profile?.height_cm,
-      birth_date: profile?.birth_date,
-      gender: profile?.gender,
-    },
-    weather ?? null,
-  ), [profile?.weight_kg, profile?.height_cm, profile?.birth_date, profile?.gender, weather])
+  // Compat: respostas em cache antigas (sem goal_source) caem na heurística do 2000.
+  const nutriSetCustomGoal = goalSource ? goalSource === 'nutri' : apiGoalMl !== 2000
+  const isPersonalized = goalSource === 'baseline'
 
-  const nutriSetCustomGoal = apiGoalMl !== 2000
-
-  const goal = nutriSetCustomGoal
-    ? apiGoalMl
-    : (hydration.isPersonalized ? hydration.goal_ml : apiGoalMl)
+  const bonusMl = useMemo(() => weatherBonusMl(weather ?? null), [weather])
+  const message = useMemo(() => hydrationMessage(weather ?? null), [weather])
 
   return {
-    goal,
-    hydration,
+    goal: apiGoalMl,
     weather: weather ?? null,
     nutriSetCustomGoal,
+    isPersonalized,
+    weatherBonusMl: bonusMl,
+    message,
   }
 }

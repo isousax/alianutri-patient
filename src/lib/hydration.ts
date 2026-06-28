@@ -27,6 +27,22 @@ function ageFromBirthDate(birth: string): number {
   return age
 }
 
+/**
+ * Ajuste climático EFÊMERO do dia ("+X ml hoje") — quanto beber a mais por causa
+ * de calor/ar seco. NÃO entra na meta oficial (que vem do servidor); é só uma
+ * sugestão do dia. Espelha a régua de clima de `calculateHydrationGoal`.
+ */
+export function weatherBonusMl(weather: WeatherData | null): number {
+  if (!weather) return 0
+  let bonus = 0
+  const temp = weather.apparentTemperature ?? weather.temperature
+  if (temp >= 33) bonus += 600
+  else if (temp >= 28) bonus += 400
+  else if (temp >= 23) bonus += 200
+  if (weather.humidity < 30) bonus += weather.humidity < 20 ? 300 : 200
+  return bonus
+}
+
 // ── Calculator ──
 
 /**
@@ -93,7 +109,7 @@ export function calculateHydrationGoal(
   goal = Math.round(goal / 50) * 50 // round to nearest 50ml
 
   // ── Contextual message ──
-  const message = buildMessage(weather)
+  const message = hydrationMessage(weather)
 
   const isPersonalized = factors.length > 0
   return { goal_ml: goal, message, factors, isPersonalized }
@@ -101,7 +117,7 @@ export function calculateHydrationGoal(
 
 // ── Message builder ──
 
-function buildMessage(weather: WeatherData | null): string {
+export function hydrationMessage(weather: WeatherData | null): string {
   if (!weather) return 'Mantenha-se hidratado ao longo do dia!'
 
   const t = weather.apparentTemperature ?? weather.temperature

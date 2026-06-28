@@ -4,7 +4,7 @@ import type { PortalGoal } from '../types/portal'
 // dias registrados, metas, check-ins de hábito). Sem motor de pontos persistido:
 // tudo é função pura e determinística sobre os dados já carregados.
 
-export type BadgeIconKey = 'flame' | 'award' | 'star' | 'target' | 'trophy' | 'utensils' | 'sparkles'
+export type BadgeIconKey = 'flame' | 'award' | 'star' | 'target' | 'trophy' | 'utensils' | 'sparkles' | 'droplet'
 
 export interface Badge {
   id: string
@@ -25,8 +25,22 @@ export interface GamificationState {
 }
 
 // Curva de níveis — XP acumulado para alcançar cada nível (1..8).
-// Iniciante · Comprometido · Dedicado · Focado · Disciplinado · Transformador · Inspiração · Lenda
 const LEVEL_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2500, 4000]
+
+// Título humano de cada nível (1..8), na ordem da curva acima.
+export const LEVEL_TITLES = [
+  'Iniciante', 'Comprometido', 'Dedicado', 'Focado',
+  'Disciplinado', 'Transformador', 'Inspiração', 'Lenda',
+]
+
+/** Título do nível (clampado em 1..8). */
+export function levelTitle(level: number): string {
+  const i = Math.min(Math.max(level, 1), LEVEL_TITLES.length) - 1
+  return LEVEL_TITLES[i]
+}
+
+/** Nível máximo da curva (barra de XP cheia, sem "próximo nível"). */
+export const MAX_LEVEL = LEVEL_THRESHOLDS.length
 
 function levelFromXp(xp: number): { level: number; xpInLevel: number; xpPerLevel: number } {
   let level = 1
@@ -94,4 +108,43 @@ export function computeGamification(params: {
     badges,
     unlockedCount: badges.filter((x) => x.unlocked).length,
   }
+}
+
+export interface WeeklyChallenge {
+  id: string
+  label: string
+  hint: string
+  icon: BadgeIconKey
+  current: number
+  target: number
+  done: boolean
+}
+
+const STREAK_TARGETS = [7, 14, 30, 60, 90]
+
+/** Próximo marco de streak ainda não alcançado (ou o máximo da escada). */
+export function nextStreakMilestone(streak: number): number {
+  return STREAK_TARGETS.find((m) => m > streak) ?? STREAK_TARGETS[STREAK_TARGETS.length - 1]
+}
+
+/**
+ * Desafios da semana — DERIVADOS client-side dos sinais que o paciente já gera.
+ * Sem motor de desafios no back; é uma leitura motivacional do progresso semanal.
+ */
+export function computeWeeklyChallenges(params: {
+  loggedDaysThisWeek: number
+  waterDaysThisWeek: number
+  postsThisWeek: number
+  streak: number
+}): WeeklyChallenge[] {
+  const { loggedDaysThisWeek, waterDaysThisWeek, postsThisWeek, streak } = params
+  const mk = (id: string, label: string, hint: string, icon: BadgeIconKey, current: number, target: number): WeeklyChallenge => ({
+    id, label, hint, icon, current: Math.max(0, Math.min(current, target)), target, done: current >= target,
+  })
+  return [
+    mk('log5', 'Diário em dia', 'Registre em 5 dias nesta semana', 'utensils', loggedDaysThisWeek, 5),
+    mk('water7', 'Hidratação diária', 'Beba água em 7 dias', 'droplet', waterDaysThisWeek, 7),
+    mk('streak', 'Mantenha a sequência', `Chegue a ${nextStreakMilestone(streak)} dias seguidos`, 'flame', streak, nextStreakMilestone(streak)),
+    mk('share3', 'Compartilhe momentos', 'Poste 3 vezes no diário', 'star', postsThisWeek, 3),
+  ]
 }

@@ -6,7 +6,6 @@ import {
   Pressable,
   RefreshControl,
   Dimensions,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +16,7 @@ import {
   ClipboardList,
   Target,
   ChevronRight,
+  ChevronUp,
   MapPin,
   Video,
   Flame,
@@ -24,23 +24,21 @@ import {
   TrendingDown,
   TrendingUp,
   Sparkles,
-  MessageCircle,
   Utensils,
   Sun,
   Moon,
   CloudSun,
   BarChart3,
-  Heart,
-  Scale,
   Camera,
   CalendarPlus,
-  LayoutGrid,
   Trophy,
   Award,
   Star,
   Lock,
   Pill,
   FileText,
+  MoreHorizontal,
+  X,
 } from "lucide-react-native";
 import Svg, {
   Rect as SvgRect,
@@ -53,8 +51,6 @@ import Svg, {
 import Animated, {
   FadeIn,
   FadeInDown,
-  FadeInUp,
-  ZoomIn,
   SlideInDown,
   useSharedValue,
   useAnimatedStyle,
@@ -75,6 +71,7 @@ import {
   useEvolution,
   useWaterIntake,
   useWeeklyAdherence,
+  useDiaryStreak,
 } from "../../src/hooks/usePortal";
 import { useLevelUp } from "../../src/hooks/useLevelUp";
 import { useAchievementUnlock } from "../../src/hooks/useAchievementUnlock";
@@ -87,6 +84,7 @@ import type {
 } from "../../src/types/portal";
 import { computeGamification, type BadgeIconKey } from "../../src/lib/gamification";
 import { getTipOfTheDay } from "../../src/data/dailyTips";
+import { useDailyTipStore } from "../../src/stores/dailyTip";
 import { useSmartWaterGoal } from "../../src/hooks/useSmartWaterGoal";
 import * as Haptics from "expo-haptics";
 import {
@@ -97,7 +95,9 @@ import {
   AuroraBackground,
 } from "../../src/components/ui";
 import { HomeHeader } from "../../src/components/home/HomeHeader";
-import { DailyRingsRow } from "../../src/components/home/DailyRingsRow";
+import { AnelDoDia } from "../../src/components/home/AnelDoDia";
+import { ProximoPasso } from "../../src/components/home/ProximoPasso";
+import { RefeicoesDeHoje } from "../../src/components/home/RefeicoesDeHoje";
 import { MiniPostCard } from "../../src/components/home/MiniPostCard";
 import { GoalsPreview } from "../../src/components/home/GoalsPreview";
 import { LevelUpCelebration, CelebrationModal } from "../../src/components/home/LevelUpCelebration";
@@ -127,6 +127,14 @@ export default function HomeScreen() {
   const [, tick] = useReducer((x: number) => x + 1, 0);
   const today = useMemo(todayStr, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Dica do dia: auto-aparece 1x/dia (até ser dispensada); a lâmpada no header
+  // reabre sob demanda. Sem FAB, sem rodapé.
+  const tipDismissedDate = useDailyTipStore((s) => s.dismissedDate);
+  const tipHydrated = useDailyTipStore((s) => s.hydrated);
+  const dismissTip = useDailyTipStore((s) => s.dismiss);
+  const [tipManual, setTipManual] = useState(false);
+  const tipVisible = tipManual || (tipHydrated && tipDismissedDate !== today);
+
   const { data: diaryToday } = useDiaryToday(today);
   const { data: chartsToday } = useChartsSummary(1);
   const aiCalories = Math.round((chartsToday?.nutrition ?? []).reduce((s, d) => s + (d.calories || 0), 0));
@@ -138,6 +146,7 @@ export default function HomeScreen() {
     waterData?.goal_ml ?? 2000,
   );
   const { data: adherenceData } = useWeeklyAdherence();
+  const { data: streakData } = useDiaryStreak();
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -169,8 +178,8 @@ export default function HomeScreen() {
     () =>
       data
         ? computeGamification({
-            streak: data.diary_streak ?? 0,
-            loggedDays: data.logged_dates?.length ?? 0,
+            streak: streakData?.streak ?? 0,
+            loggedDays: streakData?.logged_dates?.length ?? 0,
             goals: goals ?? [],
             mealPhotoCount: chartsToday?.counts?.meal_photos,
             exercisePostCount: chartsToday?.counts?.exercise_posts,
@@ -178,7 +187,7 @@ export default function HomeScreen() {
             nutriCommentCount: chartsToday?.counts?.nutri_comments,
           })
         : null,
-    [data, goals, chartsToday],
+    [data, goals, chartsToday, streakData],
   );
   const { celebrateLevel, dismiss: dismissLevelUp } = useLevelUp(gam?.level ?? null);
   const { newBadge, dismiss: dismissBadge } = useAchievementUnlock(gam?.badges ?? []);
@@ -207,7 +216,7 @@ export default function HomeScreen() {
 
   // ── Derived data ──
   const displayName = data.patient.name?.split(" ")[0] || "Paciente";
-  const streak = data.diary_streak ?? 0;
+  const streak = streakData?.streak ?? 0;
   const meals = diaryToday?.meals ?? [];
   const loggedCount = meals.filter((m: DiaryTimelineMeal) => m.entry !== null).length;
   const totalMeals = meals.length;
@@ -251,70 +260,45 @@ export default function HomeScreen() {
           weather={weather ?? null}
           streak={streak}
           chatUnread={chatUnread}
+          photoUrl={data.patient.photo_url}
+          onTipPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setTipManual(true);
+          }}
         />
 
-        {/* ═══════ PENDING QUESTIONNAIRES (urgent) ═══════ */}
-        {pendingQ > 0 && (
-          <Animated.View
-            entering={FadeInDown.duration(350).delay(80)}
-            style={{
-              paddingHorizontal: SCREEN_PADDING,
-              marginBottom: space.lg,
+        {/* ═══════ DICA DO DIA — discreta, 1x/dia, reabre pela lâmpada ═══════ */}
+        {tipVisible && (
+          <DailyTipCard
+            onDismiss={() => {
+              dismissTip(today);
+              setTipManual(false);
             }}
-          >
-            <Pressable onPress={() => router.push("/questionnaires")}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  padding: space.lg,
-                  borderRadius: radius.xl,
-                  backgroundColor: t.accentLight,
-                }}
-              >
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: radius.md,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: t.accent + "20",
-                    marginRight: space.md,
-                  }}
-                >
-                  <ClipboardList size={18} color={t.accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.labelMd, { color: t.text }]}>
-                    {pendingQ} questionário{pendingQ > 1 ? "s" : ""} pendente
-                    {pendingQ > 1 ? "s" : ""}
-                  </Text>
-                  <Text
-                    style={[
-                      typography.caption,
-                      { color: t.textMuted, marginTop: 2 },
-                    ]}
-                  >
-                    Toque para responder
-                  </Text>
-                </View>
-                <ChevronRight size={16} color={t.accent} />
-              </View>
-            </Pressable>
-          </Animated.View>
+          />
         )}
 
-        {/* ═══════ DAILY FOCUS — Twin progress rings ═══════ */}
-        <DailyRingsRow
-          diaryPct={diaryPct}
+        {/* ═══════ PRÓXIMO PASSO — ação única mais relevante ═══════ */}
+        <ProximoPasso
+          meals={meals}
+          waterTotalMl={waterTotal}
+          waterGoalMl={waterGoal}
+          pendingQuestionnaires={pendingQ}
+        />
+
+        {/* ═══════ ANEL DO DIA — foco diário (refeições · calorias · água) ═══════ */}
+        <AnelDoDia
           loggedCount={loggedCount}
           totalMeals={totalMeals}
-          waterPct={waterPct}
+          diaryPct={diaryPct}
           waterTotal={waterTotal}
           waterGoal={waterGoal}
+          waterPct={waterPct}
           aiCalories={aiCalories}
+          targetKcal={data.active_meal_plan?.target_kcal ?? null}
         />
+
+        {/* ═══════ REFEIÇÕES DE HOJE — checklist do plano ═══════ */}
+        <RefeicoesDeHoje meals={meals} />
 
         {/* ═══════ QUICK ACTIONS — 4-column icon grid + folder ═══════ */}
         <QuickActionsGrid canWrite={canWrite} />
@@ -324,7 +308,7 @@ export default function HomeScreen() {
           <Animated.View entering={FadeInDown.duration(350).delay(160)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: space.sm }}>
               <Text style={[typography.headingSm, { color: t.text }]}>Seu Diário</Text>
-              <Pressable onPress={() => router.push("/feed" as never)} accessibilityRole="button" accessibilityLabel="Ver diário completo" hitSlop={8}>
+              <Pressable onPress={() => router.push("/(tabs)/diary")} accessibilityRole="button" accessibilityLabel="Ver diário completo" hitSlop={8}>
                 <Text style={[typography.labelSm, { color: t.primary }]}>Ver tudo</Text>
               </Pressable>
             </View>
@@ -361,19 +345,6 @@ export default function HomeScreen() {
           <WeeklyAdherenceChart days={adherenceData?.days ?? []} />
         )}
 
-        {/* ═══════ DAILY TIP ═══════ */}
-        <DailyTipCard />
-
-        {/* ═══════ EMPTY STATE ═══════ */}
-        {!hasAnyContent && !apt && (
-          <EmptyState
-            icon={<Sparkles size={28} color={t.primary} />}
-            title="Bem-vindo ao AliaNutri!"
-            description={
-              "Seus dados aparecerão aqui conforme\nseu nutricionista atualizar seu plano."
-            }
-          />
-        )}
       </ScrollView>
 
       {celebrateLevel != null ? (
@@ -405,23 +376,30 @@ const GRID_GAP = space.md;
 const GRID_ITEM_W =
   (SCREEN_W - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
 
+// 5 slots numa única linha: 4 ações principais + "Mais".
+const QUICK_COLS = 5;
+const QUICK_ITEM_W =
+  (SCREEN_W - SCREEN_PADDING * 2 - GRID_GAP * (QUICK_COLS - 1)) / QUICK_COLS;
+
 function QuickAction({
   icon,
   label,
   bg,
   onPress,
+  width = GRID_ITEM_W,
 }: {
   icon: React.ReactNode;
   label: string;
   bg: string;
   onPress: () => void;
+  width?: number;
 }) {
   const t = useThemeColors();
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        width: GRID_ITEM_W,
+        width,
         alignItems: "center",
         paddingVertical: space.md,
         marginBottom: space.xs,
@@ -457,250 +435,141 @@ function QuickAction({
   );
 }
 
-// ── Quick Actions Grid with iOS Folder ──
-
-const MAX_VISIBLE = 5;
-const FOLDER_SPRING = { damping: 16, stiffness: 200, mass: 0.8 };
+// ── Quick Actions Grid (4 ações + "Mais" inline) ──
 
 type ActionDef = {
   icon: React.ReactNode;
   label: string;
   bg: string;
   route: string;
-  folderIcon?: React.ReactNode;
 };
 
 function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
   const t = useThemeColors();
-  const [folderOpen, setFolderOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
-  const allActions: ActionDef[] = useMemo(() => {
-    const actions: ActionDef[] = [
-      { icon: <Scale size={18} color={t.accent} />, label: "Peso", bg: t.accentLight, route: "/weight", folderIcon: <Scale size={10} color={t.accent} /> },
-      { icon: <Target size={18} color={t.success} />, label: "Metas", bg: t.successLight, route: "/goals", folderIcon: <Target size={10} color={t.success} /> },
-      { icon: <Heart size={18} color={t.error} />, label: "Bem-estar", bg: t.errorLight, route: "/wellness", folderIcon: <Heart size={10} color={t.error} /> },
-      { icon: <MessageCircle size={18} color={t.info} />, label: "Chat", bg: t.infoLight, route: "/chat", folderIcon: <MessageCircle size={10} color={t.info} /> },
-    ];
+  // 4 ações principais (sempre visíveis). Removidos da grade: Chat (vive no
+  // hub Nutri), Peso e Como me sinto (migraram para o "+"), Diário (já é tab).
+  const mainActions: ActionDef[] = useMemo(
+    () => [
+      { icon: <Camera size={18} color={t.primary} />, label: "Registrar progresso", bg: t.primaryLight, route: "/progress-photos" },
+      { icon: <BarChart3 size={18} color={t.success} />, label: "Evolução", bg: t.successLight, route: "/evolution" },
+      { icon: <Target size={18} color={t.accent} />, label: "Metas", bg: t.accentLight, route: "/goals" },
+      { icon: <ClipboardList size={18} color={t.info} />, label: "Questionários", bg: t.infoLight, route: "/questionnaires" },
+    ],
+    [t],
+  );
+
+  const moreActions: ActionDef[] = useMemo(() => {
+    const actions: ActionDef[] = [];
     if (canWrite) {
-      actions.push({ icon: <CalendarPlus size={18} color={t.primary} />, label: "Agendar", bg: t.primaryLight, route: "/booking", folderIcon: <CalendarPlus size={10} color={t.primary} /> });
+      actions.push({ icon: <CalendarPlus size={18} color={t.primary} />, label: "Agendar", bg: t.primaryLight, route: "/booking" });
     }
     actions.push(
-      { icon: <LayoutGrid size={18} color={t.accent} />, label: "Feed", bg: t.accentLight, route: "/feed", folderIcon: <LayoutGrid size={10} color={t.accent} /> },
-      { icon: <BarChart3 size={18} color={t.success} />, label: "Evolução", bg: t.successLight, route: "/evolution", folderIcon: <BarChart3 size={10} color={t.success} /> },
-      { icon: <Camera size={18} color={t.primary} />, label: "Fotos", bg: t.primaryLight, route: "/progress-photos", folderIcon: <Camera size={10} color={t.primary} /> },
-      { icon: <ClipboardList size={18} color={t.accent} />, label: "Quest.", bg: t.accentLight, route: "/questionnaires", folderIcon: <ClipboardList size={10} color={t.accent} /> },
-      { icon: <FileText size={18} color={t.info} />, label: "Documentos", bg: t.infoLight, route: "/documents", folderIcon: <FileText size={10} color={t.info} /> },
-      { icon: <FileText size={18} color={t.warning} />, label: "Orientações", bg: t.warningLight, route: "/guidelines", folderIcon: <FileText size={10} color={t.warning} /> },
+      { icon: <FileText size={18} color={t.info} />, label: "Documentos", bg: t.infoLight, route: "/documents" },
+      { icon: <FileText size={18} color={t.warning} />, label: "Orientações", bg: t.warningLight, route: "/guidelines" },
     );
     return actions;
   }, [canWrite, t]);
 
-  const visible = allActions.slice(0, MAX_VISIBLE);
-  const overflow = allActions.slice(MAX_VISIBLE);
-  const hasOverflow = overflow.length > 0;
+  const go = (route: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    router.push(route as never);
+  };
+
+  const toggleMore = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setExpanded((v) => !v);
+  };
 
   return (
     <Animated.View
       entering={FadeInDown.duration(350).delay(160)}
       style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.xl }}
     >
-      <View
-        style={{
-          flexDirection: "row",
-          flexWrap: "wrap",
-          columnGap: GRID_GAP,
-          rowGap: 0,
-        }}
-      >
-        {visible.map((a) => (
+      <View style={{ flexDirection: "row", columnGap: GRID_GAP }}>
+        {mainActions.map((a) => (
           <QuickAction
             key={a.route}
             icon={a.icon}
             label={a.label}
             bg={a.bg}
-            onPress={() => router.push(a.route as never)}
+            width={QUICK_ITEM_W}
+            onPress={() => go(a.route)}
           />
         ))}
 
-        {/* ── Folder button with mini-icon grid ── */}
-        {hasOverflow && (
-          <Pressable
-            onPress={() => setFolderOpen(true)}
-            style={({ pressed }) => ({
-              width: GRID_ITEM_W,
+        {/* Slot "Mais" — expande DENTRO do card (sem overlay) */}
+        <Pressable
+          onPress={toggleMore}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          accessibilityLabel={expanded ? "Mostrar menos ações" : "Mostrar mais ações"}
+          style={({ pressed }) => ({
+            width: QUICK_ITEM_W,
+            alignItems: "center",
+            paddingVertical: space.md,
+            marginBottom: space.xs,
+            borderRadius: radius.lg,
+            opacity: pressed ? 0.75 : 1,
+            transform: [{ scale: pressed ? 0.93 : 1 }],
+          })}
+        >
+          <View
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 15,
+              backgroundColor: t.surfaceSecondary,
               alignItems: "center",
-              paddingVertical: space.md,
-              marginBottom: space.xs,
-              borderRadius: radius.lg,
-              opacity: pressed ? 0.75 : 1,
-              transform: [{ scale: pressed ? 0.92 : 1 }],
-            })}
+              justifyContent: "center",
+            }}
           >
-            <View
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: 15,
-                backgroundColor: t.surfaceSecondary,
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "row",
-                flexWrap: "wrap",
-                padding: 6,
-                gap: 2,
-              }}
+            {expanded ? (
+              <ChevronUp size={20} color={t.textSecondary} />
+            ) : (
+              <MoreHorizontal size={20} color={t.textSecondary} />
+            )}
+          </View>
+          <View style={{ height: 30, justifyContent: "center", marginTop: space.xs + 2 }}>
+            <Text
+              style={[
+                typography.captionBold,
+                { color: t.textSecondary, textAlign: "center", fontSize: 10.5, lineHeight: 13 },
+              ]}
+              numberOfLines={1}
             >
-              {overflow.slice(0, 4).map((a, i) => (
-                <View
-                  key={i}
-                  style={{
-                    width: 15,
-                    height: 15,
-                    borderRadius: 5,
-                    backgroundColor: a.bg,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {a.folderIcon}
-                </View>
-              ))}
-            </View>
-            <View style={{ height: 30, justifyContent: "center", marginTop: space.xs + 2 }}>
-              <Text
-                style={[
-                  typography.captionBold,
-                  { color: t.textMuted, textAlign: "center", fontSize: 10.5, lineHeight: 13 },
-                ]}
-                numberOfLines={2}
-              >
-                Mais
-              </Text>
-            </View>
-          </Pressable>
-        )}
+              {expanded ? "Menos" : "Mais"}
+            </Text>
+          </View>
+        </Pressable>
       </View>
 
-      {/* ── Folder overlay — Apple-style ── */}
-      <Modal
-        visible={folderOpen}
-        transparent
-        statusBarTranslucent
-        animationType="none"
-        onRequestClose={() => setFolderOpen(false)}
-      >
-        <View style={{ flex: 1 }}>
-          {/* Backdrop */}
-          <Animated.View
-            entering={FadeIn.duration(250)}
-            style={{
-              position: "absolute",
-              top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: "rgba(0,0,0,0.5)",
-            }}
-          />
-          <Pressable
-            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-            onPress={() => setFolderOpen(false)}
-          >
-            {/* Card */}
-            <Animated.View
-              entering={ZoomIn.springify()
-                .damping(FOLDER_SPRING.damping)
-                .stiffness(FOLDER_SPRING.stiffness)
-                .mass(FOLDER_SPRING.mass)}
-            >
-              <Pressable
-                onPress={(e) => e.stopPropagation()}
-                style={{
-                  backgroundColor: t.surface,
-                  borderRadius: 24,
-                  paddingTop: space.xl,
-                  paddingBottom: space.xl + 4,
-                  paddingHorizontal: space.lg,
-                  width: SCREEN_W * 0.72,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 12 },
-                  shadowOpacity: 0.18,
-                  shadowRadius: 32,
-                  elevation: 24,
-                }}
-              >
-                {/* Accent line */}
-                <View style={{ alignItems: "center", marginBottom: space.xl }}>
-                  <View
-                    style={{
-                      width: 40,
-                      height: 3.5,
-                      borderRadius: 2,
-                      backgroundColor: t.primary,
-                      opacity: 0.25,
-                    }}
-                  />
-                </View>
+      {/* Expansão inline — ações secundárias no mesmo bloco */}
+      {expanded && (
+        <Animated.View
+          entering={FadeInDown.duration(220)}
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            columnGap: GRID_GAP,
+            rowGap: space.xs,
+            marginTop: space.sm,
+          }}
+        >
+          {moreActions.map((a) => (
+            <QuickAction
+              key={a.route}
+              icon={a.icon}
+              label={a.label}
+              bg={a.bg}
+              width={QUICK_ITEM_W}
+              onPress={() => go(a.route)}
+            />
+          ))}
+        </Animated.View>
+      )}
 
-                {/* Items */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "center",
-                    gap: space.xl,
-                  }}
-                >
-                  {overflow.map((a, i) => (
-                    <Animated.View
-                      key={a.route}
-                      entering={FadeInUp.springify()
-                        .damping(12)
-                        .stiffness(150)
-                        .mass(0.5)
-                        .delay(100 + i * 80)}
-                    >
-                      <Pressable
-                        onPress={() => {
-                          setFolderOpen(false);
-                          setTimeout(() => router.push(a.route as never), 180);
-                        }}
-                        style={({ pressed }) => ({
-                          alignItems: "center",
-                          paddingVertical: space.sm,
-                          paddingHorizontal: space.sm,
-                          borderRadius: radius.xl,
-                          backgroundColor: pressed ? t.borderLight : "transparent",
-                          transform: [{ scale: pressed ? 0.88 : 1 }],
-                        })}
-                      >
-                        <View
-                          style={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 18,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            backgroundColor: a.bg,
-                            marginBottom: space.sm,
-                          }}
-                        >
-                          {a.icon}
-                        </View>
-                        <Text
-                          style={[
-                            typography.captionBold,
-                            { color: t.text, textAlign: "center", fontSize: 11, lineHeight: 14 },
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {a.label}
-                        </Text>
-                      </Pressable>
-                    </Animated.View>
-                  ))}
-                </View>
-              </Pressable>
-            </Animated.View>
-          </Pressable>
-        </View>
-      </Modal>
     </Animated.View>
   );
 }
@@ -799,13 +668,18 @@ function AppointmentCard({
 
 // ── Daily tip card (static, no carousel — stability > novelty) ──
 
-function DailyTipCard() {
+function DailyTipCard({ onDismiss }: { onDismiss: () => void }) {
   const t = useThemeColors();
   const tip = useMemo(() => getTipOfTheDay(), []);
 
+  const dismiss = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onDismiss();
+  };
+
   return (
     <Animated.View
-      entering={FadeInDown.duration(350).delay(300)}
+      entering={FadeInDown.duration(300).delay(90)}
       style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}
     >
       <Card style={{ backgroundColor: t.primaryLight }}>
@@ -838,6 +712,15 @@ function DailyTipCard() {
               {tip.text}
             </Text>
           </View>
+          <Pressable
+            onPress={dismiss}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Dispensar dica do dia"
+            style={({ pressed }) => ({ marginLeft: space.sm, marginTop: -2, opacity: pressed ? 0.6 : 1 })}
+          >
+            <X size={18} color={t.textMuted} />
+          </Pressable>
         </View>
       </Card>
     </Animated.View>
@@ -866,7 +749,7 @@ function WeeklyAdherenceChart({ days }: { days: WeeklyAdherenceDay[] }) {
       entering={FadeInDown.duration(350).delay(260)}
       style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}
     >
-      <Card onPress={() => router.push("/(tabs)/diary")}>
+      <Card onPress={() => router.push("/food-diary" as never)}>
         <View
           style={{
             flexDirection: "row",
@@ -997,6 +880,7 @@ const BADGE_ICON: Record<BadgeIconKey, typeof Flame> = {
   trophy: Trophy,
   utensils: Utensils,
   sparkles: Sparkles,
+  droplet: Droplets,
 };
 
 function ProgressHubCard({ home }: { home: PortalHome }) {

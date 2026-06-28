@@ -53,7 +53,7 @@ export default function DeepLinkHandler() {
           photo_url: result.nutritionist?.photo_url || null,
         },
       )
-      router.replace('/(tabs)')
+      router.replace('/')
     }
 
     authenticate()

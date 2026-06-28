@@ -1,13 +1,17 @@
-import { useEffect } from 'react'
-import { Platform, StyleSheet, View, Pressable, Alert } from 'react-native'
-import { Tabs, router } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { Platform, StyleSheet, View, Pressable } from 'react-native'
+import { Tabs } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { Home, Utensils, FileText, BookOpen, User, Plus, type LucideIcon } from 'lucide-react-native'
+import { Home, Utensils, BookOpen, Plus, HeartHandshake, type LucideIcon } from 'lucide-react-native'
 import { useTheme, useThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
 import { radius, shadows, motion } from '../../src/theme/tokens'
+import { RegistroSheet } from '../../src/components/registro/RegistroSheet'
+import { useRecentPosts } from '../../src/hooks/usePortal'
+import { useDiarySeenStore } from '../../src/stores/diarySeen'
+import { hasUnseenNutriActivity } from '../../src/lib/diaryUnseen'
 
 const ICON_SIZE = 22
 const PILL_W = 56
@@ -16,7 +20,7 @@ const PILL_H = 34
 // Active indicator: gradient pill + colored glow halo, with the icon
 // cross-fading between the inactive tint and the on-primary color so it
 // never flashes (e.g. a white glyph on a white bar) mid-transition.
-function TabIcon({ Icon, focused }: { Icon: LucideIcon; focused: boolean }) {
+function TabIcon({ Icon, focused, badge }: { Icon: LucideIcon; focused: boolean; badge?: boolean }) {
   const t = useThemeColors()
   const p = useSharedValue(focused ? 1 : 0)
 
@@ -57,32 +61,38 @@ function TabIcon({ Icon, focused }: { Icon: LucideIcon; focused: boolean }) {
       <Animated.View style={[styles.iconWrap, activeStyle]}>
         <Icon size={ICON_SIZE} color={t.primaryFg} strokeWidth={2.4} />
       </Animated.View>
+      {badge ? (
+        <View
+          style={{
+            position: 'absolute',
+            top: 3,
+            right: 13,
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: t.error,
+            borderWidth: 2,
+            borderColor: t.tabBar,
+          }}
+        />
+      ) : null}
     </View>
   )
 }
 
 // Botão central "+" do tab bar — abre o menu de criação rápida (não navega).
-function CreateFab() {
+function CreateFab({ onPress }: { onPress: () => void }) {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const handlePress = () => {
-    if (!canWrite) {
-      Alert.alert('Somente leitura', 'Seu acesso está em modo leitura. Fale com seu nutricionista para ativar os registros.')
-      return
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
-    Alert.alert('Criar', undefined, [
-      { text: '📸 Postar no diário', onPress: () => router.push('/post-compose' as never) },
-      { text: '💧 Registrar água', onPress: () => router.push('/water' as never) },
-      { text: '⚖️ Registrar peso', onPress: () => router.push('/weight' as never) },
-      { text: 'Cancelar', style: 'cancel' },
-    ])
+    onPress()
   }
   return (
     <Pressable
       onPress={handlePress}
       accessibilityRole="button"
-      accessibilityLabel={canWrite ? 'Criar nova postagem ou registro' : 'Criação indisponível (somente leitura)'}
+      accessibilityLabel={canWrite ? 'Criar nova postagem ou registro' : 'Registro pausado — modo de acompanhamento'}
       style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
     >
       <View
@@ -107,8 +117,18 @@ function CreateFab() {
 export default function TabLayout() {
   const theme = useTheme()
   const t = theme.colors
+  const canWrite = useFeaturesStore((s) => s.canWrite)
+  const [registroOpen, setRegistroOpen] = useState(false)
+
+  // Badge "nova reação do nutri" no Diário (feed): comentarios do nutri ainda
+  // não vistos (reacoes nao tem timestamp na API, ver lib/diaryUnseen).
+  const { data: recent } = useRecentPosts(20)
+  const seenAt = useDiarySeenStore((s) => s.seenAt)
+  const seenHydrated = useDiarySeenStore((s) => s.hydrated)
+  const diaryBadge = seenHydrated && hasUnseenNutriActivity(recent?.posts ?? [], seenAt)
 
   return (
+    <>
     <Tabs
       screenListeners={{
         tabPress: () => { Haptics.selectionAsync().catch(() => {}) },
@@ -146,7 +166,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Início',
+          title: 'Hoje',
           tabBarIcon: ({ focused }) => <TabIcon Icon={Home} focused={focused} />,
         }}
       />
@@ -161,30 +181,26 @@ export default function TabLayout() {
         name="create"
         options={{
           title: '',
-          tabBarButton: () => <CreateFab />,
+          tabBarButton: () => <CreateFab onPress={() => setRegistroOpen(true)} />,
         }}
       />
       <Tabs.Screen
         name="diary"
         options={{
           title: 'Diário',
-          tabBarIcon: ({ focused }) => <TabIcon Icon={BookOpen} focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon Icon={BookOpen} focused={focused} badge={diaryBadge && !focused} />,
         }}
       />
       <Tabs.Screen
-        name="guidelines"
+        name="nutri"
         options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Perfil',
-          tabBarIcon: ({ focused }) => <TabIcon Icon={User} focused={focused} />,
+          title: 'Nutri',
+          tabBarIcon: ({ focused }) => <TabIcon Icon={HeartHandshake} focused={focused} />,
         }}
       />
     </Tabs>
+      <RegistroSheet visible={registroOpen} onClose={() => setRegistroOpen(false)} canWrite={canWrite} />
+    </>
   )
 }
 

@@ -65,9 +65,21 @@ export const REMINDERS: ReminderDef[] = [
     ],
   },
   {
-    id: 'weight',
-    label: 'Peso (21:00)',
+    id: 'streak',
+    label: 'Ofensiva (21:00)',
     hour: 21,
+    minute: 0,
+    title: 'Mantenha sua ofensiva 🔥',
+    pool: [
+      'Ainda dá tempo de registrar hoje e manter sua sequência!',
+      'Não perca seu streak — registre uma refeição 🔥',
+      'Falta pouco pro dia acabar: garante seu registro de hoje',
+    ],
+  },
+  {
+    id: 'weight',
+    label: 'Peso (22:00)',
+    hour: 22,
     minute: 0,
     title: 'Antes de dormir 🌟',
     pool: [

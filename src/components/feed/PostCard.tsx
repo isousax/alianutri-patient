@@ -1,9 +1,10 @@
-import { View, Text, ActivityIndicator, Pressable, Alert } from 'react-native'
+import { View, Text, ActivityIndicator, Pressable } from 'react-native'
 import { Image } from 'expo-image'
 import { Utensils, Dumbbell, Smile, Pencil, Sparkles, MessageCircle, CloudOff } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
 import { useUpdatePostType } from '../../hooks/usePortal'
+import { confirm } from '../../stores/confirm'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 import { Card, MacrosBar, AuroraBackground } from '../ui'
 import { diaryPhotoUrl } from '../../lib/diaryPhoto'
@@ -55,10 +56,13 @@ export function PostCard({ post }: { post: DiaryPost }) {
   const notFood = post.ai_status === 'not_food'
 
   const handleConvert = () => {
-    Alert.alert('Converter post', 'Transformar em post livre? A análise de macros será removida.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Converter', onPress: () => updateType.mutate({ postId: post.id, type: 'free' }) },
-    ])
+    confirm({
+      title: 'Converter post',
+      message: 'Transformar em post livre? A análise de macros será removida.',
+      cancelLabel: 'Cancelar',
+      confirmLabel: 'Converter',
+      onConfirm: () => updateType.mutate({ postId: post.id, type: 'free' }),
+    })
   }
 
   return (

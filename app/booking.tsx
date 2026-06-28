@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Calendar, Clock, MapPin, Video, ChevronLeft, ChevronRight, Check, Info, Wifi } from 'lucide-react-native'
@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
+import { toast } from '../src/stores/toast'
 import { useBookingConfig, useBookingSlots, useRequestBooking } from '../src/hooks/usePortal'
 import type { BookingSlot, BookingLocationItem } from '../src/types/portal'
 import { ScreenHeader, Card, EmptyState, LoadingScreen } from '../src/components/ui'
@@ -142,13 +143,12 @@ export default function BookingScreen() {
         location_id: activeLocationId ?? undefined,
       })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
-      Alert.alert('Sucesso', result.message, [
-        { text: 'OK', onPress: () => router.back() },
-      ])
+      toast.success(result.message)
+      router.back()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao solicitar agendamento.'
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {})
-      Alert.alert('Erro', msg)
+      toast.error(msg)
     }
   }, [selectedDate, selectedSlot, effectiveType, activeLocationId, requestBooking])
 

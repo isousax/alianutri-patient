@@ -8,11 +8,11 @@ import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from '
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
-import { usePortalProfile, useEvolution } from '../../src/hooks/usePortal'
-import type { PortalEvolution } from '../../src/types/portal'
-import { useThemeColors } from '../../src/stores/theme'
-import { Card, LoadingScreen } from '../../src/components/ui'
-import { shadows, radius, space, typography, SCREEN_PADDING, fmtDateLabel } from '../../src/theme/tokens'
+import { usePortalProfile, useEvolution } from '../src/hooks/usePortal'
+import type { PortalEvolution } from '../src/types/portal'
+import { useThemeColors } from '../src/stores/theme'
+import { Card, LoadingScreen } from '../src/components/ui'
+import { shadows, radius, space, typography, SCREEN_PADDING, fmtDateLabel } from '../src/theme/tokens'
 
 const { width: SCREEN_W } = Dimensions.get('window')
 const AVATAR_SIZE = 88

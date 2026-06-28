@@ -15,8 +15,9 @@ import { useReminders } from '../src/hooks/useReminders'
 import { useThemeStore, useTheme } from '../src/stores/theme'
 import { useOnboardingStore } from '../src/stores/onboarding'
 import { SplashGate } from '../src/components/SplashGate'
-import { XpToast } from '../src/components/ui'
+import { XpToast, FeedbackOverlays } from '../src/components/ui'
 import { setupNetworkMonitoring } from '../src/lib/network'
+import { useOfflineQueueSync } from '../src/hooks/useOfflineQueueSync'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -49,6 +50,12 @@ const persistOptions = {
       return !CLINICAL_RESOURCES.has(resource)
     },
   },
+}
+
+// Drena a fila de mutações offline (food-diary/água) ao iniciar e ao reconectar.
+function OfflineQueueSync() {
+  useOfflineQueueSync()
+  return null
 }
 
 export default function RootLayout() {
@@ -97,6 +104,8 @@ export default function RootLayout() {
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }} />
           )}
           {ready && <XpToast />}
+          {ready && <FeedbackOverlays />}
+          {ready && <OfflineQueueSync />}
           {!splashDone && <SplashGate ready={ready} onDone={() => setSplashDone(true)} />}
         </PersistQueryClientProvider>
       </SafeAreaProvider>

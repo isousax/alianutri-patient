@@ -8,6 +8,7 @@ const DEFAULTS: Record<string, boolean> = {
   water: true,
   dinner: true,
   weight: true,
+  streak: true,
 }
 
 interface RemindersState {

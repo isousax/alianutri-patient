@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { View, Text, ScrollView, ActivityIndicator, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FileText, ChevronRight } from 'lucide-react-native'
-import { useThemeColors } from '../../src/stores/theme'
-import { useGuidelines, useGuidelineDetail } from '../../src/hooks/usePortal'
-import type { PortalGuidelineSummary } from '../../src/types/portal'
-import { Card, ScreenHeader, EmptyState, SkeletonList } from '../../src/components/ui'
-import { Markdown } from '../../src/components/Markdown'
-import { radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
+import { useThemeColors } from '../src/stores/theme'
+import { useGuidelines, useGuidelineDetail } from '../src/hooks/usePortal'
+import type { PortalGuidelineSummary } from '../src/types/portal'
+import { Card, ScreenHeader, EmptyState, SkeletonList } from '../src/components/ui'
+import { Markdown } from '../src/components/Markdown'
+import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 export default function GuidelinesScreen() {
   const t = useThemeColors()

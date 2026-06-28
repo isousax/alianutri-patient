@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Alert, Dimensions } from "react-native";
+import { View, Text, ScrollView, Pressable, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Droplets,
@@ -23,13 +23,15 @@ import Animated, {
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 import { useThemeColors } from "../src/stores/theme";
 import { useFeaturesStore } from "../src/stores/features";
+import { toast } from "../src/stores/toast";
+import { confirm, alertInfo } from "../src/stores/confirm";
 import {
   useWaterIntake,
   useLogWater,
   useDeleteWater,
 } from "../src/hooks/usePortal";
 import type { WaterIntakeResponse } from "../src/types/portal";
-import { useSmartWaterGoal } from "../src/hooks/useSmartWaterGoal";
+import { useSmartWaterGoal, type WaterGoalSource } from "../src/hooks/useSmartWaterGoal";
 import { ScreenHeader, Card } from "../src/components/ui";
 import { ReadOnlyBanner } from "../src/components/ui/ReadOnlyBanner";
 import {
@@ -85,11 +87,14 @@ export default function WaterScreen() {
   const { mutateAsync: deleteWater } = useDeleteWater();
 
   const apiGoal = data?.goal_ml ?? 2000;
+  // `goal_source` ainda não está no tipo WaterIntakeResponse (WIP em portal.ts);
+  // lido via cast até o tipo ser atualizado. O servidor é a fonte única do goal.
+  const goalSource = (data as { goal_source?: WaterGoalSource } | undefined)?.goal_source;
   const total = data?.total_ml ?? 0;
   const entries: WaterIntakeResponse["entries"] = data?.entries ?? [];
 
-  const { goal, hydration, weather, nutriSetCustomGoal } =
-    useSmartWaterGoal(apiGoal);
+  const { goal, weather, nutriSetCustomGoal, isPersonalized, weatherBonusMl, message } =
+    useSmartWaterGoal(apiGoal, goalSource);
 
   // Absorb server delta synchronously during render (no flicker)
   if (total !== prevServerTotal.current) {
@@ -150,7 +155,7 @@ export default function WaterScreen() {
       } catch {
         localBoostRef.current = Math.max(0, localBoostRef.current - amount);
         rerender((n) => n + 1);
-        Alert.alert("Erro", "Não foi possível registrar.");
+        toast.error("Não foi possível registrar.");
       }
     },
     [date, logWater, displayTotal, goal, canWrite],
@@ -160,21 +165,21 @@ export default function WaterScreen() {
     async (id: string) => {
       if (!canWrite) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Alert.alert("Remover", "Remover este registro?", [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Remover",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteWater(id);
-              refetch();
-            } catch {
-              Alert.alert("Erro", "Não foi possível remover.");
-            }
-          },
+      confirm({
+        title: "Remover",
+        message: "Remover este registro?",
+        cancelLabel: "Cancelar",
+        confirmLabel: "Remover",
+        destructive: true,
+        onConfirm: async () => {
+          try {
+            await deleteWater(id);
+            refetch();
+          } catch {
+            toast.error("Não foi possível remover.");
+          }
         },
-      ]);
+      });
     },
     [deleteWater, refetch, canWrite],
   );
@@ -335,7 +340,7 @@ export default function WaterScreen() {
         </Animated.View>
 
         {/* Weather & smart goal card */}
-        {isToday && (weather || hydration.isPersonalized) && (
+        {isToday && (weather || isPersonalized) && (
           <Animated.View
             entering={FadeInDown.duration(300).delay(50)}
             style={{
@@ -370,15 +375,29 @@ export default function WaterScreen() {
                       >
                         {weather.description}
                       </Text>
+                      {weatherBonusMl > 0 && !nutriSetCustomGoal && (
+                        <View
+                          style={{
+                            paddingHorizontal: space.sm,
+                            paddingVertical: 2,
+                            borderRadius: radius.sm,
+                            backgroundColor: t.info + "15",
+                          }}
+                        >
+                          <Text style={[typography.captionBold, { color: t.info }]}>
+                            +{weatherBonusMl}ml hoje
+                          </Text>
+                        </View>
+                      )}
                     </>
                   )}
                 </View>
-                {hydration.isPersonalized && !nutriSetCustomGoal && (
+                {isPersonalized && !nutriSetCustomGoal && (
                   <Pressable
                     onPress={() =>
-                      Alert.alert(
-                        "Meta personalizada",
-                        `Sua meta de ${(goal / 1000).toFixed(1).replace(".", ",")}L foi calculada com base no seu perfil e nas condições climáticas atuais.`,
+                      alertInfo(
+                        "Sua meta de hidratação",
+                        `Calculamos ${(goal / 1000).toFixed(1).replace(".", ",")}L a partir do seu peso e perfil.${weatherBonusMl > 0 ? ` Com o clima de hoje, vale beber cerca de +${weatherBonusMl}ml.` : ""}`,
                       )
                     }
                     style={{
@@ -409,7 +428,7 @@ export default function WaterScreen() {
                     <Text
                       style={[
                         typography.captionBold,
-                        { color: t.accent, fontSize: 9 },
+                        { color: t.accent, fontSize: 11 },
                       ]}
                     >
                       NUTRI
@@ -425,7 +444,7 @@ export default function WaterScreen() {
               >
                 {nutriSetCustomGoal
                   ? `Meta de ${(apiGoal / 1000).toFixed(1).replace(".", ",")}L definida pelo seu nutricionista`
-                  : hydration.message}
+                  : message}
               </Text>
             </Card>
           </Animated.View>

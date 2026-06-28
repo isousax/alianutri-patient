@@ -53,7 +53,7 @@ export default function LoginScreen() {
           photo_url: result.nutritionist?.photo_url || null,
         },
       )
-      router.replace('/(tabs)')
+      router.replace('/')
     } catch (e: unknown) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {})
       const msg = e instanceof Error ? e.message : 'Código inválido ou expirado'

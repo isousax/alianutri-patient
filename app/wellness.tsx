@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import {
-  View, Text, ScrollView, Pressable, Alert,
+  View, Text, ScrollView, Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Check, Send } from 'lucide-react-native'
@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics'
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOutUp } from 'react-native-reanimated'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
+import { toast } from '../src/stores/toast'
 import { useSymptoms, useLogSymptoms } from '../src/hooks/usePortal'
 import { ScreenHeader } from '../src/components/ui'
 import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
@@ -115,7 +116,7 @@ export default function WellnessScreen() {
   const handleSave = useCallback(async () => {
     if (!canWrite) return
     if (filledCount === 0) {
-      Alert.alert('Preencha ao menos um campo', 'Selecione como você está se sentindo hoje.')
+      toast.info('Selecione ao menos um campo para salvar.')
       return
     }
     try {
@@ -133,7 +134,7 @@ export default function WellnessScreen() {
       clearTimeout(successTimer.current)
       successTimer.current = setTimeout(() => setShowSuccess(false), 2500)
     } catch {
-      Alert.alert('Erro', 'Não foi possível salvar.')
+      toast.error('Não foi possível salvar.')
     }
   }, [filledCount, values, today, logSymptoms, canWrite])
 
@@ -177,7 +178,7 @@ export default function WellnessScreen() {
                     >
                       <Text style={{ fontSize: 18 }}>{opt.emoji}</Text>
                       <Text
-                        style={[typography.captionBold, { color: selected ? t.primary : t.textMuted, fontSize: 9, marginTop: 2 }]}
+                        style={[typography.captionBold, { color: selected ? t.primary : t.textMuted, fontSize: 11, marginTop: 2 }]}
                         numberOfLines={1}
                       >
                         {opt.label}

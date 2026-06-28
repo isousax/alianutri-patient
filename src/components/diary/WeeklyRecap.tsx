@@ -1,0 +1,90 @@
+import { View, Text } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import Animated, { FadeInDown } from 'react-native-reanimated'
+import { Sparkles, Flame, Droplets, CalendarCheck, Heart } from 'lucide-react-native'
+import { useThemeColors } from '../../stores/theme'
+import { useWeeklyAdherence, useChartsSummary, useDiaryStreak } from '../../hooks/usePortal'
+import { typography, space, radius, SCREEN_PADDING, shadows } from '../../theme/tokens'
+
+// "Sua semana" — recap estilo Wrapped no topo do Feed (P1). Resume os últimos 7
+// dias a partir de sinais que o paciente já gera (adesão, sequência, água,
+// carinho do nutri). Peak-end rule: tom sempre encorajador. Some quando não há
+// nada para recapitular.
+
+function recapHeadline(loggedDays: number, totalDays: number): string {
+  const ratio = totalDays > 0 ? loggedDays / totalDays : 0
+  if (loggedDays === 0) return 'Bora começar essa semana? ✨'
+  if (ratio >= 0.85) return 'Semana impecável! 🔥'
+  if (ratio >= 0.55) return 'Semana firme 💪'
+  return 'Bom começo — dá pra subir 📈'
+}
+
+export function WeeklyRecap() {
+  const t = useThemeColors()
+  const { data: adherence } = useWeeklyAdherence()
+  const { data: charts } = useChartsSummary(7)
+  const { data: streakData } = useDiaryStreak()
+
+  const days = adherence?.days ?? []
+  const totalDays = days.length || 7
+  const loggedDays = days.filter((d) => d.logged > 0).length
+  const loggedMeals = days.reduce((s, d) => s + (d.logged || 0), 0)
+  const waterL = (charts?.water ?? []).reduce((s, d) => s + (d.total_ml || 0), 0) / 1000
+  const mealPhotos = charts?.counts?.meal_photos ?? 0
+  const nutriLove = (charts?.counts?.nutri_reactions ?? 0) + (charts?.counts?.nutri_comments ?? 0)
+  const streak = streakData?.streak ?? 0
+
+  // Nada relevante p/ recapitular ainda — não mostra o card.
+  if (loggedDays === 0 && streak === 0 && mealPhotos === 0 && waterL === 0) return null
+
+  const tiles = [
+    { key: 'days', icon: <CalendarCheck size={18} color={t.primaryFg} />, label: 'Dias', value: `${loggedDays}/${totalDays}` },
+    { key: 'streak', icon: <Flame size={18} color={t.primaryFg} />, label: 'Sequência', value: `${streak}` },
+    { key: 'water', icon: <Droplets size={18} color={t.primaryFg} />, label: 'Água', value: `${waterL.toFixed(1).replace('.', ',')} L` },
+    { key: 'meals', icon: <Sparkles size={18} color={t.primaryFg} />, label: 'Refeições', value: `${loggedMeals || mealPhotos}` },
+  ]
+
+  return (
+    <Animated.View entering={FadeInDown.duration(350)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.md }}>
+      <View style={{ borderRadius: radius.xl, overflow: 'hidden', ...shadows.md }}>
+        <LinearGradient colors={[t.primary, t.primaryMuted]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: space.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.xs }}>
+            <Sparkles size={16} color={t.primaryFg} />
+            <Text style={[typography.labelMd, { color: t.primaryFg, opacity: 0.9 }]}>Sua semana</Text>
+          </View>
+          <Text style={[typography.headingMd, { color: t.primaryFg }]}>{recapHeadline(loggedDays, totalDays)}</Text>
+
+          <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.lg }}>
+            {tiles.map((tile) => (
+              <View
+                key={tile.key}
+                style={{
+                  flex: 1,
+                  backgroundColor: 'rgba(255,255,255,0.16)',
+                  borderRadius: radius.lg,
+                  paddingVertical: space.md,
+                  paddingHorizontal: space.sm,
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                {tile.icon}
+                <Text style={[typography.headingSm, { color: t.primaryFg }]} numberOfLines={1}>{tile.value}</Text>
+                <Text style={[typography.caption, { color: t.primaryFg, opacity: 0.85 }]} numberOfLines={1}>{tile.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          {nutriLove > 0 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.md }}>
+              <Heart size={14} color={t.primaryFg} fill={t.primaryFg} />
+              <Text style={[typography.caption, { color: t.primaryFg }]}>
+                Sua nutri reagiu {nutriLove} {nutriLove === 1 ? 'vez' : 'vezes'} essa semana
+              </Text>
+            </View>
+          )}
+        </LinearGradient>
+      </View>
+    </Animated.View>
+  )
+}

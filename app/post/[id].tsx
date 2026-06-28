@@ -1,11 +1,13 @@
 import { useCallback } from 'react'
-import { ScrollView, Alert, Pressable } from 'react-native'
+import { ScrollView, Pressable } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, router } from 'expo-router'
 import { Trash2, FileText } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import { useThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
+import { confirm } from '../../src/stores/confirm'
+import { toast } from '../../src/stores/toast'
 import { usePostDetail, useDeletePost } from '../../src/hooks/usePortal'
 import { ScreenHeader, SkeletonList, EmptyState } from '../../src/components/ui'
 import { PostCard } from '../../src/components/feed/PostCard'
@@ -20,22 +22,22 @@ export default function PostDetailScreen() {
 
   const handleDelete = useCallback(() => {
     if (!post) return
-    Alert.alert('Excluir postagem', 'Tem certeza? Esta ação não pode ser desfeita.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await del.mutateAsync(post.id)
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
-            router.back()
-          } catch {
-            Alert.alert('Erro', 'Não foi possível excluir a postagem.')
-          }
-        },
+    confirm({
+      title: 'Excluir postagem',
+      message: 'Tem certeza? Esta ação não pode ser desfeita.',
+      cancelLabel: 'Cancelar',
+      confirmLabel: 'Excluir',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await del.mutateAsync(post.id)
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+          router.back()
+        } catch {
+          toast.error('Não foi possível excluir a postagem.')
+        }
       },
-    ])
+    })
   }, [post, del])
 
   const rightAction = post && canWrite ? (

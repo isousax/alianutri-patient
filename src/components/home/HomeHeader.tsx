@@ -1,10 +1,11 @@
 import { View, Text, Pressable } from 'react-native'
 import { router } from 'expo-router'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
-import { Sun, CloudSun, Moon, Flame, MessageCircle } from 'lucide-react-native'
+import { Sun, CloudSun, Moon, Flame, MessageCircle, Lightbulb } from 'lucide-react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
-import { AuroraBackground } from '../ui'
+import { AuroraBackground, Avatar } from '../ui'
 
 function getGreeting(): { text: string; Icon: typeof Sun } {
   const h = new Date().getHours()
@@ -19,9 +20,11 @@ interface HomeHeaderProps {
   weather: { icon: string; temperature: number } | null
   streak: number
   chatUnread: number
+  photoUrl?: string | null
+  onTipPress?: () => void
 }
 
-export function HomeHeader({ displayName, nutritionistName, weather, streak, chatUnread }: HomeHeaderProps) {
+export function HomeHeader({ displayName, nutritionistName, weather, streak, chatUnread, photoUrl, onTipPress }: HomeHeaderProps) {
   const t = useThemeColors()
   const greeting = getGreeting()
   const GreetingIcon = greeting.Icon
@@ -30,10 +33,39 @@ export function HomeHeader({ displayName, nutritionistName, weather, streak, cha
     <>
       {/* Aurora hero */}
       <AuroraBackground variant="prominent">
+        {/* Fade que derrete a aurora no fundo da tela (sem costura). Pintado
+            SOB o texto (1º filho) → mascara os blobs sem lavar o conteúdo. */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={['transparent', t.background]}
+          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 96 }}
+        />
         <Animated.View
           entering={FadeIn.duration(400)}
           style={{ paddingHorizontal: SCREEN_PADDING + 4, paddingTop: space.lg, paddingBottom: space.xl }}
         >
+          <View style={{ position: 'absolute', top: space.lg, right: SCREEN_PADDING, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+            {onTipPress ? (
+              <Pressable
+                onPress={onTipPress}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Ver a dica do dia"
+                style={({ pressed }) => ({
+                  width: 40,
+                  height: 40,
+                  borderRadius: radius.md,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: t.surfaceSecondary,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Lightbulb size={18} color={t.warning} />
+              </Pressable>
+            ) : null}
+            <Avatar name={displayName} uri={photoUrl} size={40} onPress={() => router.push('/profile')} />
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.xs }}>
             <GreetingIcon size={14} color={t.primary} strokeWidth={2} />
             <Text style={[typography.labelSm, { color: t.primary, marginLeft: 6 }]}>{greeting.text}</Text>

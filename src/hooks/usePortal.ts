@@ -4,6 +4,8 @@ import { compressImage } from '../lib/compressImage'
 import { generateImageVariants } from '../lib/imageVariants'
 import { useXpToast } from '../stores/xpToast'
 import { todayISO } from '../lib/habit'
+import { generateClientId } from '../lib/clientId'
+import { sendOrQueue } from '../lib/mutationQueue'
 import type {
   PortalHome,
   PortalProfile,
@@ -157,6 +159,8 @@ export function useFoodDiary(date?: string) {
 export function useLogFoodDiary() {
   const qc = useQueryClient()
   return useMutation({
+    // offlineFirst + fila cifrada: registra otimisticamente e envia ao reconectar.
+    networkMode: 'offlineFirst',
     mutationFn: (entry: {
       id?: string
       meal_type: string
@@ -173,8 +177,57 @@ export function useLogFoodDiary() {
       meal_plan_id?: string
       meal_index?: number
       photo_url?: string
-    }) => portalApi.post<PortalFoodDiaryEntry>('/food-diary', entry),
-    onSuccess: () => {
+    }) =>
+      sendOrQueue({
+        type: 'food-diary',
+        path: '/food-diary',
+        payload: { ...entry, id: entry.id ?? generateClientId() },
+      }),
+    onMutate: async (entry) => {
+      const date = entry.entry_date
+      await qc.cancelQueries({ queryKey: ['portal', 'diary-today', date] })
+      await qc.cancelQueries({ queryKey: ['portal', 'food-diary', date] })
+      const prevToday = qc.getQueryData<DiaryTodayResponse>(['portal', 'diary-today', date])
+      const prevList = qc.getQueryData<PortalFoodDiaryEntry[]>(['portal', 'food-diary', date])
+      const optimistic: PortalFoodDiaryEntry = {
+        id: `__opt_${Date.now()}`,
+        meal_type: entry.meal_type as PortalFoodDiaryEntry['meal_type'],
+        entry_date: date,
+        entry_time: entry.entry_time ?? null,
+        food_description: entry.food_description,
+        quantity_g: entry.quantity_g ?? null,
+        energy_kcal: entry.energy_kcal ?? null,
+        protein_g: entry.protein_g ?? null,
+        carbs_g: entry.carbs_g ?? null,
+        fat_g: entry.fat_g ?? null,
+        notes: entry.notes ?? null,
+        compliance_status: (entry.compliance_status ?? null) as PortalFoodDiaryEntry['compliance_status'],
+        meal_plan_id: entry.meal_plan_id ?? null,
+        meal_index: entry.meal_index ?? null,
+        photo_url: entry.photo_url ?? null,
+        created_at: new Date().toISOString(),
+        updated_at: null,
+      }
+      if (prevToday) {
+        qc.setQueryData<DiaryTodayResponse>(['portal', 'diary-today', date], {
+          ...prevToday,
+          entries: [...prevToday.entries, optimistic],
+          meals: prevToday.meals.map((m) =>
+            entry.meal_index != null && m.meal_index === entry.meal_index ? { ...m, entry: optimistic } : m,
+          ),
+        })
+      }
+      if (prevList) {
+        qc.setQueryData<PortalFoodDiaryEntry[]>(['portal', 'food-diary', date], [...prevList, optimistic])
+      }
+      return { prevToday, prevList, date }
+    },
+    onError: (_err, _entry, ctx) => {
+      if (!ctx) return
+      if (ctx.prevToday !== undefined) qc.setQueryData(['portal', 'diary-today', ctx.date], ctx.prevToday)
+      if (ctx.prevList !== undefined) qc.setQueryData(['portal', 'food-diary', ctx.date], ctx.prevList)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'food-diary'] })
       qc.invalidateQueries({ queryKey: ['portal', 'diary-today'] })
       qc.invalidateQueries({ queryKey: ['portal', 'diary-streak'] })
@@ -485,8 +538,15 @@ export function useWaterIntake(date: string) {
 export function useLogWater() {
   const qc = useQueryClient()
   return useMutation({
+    // offlineFirst + fila cifrada. Sem update otimista de cache aqui: a tela de
+    // água já reconcilia o total via localBoost (app/water.tsx).
+    networkMode: 'offlineFirst',
     mutationFn: (input: { id?: string; date: string; amount_ml: number }) =>
-      portalApi.post<{ id: string; entry_date: string; amount_ml: number; created_at: string; total_ml: number }>('/water', input),
+      sendOrQueue({
+        type: 'water',
+        path: '/water',
+        payload: { ...input, id: input.id ?? generateClientId() },
+      }),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['portal', 'water', vars.date] })
       qc.invalidateQueries({ queryKey: ['portal', 'home'] })

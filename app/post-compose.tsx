@@ -1,13 +1,15 @@
 import { useState, useCallback } from 'react'
-import { View, Text, ScrollView, Pressable, Alert, TextInput } from 'react-native'
+import { View, Text, ScrollView, Pressable, TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Image } from 'expo-image'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
 import { Camera, Utensils, Dumbbell, Smile, Pencil, Sparkles, X } from 'lucide-react-native'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
+import { toast } from '../src/stores/toast'
+import { showActionSheet } from '../src/stores/actionSheet'
 import { useCreatePost } from '../src/hooks/usePortal'
 import { ScreenHeader, Button, ReadOnlyBanner, KeyboardAvoidingWrapper } from '../src/components/ui'
 import { typography, space, radius, SCREEN_PADDING } from '../src/theme/tokens'
@@ -25,8 +27,13 @@ export default function PostComposeScreen() {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const { mutateAsync: createPost, isPending } = useCreatePost()
+  const params = useLocalSearchParams<{ type?: string }>()
+  const validTypes: DiaryPostType[] = ['meal', 'exercise', 'mood', 'free']
+  const initialType: DiaryPostType = validTypes.includes(params.type as DiaryPostType)
+    ? (params.type as DiaryPostType)
+    : 'meal'
   const [photoUri, setPhotoUri] = useState<string | null>(null)
-  const [type, setType] = useState<DiaryPostType>('meal')
+  const [type, setType] = useState<DiaryPostType>(initialType)
   const [caption, setCaption] = useState('')
   const [mood, setMood] = useState<string | null>(null)
 
@@ -35,7 +42,7 @@ export default function PostComposeScreen() {
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (perm.status !== 'granted') {
-      Alert.alert('Permissão necessária', mode === 'camera' ? 'Precisamos de acesso à câmera.' : 'Precisamos de acesso às fotos.')
+      toast.error(mode === 'camera' ? 'Precisamos de acesso à câmera.' : 'Precisamos de acesso às fotos.')
       return
     }
     const result = mode === 'camera'
@@ -49,11 +56,13 @@ export default function PostComposeScreen() {
   }, [])
 
   const choosePhoto = useCallback(() => {
-    Alert.alert('Adicionar foto', undefined, [
-      { text: 'Tirar foto', onPress: () => pick('camera') },
-      { text: 'Escolher da galeria', onPress: () => pick('library') },
-      { text: 'Cancelar', style: 'cancel' },
-    ])
+    showActionSheet({
+      title: 'Adicionar foto',
+      options: [
+        { label: 'Tirar foto', onPress: () => pick('camera') },
+        { label: 'Escolher da galeria', onPress: () => pick('library') },
+      ],
+    })
   }, [pick])
 
   const canPublish = canWrite && !isPending && (!!photoUri || !!caption.trim() || (type === 'mood' && !!mood))
@@ -70,7 +79,7 @@ export default function PostComposeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
       router.back()
     } catch {
-      Alert.alert('Erro', 'Não foi possível publicar. Tente novamente.')
+      toast.error('Não foi possível publicar. Tente novamente.')
     }
   }, [canPublish, createPost, type, photoUri, caption, mood])
 

@@ -1,5 +1,5 @@
 import { View, Text } from 'react-native'
-import { Lock } from 'lucide-react-native'
+import { Eye } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 
@@ -13,24 +13,27 @@ export function ReadOnlyBanner({ message }: { message?: string }) {
   return (
     <View
       accessibilityRole="alert"
-      accessibilityLabel={message ?? 'Seu nutricionista configurou seu portal como somente leitura'}
+      accessibilityLabel={message ?? 'Modo de acompanhamento: você pode ver tudo, mas o registro está pausado pelo seu nutricionista.'}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: space.sm,
+        gap: space.md,
         marginHorizontal: SCREEN_PADDING,
         marginTop: space.sm,
         marginBottom: space.md,
         paddingHorizontal: space.lg,
         paddingVertical: space.md,
-        backgroundColor: t.warningLight,
+        backgroundColor: t.infoLight,
         borderRadius: radius.lg,
       }}
     >
-      <Lock size={16} color={t.warning} />
-      <Text style={[typography.bodySm, { color: t.text, flex: 1 }]}>
-        {message ?? 'Seu nutricionista configurou seu portal como somente leitura.'}
-      </Text>
+      <Eye size={18} color={t.info} />
+      <View style={{ flex: 1 }}>
+        <Text style={[typography.captionBold, { color: t.text }]}>Modo de acompanhamento</Text>
+        <Text style={[typography.caption, { color: t.textSecondary, marginTop: 1 }]}>
+          {message ?? 'Você acompanha tudo normalmente. Para voltar a registrar, fale com seu nutricionista.'}
+        </Text>
+      </View>
     </View>
   )
 }
