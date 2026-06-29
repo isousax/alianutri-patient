@@ -4,6 +4,7 @@ import { Utensils, Dumbbell, Smile, Pencil } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
 import { typography, space, radius } from '../../theme/tokens'
+import { AILoader } from '../ui/AILoader'
 import { diaryPhotoUrl } from '../../lib/diaryPhoto'
 import type { DiaryPost, DiaryPostType } from '../../types/portal'
 
@@ -52,7 +53,10 @@ export function MiniPostCard({ post, onPress }: { post: DiaryPost; onPress: () =
         {post.type === 'meal' && post.ai_status === 'completed' && ai ? (
           <Text style={[typography.caption, { color: t.textMuted, marginTop: 1 }]}>~{Math.round(ai.calories ?? 0)} kcal</Text>
         ) : post.ai_status === 'pending' ? (
-          <Text style={[typography.caption, { color: t.primary, marginTop: 1 }]}>Analisando…</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 }}>
+            <AILoader size={16} />
+            <Text style={[typography.caption, { color: t.primary }]}>Analisando…</Text>
+          </View>
         ) : null}
       </View>
     </Pressable>

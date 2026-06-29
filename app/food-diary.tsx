@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useReducer } from 'react'
 import {
   View, Text, ScrollView, Pressable, ActivityIndicator,
-  RefreshControl, Dimensions, TextInput, Modal, KeyboardAvoidingView, Platform,
+  RefreshControl, TextInput, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -16,7 +16,7 @@ import * as Haptics from 'expo-haptics'
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
   LinearTransition,
-  useSharedValue, useAnimatedStyle, withTiming, withDelay,
+  useSharedValue, useAnimatedStyle, withTiming,
   withSequence, withSpring, withRepeat, interpolate, Easing,
 } from 'react-native-reanimated'
 import { useThemeColors, type ThemeColors } from '../src/stores/theme'
@@ -27,6 +27,7 @@ import { useAuthStore } from '../src/stores/auth'
 import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useUploadDiaryPhoto, useFoodDiary } from '../src/hooks/usePortal'
 import type { DiaryTimelineMeal, PortalFoodDiaryEntry } from '../src/types/portal'
 import { ScreenHeader, SkeletonBlock } from '../src/components/ui'
+import { ConfettiCelebration } from '../src/components/ui/ConfettiCelebration'
 import { typography, space } from '../src/theme/tokens'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://api.alianutri.com.br'
@@ -395,7 +396,7 @@ export default function DiaryScreen() {
           {/* ── All-done celebration ── */}
           {allDone && (
             <>
-              {justCompleted && <ConfettiBurst t={t} />}
+              {justCompleted && <ConfettiCelebration />}
               <Animated.View entering={FadeIn.duration(500)} className="px-5 mb-2">
                 <CompletionCard t={t} justCompleted={justCompleted} streak={streak} />
               </Animated.View>
@@ -748,62 +749,6 @@ function CompletionCard({ t, justCompleted, streak }: { t: ThemeColors; justComp
           </Text>
         </Animated.View>
       )}
-    </View>
-  )
-}
-
-// ── Confetti burst (full-screen overlay) ──
-
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window')
-const CONFETTI_COUNT = 28
-const CONFETTI_COLORS = ['#10B981', '#34D399', '#14B8A6', '#6366F1', '#F59E0B', '#EC4899']
-
-function ConfettiPiece({ index, t }: { index: number; t: ThemeColors }) {
-  const progress = useSharedValue(0)
-  const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length]
-  const startX = SCREEN_W * 0.5 + (Math.random() - 0.5) * 60
-  const endX = startX + (Math.random() - 0.5) * SCREEN_W * 0.8
-  const rotation = Math.random() * 720 - 360
-  const size = 6 + Math.random() * 6
-  const isCircle = index % 3 === 0
-  const delay = Math.random() * 200
-
-  useEffect(() => {
-    progress.value = withDelay(delay, withTiming(1, { duration: 1800 + Math.random() * 600, easing: Easing.out(Easing.quad) }))
-  }, [progress, delay])
-
-  const style = useAnimatedStyle(() => {
-    const y = interpolate(progress.value, [0, 1], [-20, SCREEN_H * 0.7 + Math.random() * 100])
-    const x = interpolate(progress.value, [0, 0.3, 1], [startX, startX + (endX - startX) * 0.6, endX])
-    const rotate = interpolate(progress.value, [0, 1], [0, rotation])
-    const opacity = interpolate(progress.value, [0, 0.1, 0.7, 1], [0, 1, 1, 0])
-    const scale = interpolate(progress.value, [0, 0.15, 0.5, 1], [0, 1.2, 1, 0.6])
-
-    return {
-      position: 'absolute',
-      left: x,
-      top: y,
-      width: size,
-      height: isCircle ? size : size * 2.5,
-      borderRadius: isCircle ? size / 2 : 2,
-      backgroundColor: color,
-      opacity,
-      transform: [{ rotate: `${rotate}deg` }, { scale }],
-    }
-  })
-
-  return <Animated.View style={style} />
-}
-
-function ConfettiBurst({ t }: { t: ThemeColors }) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}
-    >
-      {Array.from({ length: CONFETTI_COUNT }).map((_, i) => (
-        <ConfettiPiece key={i} index={i} t={t} />
-      ))}
     </View>
   )
 }

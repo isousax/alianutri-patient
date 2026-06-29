@@ -93,18 +93,18 @@ export default function SettingsScreen() {
           </Card>
         </Animated.View>
 
-        {/* ── Reminders section ── */}
+        {/* ── Notifications & reminders section ── */}
         <Animated.View entering={FadeInDown.duration(300).delay(100)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space['2xl'] }}>
-          <SectionLabel text="LEMBRETES" />
+          <SectionLabel text="NOTIFICAÇÕES" />
           <Card padded={false}>
             <View style={{ paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.xs }}>
               <Text style={[typography.caption, { color: t.textSecondary }]}>
                 Lembretes diários pra manter o hábito — ligue só os que fizerem sentido pra você.
               </Text>
             </View>
-            {REMINDER_TOGGLES.map((r, i) => (
+            {REMINDER_TOGGLES.map((r) => (
               <View key={r.id}>
-                {i > 0 && <Divider inset={space.lg} />}
+                <Divider inset={space.lg} />
                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.lg, paddingVertical: space.md }}>
                   <View style={{ flex: 1, paddingRight: space.md }}>
                     <Text style={[typography.labelMd, { color: t.text }]}>{r.label}</Text>
@@ -122,6 +122,14 @@ export default function SettingsScreen() {
                 </View>
               </View>
             ))}
+            <Divider inset={space.lg} />
+            <SettingsRow
+              icon={<Bell size={18} color={t.textSecondary} />}
+              label="Configurações do sistema"
+              subtitle="Permissões e som das notificações"
+              onPress={() => Linking.openSettings()}
+              t={t}
+            />
           </Card>
         </Animated.View>
 
@@ -130,17 +138,10 @@ export default function SettingsScreen() {
           <SectionLabel text="GERAL" />
           <Card padded={false}>
             <SettingsRow
-              icon={<Bell size={18} color={t.textSecondary} />}
-              label="Notificações"
-              subtitle="Gerenciar nas configurações do sistema"
-              onPress={() => Linking.openSettings()}
-              t={t}
-            />
-            <Divider inset={space.lg + 34 + space.md} />
-            <SettingsRow
               icon={<Shield size={18} color={t.textSecondary} />}
               label="Privacidade"
-              subtitle="Seus dados são protegidos e criptografados"
+              subtitle="Termos de uso e política de privacidade"
+              onPress={() => Linking.openURL('https://alianutri.com.br/privacidade')}
               t={t}
             />
           </Card>

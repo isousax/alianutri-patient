@@ -1,4 +1,4 @@
-import { View, Text, ActivityIndicator, Pressable } from 'react-native'
+import { View, Text, Pressable } from 'react-native'
 import { Image } from 'expo-image'
 import { Utensils, Dumbbell, Smile, Pencil, Sparkles, MessageCircle, CloudOff } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
@@ -7,6 +7,7 @@ import { useUpdatePostType } from '../../hooks/usePortal'
 import { confirm } from '../../stores/confirm'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 import { Card, MacrosBar, AuroraBackground } from '../ui'
+import { AILoader } from '../ui/AILoader'
 import { diaryPhotoUrl } from '../../lib/diaryPhoto'
 import type { DiaryPost, DiaryPostType } from '../../types/portal'
 
@@ -93,8 +94,8 @@ export function PostCard({ post }: { post: DiaryPost }) {
       {post.type === 'meal' && !isLocal && (
         <View style={{ padding: space.lg, paddingBottom: ai && post.ai_status === 'completed' ? space.lg : space.md }}>
           {post.ai_status === 'pending' && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-              <ActivityIndicator size="small" color={t.primary} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
+              <AILoader size={30} />
               <Text style={[typography.bodySm, { color: t.textSecondary }]}>Analisando com IA…</Text>
             </View>
           )}
