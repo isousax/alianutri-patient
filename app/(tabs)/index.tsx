@@ -102,6 +102,7 @@ import { RefeicoesDeHoje } from "../../src/components/home/RefeicoesDeHoje";
 import { MiniPostCard } from "../../src/components/home/MiniPostCard";
 import { GoalsPreview } from "../../src/components/home/GoalsPreview";
 import { LevelUpCelebration, CelebrationModal } from "../../src/components/home/LevelUpCelebration";
+import { QuickActionTile } from "../../src/components/ui/QuickActionTile";
 import {
   radius,
   shadows,
@@ -370,66 +371,9 @@ export default function HomeScreen() {
 //  HELPER COMPONENTS (design-system based)
 // ═══════════════════════════════════════════════════════
 
-// ── Quick Action chip ──
+// ── Quick Actions Grid spacing ──
 
-const GRID_COLS = 4;
 const GRID_GAP = space.md;
-const GRID_ITEM_W =
-  (SCREEN_W - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
-
-function QuickAction({
-  icon,
-  label,
-  bg,
-  onPress,
-  width,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  bg: string;
-  onPress: () => void;
-  width?: number;
-}) {
-  const t = useThemeColors();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        ...(width != null ? { width } : { flex: 1, minWidth: 0 }),
-        alignItems: "center",
-        paddingVertical: space.md,
-        marginBottom: space.xs,
-        borderRadius: radius.lg,
-        opacity: pressed ? 0.75 : 1,
-        transform: [{ scale: pressed ? 0.93 : 1 }],
-      })}
-    >
-      <View
-        style={{
-          width: 46,
-          height: 46,
-          borderRadius: 15,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: bg,
-        }}
-      >
-        {icon}
-      </View>
-      <View style={{ height: 30, justifyContent: "center", marginTop: space.xs + 2 }}>
-        <Text
-          style={[
-            typography.captionBold,
-            { color: t.textSecondary, textAlign: "center", fontSize: 10.5, lineHeight: 13 },
-          ]}
-          numberOfLines={2}
-        >
-          {label}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
 
 // ── Quick Actions Grid (4 ações + folder "Mais" estilo iOS) ──
 
@@ -440,54 +384,35 @@ type ActionDef = {
   label: string;
   bg: string;
   route: string;
-  folderIcon?: React.ReactNode;
+  tint?: string;
 };
 
 function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
   const t = useThemeColors();
   const [folderOpen, setFolderOpen] = useState(false);
 
-  // 4 ações principais (sempre visíveis). Removidos da grade: Chat (vive no
-  // hub Nutri), Peso e Como me sinto (migraram para o "+"), Diário (já é tab).
+  // Ações principais da grade, cada uma com hue próprio (sem repetir cor lado a
+  // lado). "Progresso" (foto) e "Evolução" (gráficos) coexistem por terem intents
+  // distintos; "Progresso" mantém a MESMA cor/rota do atalho no "+" (consistência 1:1).
   const mainActions: ActionDef[] = useMemo(
-  () => [
-    { icon: <Camera size={18} color={t.primary} />, label: "Registrar \nprogresso", bg: t.primaryLight, route: "/progress-photos" },
-    { icon: <BarChart3 size={18} color={t.success} />, label: "Evolução", bg: t.successLight, route: "/evolution" },
-    { icon: <Target size={18} color={t.accent} />, label: "Metas", bg: t.accentLight, route: "/goals" },
-    { icon: <CalendarPlus size={18} color={t.primary} />, label: "Agendar", bg: t.primaryLight, route: "/booking" },
-  ],
-  [t],
-);
-
-const moreActions: ActionDef[] = useMemo(() => {
-  const actions: ActionDef[] = [];
-
-  actions.push(
-    {
-      icon: <ClipboardList size={22} color={t.info} />,
-      label: "Quest.",
-      bg: t.infoLight,
-      route: "/questionnaires",
-      folderIcon: <ClipboardList size={10} color={t.info} />,
-    },
-    {
-      icon: <FileText size={22} color={t.info} />,
-      label: "Docs.",
-      bg: t.infoLight,
-      route: "/documents",
-      folderIcon: <FileText size={10} color={t.info} />,
-    },
-    {
-      icon: <FileText size={22} color={t.warning} />,
-      label: "Orientações",
-      bg: t.warningLight,
-      route: "/guidelines",
-      folderIcon: <FileText size={10} color={t.warning} />,
-    },
+    () => [
+      { icon: <Camera size={20} color={t.success} />, label: "Progresso", bg: t.successLight, route: "/progress-photos" },
+      { icon: <BarChart3 size={20} color={t.info} />, label: "Evolução", bg: t.infoLight, route: "/evolution" },
+      { icon: <Target size={20} color={t.accent} />, label: "Metas", bg: t.accentLight, route: "/goals" },
+      { icon: <CalendarPlus size={20} color={t.primary} />, label: "Agendar", bg: t.primaryLight, route: "/booking" },
+    ],
+    [t],
   );
 
-  return actions;
-}, [t]);
+  // Overflow da grade (cada item com cor distinta — sem dois azuis iguais).
+  const moreActions: ActionDef[] = useMemo(
+    () => [
+      { icon: <ClipboardList size={22} color={t.info} />, label: "Quest.", bg: t.infoLight, route: "/questionnaires", tint: t.info },
+      { icon: <FileText size={22} color={t.accent} />, label: "Docs.", bg: t.accentLight, route: "/documents", tint: t.accent },
+      { icon: <FileText size={22} color={t.warning} />, label: "Orientações", bg: t.warningLight, route: "/guidelines", tint: t.warning },
+    ],
+    [t],
+  );
 
   const go = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -507,11 +432,11 @@ const moreActions: ActionDef[] = useMemo(() => {
       {/* Linha única: 4 ações + folder "Mais" (flex → sempre cabe na viewport) */}
       <View style={{ flexDirection: "row", columnGap: GRID_GAP }}>
         {mainActions.map((a) => (
-          <QuickAction
+          <QuickActionTile
             key={a.route}
             icon={a.icon}
             label={a.label}
-            bg={a.bg}
+            chipColor={a.bg}
             onPress={() => go(a.route)}
           />
         ))}
@@ -521,19 +446,18 @@ const moreActions: ActionDef[] = useMemo(() => {
           onPress={openFolder}
           accessibilityRole="button"
           accessibilityLabel="Mostrar mais ações"
-          style={({ pressed }) => ({
+          style={{
             flex: 1,
             minWidth: 0,
             alignItems: "center",
             paddingVertical: space.md,
             marginBottom: space.xs,
             borderRadius: radius.lg,
-            opacity: pressed ? 0.75 : 1,
-            transform: [{ scale: pressed ? 0.93 : 1 }],
-          })}
+          }}
         >
           <View
             style={{
+              alignSelf: "center",
               width: 46,
               height: 46,
               borderRadius: 15,
@@ -541,28 +465,17 @@ const moreActions: ActionDef[] = useMemo(() => {
               alignItems: "center",
               justifyContent: "center",
               flexDirection: "row",
-              flexWrap: "wrap",
-              padding: 6,
-              gap: 2,
+              gap: 3,
             }}
           >
-            {moreActions.slice(0, 4).map((a, i) => (
+            {moreActions.slice(0, 3).map((a, i) => (
               <View
                 key={i}
-                style={{
-                  width: 15,
-                  height: 15,
-                  borderRadius: 5,
-                  backgroundColor: a.bg,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {a.folderIcon}
-              </View>
+                style={{ width: 9, height: 9, borderRadius: 3, backgroundColor: a.tint ?? t.textMuted }}
+              />
             ))}
           </View>
-          <View style={{ height: 30, justifyContent: "center", marginTop: space.xs + 2 }}>
+          <View style={{ alignSelf: "center", height: 30, justifyContent: "center", marginTop: space.xs + 2 }}>
             <Text
               style={[
                 typography.captionBold,
@@ -630,14 +543,13 @@ const moreActions: ActionDef[] = useMemo(() => {
                         setFolderOpen(false);
                         setTimeout(() => router.push(a.route as never), 180);
                       }}
-                      style={({ pressed }) => ({
+                      style={{
                         alignItems: "center",
                         paddingVertical: space.sm,
                         paddingHorizontal: space.sm,
                         borderRadius: radius.xl,
-                        backgroundColor: pressed ? t.borderLight : "transparent",
-                        transform: [{ scale: pressed ? 0.88 : 1 }],
-                      })}
+                        backgroundColor: "transparent",
+                      }}
                     >
                       <View
                         style={{
@@ -813,7 +725,7 @@ function DailyTipCard({ onDismiss }: { onDismiss: () => void }) {
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel="Dispensar dica do dia"
-            style={({ pressed }) => ({ marginLeft: space.sm, marginTop: -2, opacity: pressed ? 0.6 : 1 })}
+            style={{ marginLeft: space.sm, marginTop: -2 }}
           >
             <X size={18} color={t.textMuted} />
           </Pressable>

@@ -32,7 +32,7 @@ export function ActionSheetHost() {
             onPress={() => run(opt.onPress)}
             accessibilityRole="button"
             accessibilityLabel={opt.label}
-            style={({ pressed }) => ({
+            style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: opt.icon ? 'flex-start' : 'center',
@@ -40,8 +40,8 @@ export function ActionSheetHost() {
               paddingVertical: space.lg,
               paddingHorizontal: space.lg,
               borderRadius: radius.lg,
-              backgroundColor: pressed ? t.surfacePressed : t.surfaceSecondary,
-            })}
+              backgroundColor: t.surfaceSecondary,
+            }}
           >
             {opt.icon ? <View style={{ width: 24, alignItems: 'center' }}>{opt.icon}</View> : null}
             <Text style={[typography.labelLg, { color: opt.destructive ? t.error : t.text }]}>{opt.label}</Text>
@@ -50,7 +50,7 @@ export function ActionSheetHost() {
         <Pressable
           onPress={() => run()}
           accessibilityRole="button"
-          style={({ pressed }) => ({ paddingVertical: space.md + 2, borderRadius: radius.lg, alignItems: 'center', marginTop: space.xs, opacity: pressed ? 0.6 : 1 })}
+          style={{ paddingVertical: space.md + 2, borderRadius: radius.lg, alignItems: 'center', marginTop: space.xs }}
         >
           <Text style={[typography.labelLg, { color: t.textMuted }]}>{current?.cancelLabel ?? 'Cancelar'}</Text>
         </Pressable>

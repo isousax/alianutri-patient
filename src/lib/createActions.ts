@@ -41,15 +41,15 @@ export const CREATE_ACTIONS: readonly CreateAction[] = [
   {
     id: 'mood',
     label: 'Como me sinto',
-    description: 'Registre seu humor de hoje',
-    emoji: '�',
-    route: '/post-compose?type=mood',
+    description: 'Como você está hoje? Em 1 toque',
+    emoji: '🙂',
+    route: '/wellness?focus=mood',
   },
   {
     id: 'progress',
     label: 'Foto de progresso',
     description: 'Acompanhe sua evolução em fotos',
-    emoji: '�',
+    emoji: '📸',
     route: '/progress-photos',
   },
   {

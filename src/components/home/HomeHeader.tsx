@@ -40,7 +40,7 @@ export function HomeHeader({ displayName, nutritionistName, weather, streak, cha
         <LinearGradient
           pointerEvents="none"
           colors={['transparent', t.background]}
-          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 96 }}
+          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 150 }}
         />
         <Animated.View
           entering={FadeIn.duration(400)}
@@ -53,20 +53,18 @@ export function HomeHeader({ displayName, nutritionistName, weather, streak, cha
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityLabel="Ver a dica do dia"
-                style={({ pressed }) => ({
-                  width: 40,
+                style={{
+                  width: 20,
                   height: 40,
                   borderRadius: radius.md,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: t.surfaceSecondary,
-                  opacity: pressed ? 0.7 : 1,
-                })}
+                }}
               >
                 <Lightbulb size={18} color={t.warning} />
               </Pressable>
             ) : null}
-            <Avatar name={displayName} uri={photoUrl} size={40} onPress={() => router.push('/profile')} />
+            <Avatar name={displayName} uri={photoUrl} size={53} onPress={() => router.push('/profile')} />
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.xs }}>
             <GreetingIcon size={14} color={t.primary} strokeWidth={2} />

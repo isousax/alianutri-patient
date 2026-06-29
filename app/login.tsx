@@ -116,7 +116,7 @@ export default function LoginScreen() {
                   disabled={!canSubmit}
                   accessibilityRole="button"
                   accessibilityLabel="Entrar com o código de acesso"
-                  style={({ pressed }) => ({ borderRadius: radius.lg, overflow: 'hidden', opacity: pressed ? 0.95 : 1, transform: [{ scale: pressed ? 0.985 : 1 }], ...(canSubmit ? shadows.glow(t.primary) : shadows.none) })}
+                  style={{ borderRadius: radius.lg, overflow: 'hidden', ...(canSubmit ? shadows.glow(t.primary) : shadows.none) }}
                 >
                   <LinearGradient colors={canSubmit ? gradients.brand : [t.primaryMuted, t.primaryMuted]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: space.lg }}>
                     {loading ? (

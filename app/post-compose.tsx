@@ -5,7 +5,7 @@ import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
-import { Camera, Utensils, Dumbbell, Smile, Pencil, Sparkles, X, Images } from 'lucide-react-native'
+import { Camera, Utensils, Dumbbell, Pencil, Sparkles, X, Images } from 'lucide-react-native'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { toast } from '../src/stores/toast'
@@ -18,10 +18,16 @@ import type { DiaryPostType } from '../src/types/portal'
 const TYPES: { id: DiaryPostType; label: string; Icon: typeof Utensils }[] = [
   { id: 'meal', label: 'Refeição', Icon: Utensils },
   { id: 'exercise', label: 'Exercício', Icon: Dumbbell },
-  { id: 'mood', label: 'Humor', Icon: Smile },
-  { id: 'free', label: 'Livre', Icon: Pencil },
+  { id: 'free', label: 'Nota', Icon: Pencil },
 ]
-const MOODS = ['😄', '🙂', '😐', '😕', '😣']
+// Título por tipo — dá identidade própria a cada intenção.
+// Humor não vive aqui: é um check-in estruturado (1–5) em /wellness.
+const HEADER_TITLE: Record<DiaryPostType, string> = {
+  meal: 'Nova publicação',
+  exercise: 'Nova publicação',
+  mood: 'Como me sinto',
+  free: 'Anotação',
+}
 
 export default function PostComposeScreen() {
   const t = useThemeColors()
@@ -29,14 +35,16 @@ export default function PostComposeScreen() {
   const { mutateAsync: createPost, isPending } = useCreatePost()
   const scrollRef = useRef<ScrollView>(null)
   const params = useLocalSearchParams<{ type?: string }>()
-  const validTypes: DiaryPostType[] = ['meal', 'exercise', 'mood', 'free']
+  const validTypes: DiaryPostType[] = ['meal', 'exercise', 'free']
   const initialType: DiaryPostType = validTypes.includes(params.type as DiaryPostType)
     ? (params.type as DiaryPostType)
     : 'meal'
+  // Veio de um atalho do "+" (tipo explícito) → tela focada, sem abas de tipo.
+  // Veio do FAB genérico do Diário (sem tipo) → mostra as abas para escolher.
+  const typeLocked = validTypes.includes(params.type as DiaryPostType)
   const [photoUri, setPhotoUri] = useState<string | null>(null)
   const [type, setType] = useState<DiaryPostType>(initialType)
   const [caption, setCaption] = useState('')
-  const [mood, setMood] = useState<string | null>(null)
 
   const pick = useCallback(async (mode: 'camera' | 'library') => {
     const perm = mode === 'camera'
@@ -66,7 +74,9 @@ export default function PostComposeScreen() {
     })
   }, [pick, t])
 
-  const canPublish = canWrite && !isPending && (!!photoUri || !!caption.trim() || (type === 'mood' && !!mood))
+  // Foto faz sentido para refeição/exercício; humor e anotação são texto/emoji.
+  const showPhoto = type === 'meal' || type === 'exercise'
+  const canPublish = canWrite && !isPending && (!!photoUri || !!caption.trim())
 
   const handlePublish = useCallback(async () => {
     if (!canPublish) return
@@ -75,23 +85,23 @@ export default function PostComposeScreen() {
         type,
         photoUri: photoUri ?? undefined,
         caption: caption.trim() || undefined,
-        emoji: type === 'mood' ? (mood ?? undefined) : undefined,
       })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
       router.back()
     } catch {
       toast.error('Não foi possível publicar. Tente novamente.')
     }
-  }, [canPublish, createPost, type, photoUri, caption, mood])
+  }, [canPublish, createPost, type, photoUri, caption])
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      <ScreenHeader title="Nova postagem" />
       <KeyboardAvoidingWrapper>
-        <ScrollView ref={scrollRef} contentContainerStyle={{ padding: SCREEN_PADDING, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScreenHeader title={HEADER_TITLE[type]} />
+        <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: SCREEN_PADDING, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {!canWrite && <ReadOnlyBanner />}
 
-          {/* Foto */}
+          {/* Foto — só refeição e exercício (humor/anotação não precisam de imagem) */}
+          {showPhoto && (
           <Pressable
             onPress={canWrite ? choosePhoto : undefined}
             accessibilityRole="button"
@@ -118,8 +128,11 @@ export default function PostComposeScreen() {
               </View>
             )}
           </Pressable>
+          )}
 
-          {/* Tipo */}
+          {/* Tipo — só quando a intenção não veio definida (FAB genérico do Diário) */}
+          {!typeLocked && (
+          <>
           <Text style={[typography.overline, { color: t.textMuted, marginBottom: space.sm }]}>TIPO</Text>
           <View style={{ flexDirection: 'row', gap: space.sm, marginBottom: space.lg }}>
             {TYPES.map((ty) => {
@@ -128,7 +141,7 @@ export default function PostComposeScreen() {
               return (
                 <Pressable
                   key={ty.id}
-                  onPress={() => { setType(ty.id); Haptics.selectionAsync().catch(() => {}) }}
+                  onPress={() => { setType(ty.id); if (ty.id === 'free') setPhotoUri(null); Haptics.selectionAsync().catch(() => {}) }}
                   disabled={!canWrite}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
@@ -140,34 +153,23 @@ export default function PostComposeScreen() {
               )
             })}
           </View>
-
-          {/* Humor */}
-          {type === 'mood' && (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: space.lg }}>
-              {MOODS.map((m) => (
-                <Pressable
-                  key={m}
-                  onPress={() => { setMood(m); Haptics.selectionAsync().catch(() => {}) }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: mood === m }}
-                  style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: mood === m ? t.primaryLight : t.surfaceSecondary, borderWidth: mood === m ? 2 : 0, borderColor: t.primary }}
-                >
-                  <Text style={{ fontSize: 26 }}>{m}</Text>
-                </Pressable>
-              ))}
-            </View>
+          </>
           )}
 
-          {/* Legenda */}
+          {/* Texto: legenda (refeição/exercício) ou a anotação */}
+          <Text style={[typography.overline, { color: t.textMuted, marginBottom: space.sm }]}>
+            {type === 'free' ? 'ANOTAÇÃO' : 'LEGENDA'}
+          </Text>
           <TextInput
             value={caption}
             onChangeText={setCaption}
             editable={canWrite}
-            placeholder={type === 'mood' ? 'Como você está se sentindo?' : 'Escreva uma legenda (opcional)'}
+            autoFocus={type === 'free'}
+            placeholder={type === 'free' ? 'Escreva sua anotação…' : 'Escreva uma legenda (opcional)'}
             placeholderTextColor={t.textMuted}
             multiline
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
-            style={[typography.bodyLg, { color: t.text, backgroundColor: t.surfaceSecondary, borderRadius: radius.lg, padding: space.lg, minHeight: 90, textAlignVertical: 'top', marginBottom: space.lg }]}
+            style={[typography.bodyLg, { color: t.text, backgroundColor: t.surfaceSecondary, borderRadius: radius.lg, padding: space.lg, minHeight: type === 'free' ? 160 : 90, textAlignVertical: 'top', marginBottom: space.lg }]}
           />
 
           {/* Dica IA */}

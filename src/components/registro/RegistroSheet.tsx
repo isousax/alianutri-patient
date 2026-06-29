@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import { Droplets, Check, Utensils, Scale, Smile, Camera, Dumbbell, Pencil, type LucideIcon } from 'lucide-react-native'
+import { Droplets, Check, Utensils, Scale, Smile, Camera, Dumbbell, Pencil, LayoutGrid, type LucideIcon } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, fmtWater, todayStr } from '../../theme/tokens'
 import { BottomSheet } from '../ui/BottomSheet'
 import { ReadOnlyBanner } from '../ui/ReadOnlyBanner'
 import { useLogWater } from '../../hooks/usePortal'
 import { CREATE_ACTIONS, type CreateActionId } from '../../lib/createActions'
+import { QuickActionTile } from '../ui/QuickActionTile'
 
 const WATER_QUICK = [200, 300, 500]
 
@@ -47,13 +48,14 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
   const { mutateAsync: logWater, isPending } = useLogWater()
   const [justAdded, setJustAdded] = useState<number | null>(null)
 
-  const actionColors: Record<CreateActionId, string> = {
-    meal: t.primary,
-    weight: t.accent,
-    mood: t.info,
-    progress: t.success,
-    exercise: t.warning,
-    note: t.textSecondary,
+  // Cor do ícone + fundo do chip (token *Light) por ação — sem hex-alpha frágil.
+  const ACTION_STYLE: Record<CreateActionId, { color: string; light: string }> = {
+    meal: { color: t.primary, light: t.primaryLight },
+    weight: { color: t.accent, light: t.accentLight },
+    mood: { color: t.info, light: t.infoLight },
+    progress: { color: t.success, light: t.successLight },
+    exercise: { color: t.warning, light: t.warningLight },
+    note: { color: t.textSecondary, light: t.border },
   }
 
   const go = (route: string) => {
@@ -99,14 +101,13 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
                     disabled={isPending}
                     accessibilityRole="button"
                     accessibilityLabel={`Adicionar ${fmtWater(ml)} de água`}
-                    style={({ pressed }) => ({
+                    style={{
                       flex: 1,
                       alignItems: 'center',
                       paddingVertical: space.md,
                       borderRadius: radius.lg,
                       backgroundColor: added ? t.successLight : t.infoLight,
-                      opacity: pressed ? 0.7 : 1,
-                    })}
+                    }}
                   >
                     {added ? (
                       <Check size={18} color={t.success} />
@@ -119,44 +120,26 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
             </View>
           </View>
 
-          {/* Demais registros — grid de atalhos */}
-          <View style={{ height: 1, backgroundColor: t.borderLight, marginBottom: space.md }} />
+          {/* Outros registros — grid de atalhos (mesmo tile da Home) */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.sm }}>
+            <LayoutGrid size={16} color={t.textMuted} />
+            <Text style={[typography.labelMd, { color: t.text, marginLeft: space.xs }]}>Outros registros</Text>
+          </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -space.xs }}>
             {CREATE_ACTIONS.map((a) => {
               const Icon = ACTION_ICONS[a.id]
-              const color = actionColors[a.id]
+              const s = ACTION_STYLE[a.id]
               return (
-                <View key={a.id} style={{ width: '33.333%', padding: space.xs }}>
-                  <Pressable
-                    onPress={() => go(a.route)}
-                    accessibilityRole="button"
+                <View key={a.id} style={{ width: '33.333%', paddingHorizontal: space.xs }}>
+                  <QuickActionTile
+                    variant="surface"
+                    icon={<Icon size={20} color={s.color} />}
+                    label={SHORT_LABEL[a.id]}
+                    //chipColor={s.light}
+                    labelLines={1}
                     accessibilityLabel={a.label}
-                    style={({ pressed }) => ({
-                      alignItems: 'center',
-                      paddingVertical: space.md,
-                      paddingHorizontal: space.xs,
-                      borderRadius: radius.lg,
-                      backgroundColor: t.surfaceSecondary,
-                      opacity: pressed ? 0.6 : 1,
-                    })}
-                  >
-                    <View
-                      style={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: radius.md,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: color + '22',
-                        marginBottom: space.sm,
-                      }}
-                    >
-                      <Icon size={22} color={color} />
-                    </View>
-                    <Text style={[typography.captionBold, { color: t.text }]} numberOfLines={1}>
-                      {SHORT_LABEL[a.id]}
-                    </Text>
-                  </Pressable>
+                    onPress={() => go(a.route)}
+                  />
                 </View>
               )
             })}

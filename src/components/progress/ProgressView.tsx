@@ -58,6 +58,15 @@ function bmiCategory(v: number): { label: string; key: 'low' | 'ok' | 'over' | '
   return { label: 'Obesidade', key: 'obese' }
 }
 
+// Distância de um valor à faixa saudável (0 = dentro). Permite colorir a
+// tendência por "aproximar-se da meta", e não por "subir/descer".
+function distToBand(v: number | null, band: [number, number] | null): number | null {
+  if (v == null || !band) return null
+  if (v < band[0]) return band[0] - v
+  if (v > band[1]) return v - band[1]
+  return 0
+}
+
 export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number }) {
   const t = useThemeColors()
   const [metric, setMetric] = useState<Metric>('weight')
@@ -66,6 +75,15 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
   const { data: evolution } = useEvolution()
   const { data: charts } = useChartsSummary(period === 0 ? 365 : period)
   const { data: profile } = usePortalProfile()
+  const heightM = profile?.height_cm ? profile.height_cm / 100 : null
+  // Faixa saudável (IMC 18,5–25) na unidade da métrica: direto p/ IMC; convertida
+  // p/ kg via altura no peso. Alimenta a faixa do gráfico e a cor da tendência.
+  const healthyBand: [number, number] | null =
+    metric === 'bmi'
+      ? [18.5, 25]
+      : metric === 'weight' && heightM
+      ? [18.5 * heightM * heightM, 25 * heightM * heightM]
+      : null
 
   const series = useMemo<{ points: LineChartPoint[]; unit: string; decimals: number }>(() => {
     if (metric === 'weight') {
@@ -77,7 +95,6 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
     if (metric === 'bmi') {
       // IMC calculado a partir do peso registrado × altura do perfil; a medição
       // do nutricionista (evolution.bmi) tem precedência quando existe na data.
-      const heightM = profile?.height_cm ? profile.height_cm / 100 : null
       const byDate = new Map<string, number>()
       if (heightM && heightM > 0) {
         for (const w of weightData?.entries ?? []) {
@@ -114,7 +131,7 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
     }
     const pts = (charts?.wellness ?? []).map((d) => ({ label: fmtDayMonth(d.date), value: d.energy }))
     return { points: pts, unit: '', decimals: 1 }
-  }, [metric, period, weightData, evolution, charts, profile])
+  }, [metric, period, weightData, evolution, charts, heightM])
 
   const points = series.points
   const current = points.length ? points[points.length - 1].value : null
@@ -123,11 +140,20 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
   const decreasing = delta != null && delta < -0.05
   const increasing = delta != null && delta > 0.05
   const DeltaIcon = decreasing ? TrendingDown : increasing ? TrendingUp : Minus
-  // Peso/IMC/%Gordura: cair é o objetivo (verde). Nutrição/Água/Bem-estar: subir é bom.
-  const lowerIsBetter = metric === 'weight' || metric === 'bmi' || metric === 'fat'
-  const deltaColor = lowerIsBetter
-    ? decreasing ? t.success : increasing ? t.warning : t.textMuted
-    : increasing ? t.success : decreasing ? t.warning : t.textMuted
+  // Cor da tendência = aproximar-se da meta clínica, não "descer = verde".
+  // Peso/IMC: bom quando se move para a faixa saudável. %Gordura: menor. Demais: maior.
+  const deltaColor = (() => {
+    if (healthyBand) {
+      const dCur = distToBand(current, healthyBand)
+      const dFirst = distToBand(first, healthyBand)
+      if (dCur == null || dFirst == null) return t.textMuted
+      if (dCur < dFirst - 0.05) return t.success
+      if (dCur > dFirst + 0.05) return t.warning
+      return t.textMuted
+    }
+    if (metric === 'fat') return decreasing ? t.success : increasing ? t.warning : t.textMuted
+    return increasing ? t.success : decreasing ? t.warning : t.textMuted
+  })()
 
   const macroTotals = useMemo(() => {
     if (metric !== 'nutrition' || !charts?.nutrition?.length) return null
@@ -146,6 +172,11 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
     : bmiCat.key === 'low' ? t.info
     : bmiCat.key === 'over' ? t.warning
     : t.error
+  const bmiCatBg = !bmiCat ? t.surfaceSecondary
+    : bmiCat.key === 'ok' ? t.successLight
+    : bmiCat.key === 'low' ? t.infoLight
+    : bmiCat.key === 'over' ? t.warningLight
+    : t.errorLight
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: bottomPadding }} showsVerticalScrollIndicator={false}>
@@ -166,7 +197,7 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
               style={{
                 paddingHorizontal: space.lg,
                 paddingVertical: space.sm + 2,
-                borderRadius: radius.lg,
+                borderRadius: radius.full,
                 backgroundColor: active ? t.primary : t.surfaceSecondary,
               }}
             >
@@ -186,9 +217,9 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
               onPress={() => setPeriod(p.id)}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
-              style={{ paddingHorizontal: space.md, paddingVertical: space.xs + 2, borderRadius: radius.full, backgroundColor: active ? t.primaryLight : 'transparent' }}
+              style={{ paddingHorizontal: space.md, paddingVertical: space.xs + 2, borderRadius: radius.full, backgroundColor: active ? t.primary : t.surfaceSecondary }}
             >
-              <Text style={[typography.labelSm, { color: active ? t.primary : t.textMuted }]}>{p.label}</Text>
+              <Text style={[typography.labelSm, { color: active ? t.primaryFg : t.textMuted }]}>{p.label}</Text>
             </Pressable>
           )
         })}
@@ -206,7 +237,9 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
                 <Text style={[typography.caption, { color: t.textMuted }]}>{currentLabel}</Text>
                 <Text style={[typography.displaySm, { color: t.text }]}>{current != null ? fmtVal(current) : '—'}</Text>
                 {bmiCat && (
-                  <Text style={[typography.captionBold, { color: bmiCatColor, marginTop: 2 }]}>{bmiCat.label}</Text>
+                  <View style={{ alignSelf: 'flex-start', marginTop: space.xs, paddingHorizontal: space.sm, paddingVertical: 3, borderRadius: radius.full, backgroundColor: bmiCatBg }}>
+                    <Text style={[typography.captionBold, { color: bmiCatColor }]}>{bmiCat.label}</Text>
+                  </View>
                 )}
               </View>
               {delta != null && (
@@ -220,7 +253,13 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
               )}
             </View>
 
-            <LineChart data={points} width={chartWidth} unit={series.unit} decimals={series.decimals} />
+            <LineChart
+              data={points}
+              width={chartWidth}
+              unit={series.unit}
+              decimals={series.decimals}
+              band={healthyBand ? { from: healthyBand[0], to: healthyBand[1], color: t.success } : null}
+            />
 
             {macroTotals && (
               <View style={{ marginTop: space.lg }}>

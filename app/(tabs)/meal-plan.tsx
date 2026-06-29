@@ -39,10 +39,10 @@ export default function MealPlanScreen() {
   // Método → acento da tríade (emerald / teal / indigo) + ícone
   const methodMeta = (method: string) =>
     method === 'qualitative'
-      ? { color: t.accent, bg: t.accentLight, label: 'Qualitativo', Icon: FileText }
+      ? { color: t.accent, bg: t.accentLight, Icon: FileText }
       : method === 'equivalents'
-      ? { color: t.info, bg: t.infoLight, label: 'Equivalentes', Icon: Replace }
-      : { color: t.primary, bg: t.primaryLight, label: 'Quantitativo', Icon: Scale }
+      ? { color: t.info, bg: t.infoLight, Icon: Replace }
+      : { color: t.primary, bg: t.primaryLight, Icon: Scale }
 
   // ── Loading ──
   if (isLoading) {

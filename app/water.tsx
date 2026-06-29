@@ -470,17 +470,16 @@ export default function WaterScreen() {
                   key={opt.ml}
                   onPress={() => handleAdd(opt.ml)}
                   disabled={isLogging || !canWrite}
-                  style={({ pressed }) => ({
+                  style={{
                     width: CARD_WIDTH,
                     alignItems: "center",
                     paddingVertical: space.md,
                     paddingHorizontal: space.xs,
                     borderRadius: radius.xl,
                     backgroundColor: t.surface,
-                    opacity: pressed ? 0.85 : canWrite ? 1 : 0.45,
-                    transform: [{ scale: pressed ? 0.96 : 1 }],
+                    opacity: canWrite ? 1 : 0.45,
                     ...shadows.md,
-                  })}
+                  }}
                 >
                   <View
                     style={{
@@ -490,7 +489,7 @@ export default function WaterScreen() {
                       alignItems: "center",
                       justifyContent: "center",
                       marginBottom: space.xs,
-                      backgroundColor: t.infoLight,
+                      //backgroundColor: t.infoLight,
                     }}
                   >
                     <Text style={{ fontSize: 22 }}>{opt.emoji}</Text>

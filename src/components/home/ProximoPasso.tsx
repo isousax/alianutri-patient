@@ -82,16 +82,14 @@ export function ProximoPasso({
         disabled={!interactive}
         accessibilityRole={interactive ? 'button' : undefined}
         accessibilityLabel={interactive ? step.cta ?? step.title : undefined}
-        style={({ pressed }) => ({
+        style={{
           flexDirection: 'row',
           alignItems: 'center',
           padding: space.lg,
           paddingRight: interactive ? space.lg + 26 : space.lg,
           borderRadius: radius.xl,
           backgroundColor: accentLight,
-          opacity: pressed && interactive ? 0.85 : 1,
-          transform: [{ scale: pressed && interactive ? 0.99 : 1 }],
-        })}
+        }}
       >
         <View
           style={{

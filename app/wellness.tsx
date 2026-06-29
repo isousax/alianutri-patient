@@ -3,7 +3,8 @@ import {
   View, Text, ScrollView, Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Check, Send } from 'lucide-react-native'
+import { useLocalSearchParams } from 'expo-router'
+import { Check, Send, Plus } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOutUp } from 'react-native-reanimated'
 import { useThemeColors } from '../src/stores/theme'
@@ -75,6 +76,11 @@ type SymptomKey = 'energy_level' | 'mood' | 'sleep_quality' | 'digestion' | 'blo
 
 export default function WellnessScreen() {
   const t = useThemeColors()
+  // Aberto pelo atalho "Como me sinto" do "+" → mostra só o Humor (rápido, 1 pergunta).
+  // O botão "Registrar bem-estar completo" revela as demais dimensões (poderíamos ter mais).
+  const params = useLocalSearchParams<{ focus?: string }>()
+  const focusMood = params.focus === 'mood'
+  const [showAll, setShowAll] = useState(!focusMood)
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const today = todayStr()
   const { data: existing } = useSymptoms(today)
@@ -140,7 +146,7 @@ export default function WellnessScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
-      <ScreenHeader title="Bem-estar" />
+      <ScreenHeader title={focusMood && !showAll ? 'Como me sinto' : 'Bem-estar'} />
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           {!canWrite && <ReadOnlyBanner />}
@@ -150,7 +156,7 @@ export default function WellnessScreen() {
             </Text>
           </Animated.View>
 
-          {CATEGORIES.map((cat, catIdx) => (
+          {(showAll ? CATEGORIES : CATEGORIES.filter((c) => c.key === 'mood')).map((cat, catIdx) => (
             <Animated.View
               key={cat.key}
               entering={FadeInDown.duration(300).delay(catIdx * 60)}
@@ -189,6 +195,30 @@ export default function WellnessScreen() {
               </View>
             </Animated.View>
           ))}
+
+          {!showAll && (
+            <Animated.View entering={FadeIn.duration(300)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setShowAll(true) }}
+                accessibilityRole="button"
+                accessibilityLabel="Registrar bem-estar completo"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: space.xs,
+                  paddingVertical: space.md,
+                  borderRadius: radius.lg,
+                  backgroundColor: t.surface,
+                  borderWidth: 1,
+                  borderColor: t.borderLight,
+                }}
+              >
+                <Plus size={16} color={t.primary} />
+                <Text style={[typography.labelMd, { color: t.primary }]}>Registrar bem-estar completo</Text>
+              </Pressable>
+            </Animated.View>
+          )}
 
           {/* Save button */}
           <Animated.View entering={FadeInDown.duration(300).delay(300)} style={{ paddingHorizontal: SCREEN_PADDING }}>

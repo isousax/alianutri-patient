@@ -311,14 +311,14 @@ export function ListRow({ icon, iconBg, title, subtitle, badge, onPress, rightCo
     <Pressable
       onPress={onPress ? () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onPress() } : undefined}
       disabled={!onPress}
-      style={({ pressed }) => ({
+      style={{
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: space.md + 2,
         paddingHorizontal: space.lg,
-        backgroundColor: pressed ? t.surfacePressed : 'transparent',
+        backgroundColor: 'transparent',
         borderRadius: radius.lg,
-      })}
+      }}
     >
       <View style={{
         width: 40,

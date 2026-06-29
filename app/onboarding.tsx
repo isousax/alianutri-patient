@@ -149,13 +149,11 @@ export default function OnboardingScreen() {
           onPress={isLast ? () => finish(true) : advance}
           accessibilityRole="button"
           accessibilityLabel={isLast ? 'Tirar foto da primeira refeição' : 'Avançar'}
-          style={({ pressed }) => ({
+          style={{
             borderRadius: radius.lg,
             overflow: 'hidden',
-            opacity: pressed ? 0.95 : 1,
-            transform: [{ scale: pressed ? 0.985 : 1 }],
             ...shadows.glow(t.primary),
-          })}
+          }}
         >
           <LinearGradient
             colors={gradients.brand}
