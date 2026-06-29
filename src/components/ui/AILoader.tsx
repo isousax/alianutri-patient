@@ -1,6 +1,6 @@
 import LottieView from 'lottie-react-native'
 
-const SOURCE = require('../../../assets/lottie/SparklesLoopLoaderAI.lottie')
+const SOURCE = require('../../../assets/lottie/SparklesLoopLoaderAI.json')
 
 /** Looping sparkles animation shown while AI is working (e.g. calculando macros). */
 export function AILoader({ size = 28 }: { size?: number }) {

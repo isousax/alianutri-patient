@@ -1,7 +1,7 @@
 import { View } from 'react-native'
 import LottieView from 'lottie-react-native'
 
-const SOURCE = require('../../../assets/lottie/Confetti.lottie')
+const SOURCE = require('../../../assets/lottie/Confetti.json')
 
 /** Full-screen one-shot confetti overlay used to celebrate the completed day. */
 export function ConfettiCelebration() {
