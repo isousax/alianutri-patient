@@ -368,6 +368,9 @@ export function useRecentPosts(limit = 3) {
     queryKey: ['portal', 'diary-recent', limit],
     queryFn: () => portalApi.get<DiaryFeedResponse>(`/diary/posts?limit=${limit}`),
     staleTime: 60_000,
+    // Polla enquanto houver post em análise (IA pending); para quando todos resolvem.
+    refetchInterval: (query) =>
+      query.state.data?.posts.some((p) => p.ai_status === 'pending') ? 5000 : false,
   })
 }
 
