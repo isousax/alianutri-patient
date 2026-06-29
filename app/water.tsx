@@ -33,6 +33,7 @@ import {
 import type { WaterIntakeResponse } from "../src/types/portal";
 import { useSmartWaterGoal, type WaterGoalSource } from "../src/hooks/useSmartWaterGoal";
 import { ScreenHeader, Card } from "../src/components/ui";
+import { SuccessBurst } from "../src/components/ui/SuccessBurst";
 import { ReadOnlyBanner } from "../src/components/ui/ReadOnlyBanner";
 import {
   shadows,
@@ -297,6 +298,14 @@ export default function WaterScreen() {
                   : `${goal}ml`}
               </Text>
             </View>
+            {displayProgress >= 1 && (
+              <View
+                pointerEvents="none"
+                style={{ position: "absolute", top: STROKE, left: STROKE, width: RADIUS * 2, height: RADIUS * 2, alignItems: "center", justifyContent: "center" }}
+              >
+                <SuccessBurst size={RADIUS * 3.5} />
+              </View>
+            )}
           </View>
 
           {/* Percentage badge + absolutely positioned floating toast */}

@@ -1,54 +1,171 @@
 export const DAILY_TIPS: { emoji: string; text: string }[] = [
-  { emoji: '💧', text: 'Beber água ao acordar ajuda a ativar o metabolismo e hidratar o corpo após horas de sono.' },
-  { emoji: '🥗', text: 'Inclua pelo menos 3 cores diferentes no seu prato — quanto mais colorido, mais nutrientes.' },
-  { emoji: '🍎', text: 'Frutas inteiras são mais saciantes que sucos, pois preservam as fibras.' },
-  { emoji: '🥜', text: 'Um punhado de castanhas por dia fornece gorduras boas e ajuda a controlar a fome.' },
-  { emoji: '🥦', text: 'Vegetais verde-escuros como brócolis e espinafre são ricos em ferro e cálcio.' },
-  { emoji: '🫘', text: 'O arroz com feijão forma uma proteína completa — uma combinação perfeita e acessível.' },
-  { emoji: '🧠', text: 'Mastigar devagar melhora a digestão e ajuda a perceber a saciedade antes de comer demais.' },
-  { emoji: '🥚', text: 'Ovos são uma das fontes mais completas de proteína e podem ser preparados de diversas formas.' },
-  { emoji: '🌾', text: 'Prefira carboidratos integrais — eles liberam energia de forma mais gradual.' },
-  { emoji: '🥛', text: 'Iogurte natural é rico em probióticos que ajudam na saúde intestinal.' },
-  { emoji: '🍌', text: 'A banana é uma ótima fonte de potássio, mineral essencial para os músculos.' },
-  { emoji: '🫒', text: 'O azeite de oliva extra virgem é anti-inflamatório — use em saladas e finalizações.' },
-  { emoji: '🍵', text: 'Chás de ervas sem açúcar são ótimas alternativas para manter a hidratação.' },
-  { emoji: '🥕', text: 'A cenoura é rica em betacaroteno, importante para a saúde dos olhos e da pele.' },
-  { emoji: '🐟', text: 'Peixes como sardinha e salmão são ricos em ômega-3, ótimo para o coração e o cérebro.' },
-  { emoji: '🌿', text: 'Temperos naturais como alho, cebola e ervas reduzem a necessidade de sal.' },
-  { emoji: '🥑', text: 'O abacate é rico em gorduras monoinsaturadas e ajuda na absorção de vitaminas.' },
-  { emoji: '🍠', text: 'A batata-doce é um carboidrato de baixo índice glicêmico, ideal para energia sustentada.' },
-  { emoji: '🧘', text: 'Comer com atenção plena (mindful eating) ajuda a evitar excessos e melhora a relação com a comida.' },
-  { emoji: '😴', text: 'Dormir bem é essencial para a regulação dos hormônios da fome (grelina e leptina).' },
-  { emoji: '🍊', text: 'A vitamina C das frutas cítricas melhora a absorção do ferro dos vegetais.' },
-  { emoji: '🥬', text: 'Folhas verdes como couve e rúcula são ricas em fibras e ajudam na digestão.' },
-  { emoji: '🏃', text: 'Atividade física regular potencializa os benefícios de uma boa alimentação.' },
-  { emoji: '🫐', text: 'Frutas vermelhas e roxas são ricas em antioxidantes que combatem o envelhecimento celular.' },
-  { emoji: '⏰', text: 'Manter horários regulares de refeições ajuda a regular o metabolismo.' },
-  { emoji: '🥒', text: 'Pepino e melancia são ricos em água — ótimos para hidratação nos dias quentes.' },
-  { emoji: '🍞', text: 'Ler rótulos ajuda a identificar açúcares ocultos e sódio em alimentos industrializados.' },
-  { emoji: '🌰', text: 'A aveia é rica em beta-glucana, uma fibra que ajuda a reduzir o colesterol.' },
-  { emoji: '🧄', text: 'O alho tem propriedades antibacterianas e anti-inflamatórias naturais.' },
-  { emoji: '🥩', text: 'Proteínas em cada refeição ajudam a manter a saciedade e a massa muscular.' },
-  { emoji: '🍋', text: 'Um copo de água com limão pela manhã pode ajudar na digestão.' },
-  { emoji: '🌽', text: 'O milho é fonte de fibras e antioxidantes como a luteína e zeaxantina.' },
-  { emoji: '🍇', text: 'Evite pular refeições — isso pode levar a comer mais na refeição seguinte.' },
-  { emoji: '🥗', text: 'Comece o almoço pela salada — as fibras ajudam a controlar a quantidade do prato principal.' },
-  { emoji: '☀️', text: 'A vitamina D (sol + alimentação) é importante para ossos fortes e imunidade.' },
-  { emoji: '🧊', text: 'Preparar marmitas no fim de semana facilita manter a dieta durante a semana.' },
-  { emoji: '🫑', text: 'O pimentão é uma das maiores fontes de vitamina C — até mais que a laranja!' },
-  { emoji: '🥝', text: 'O kiwi é rico em fibras e vitamina C, ótimo para o intestino.' },
-  { emoji: '🍫', text: 'Chocolate 70%+ cacau em pequenas porções fornece antioxidantes e pode melhorar o humor.' },
-  { emoji: '💪', text: 'Consistência é mais importante que perfeição. Pequenas mudanças diárias geram grandes resultados.' },
-]
+  {
+    emoji: "💧",
+    text: "Depois de uma noite de sono, um copo de água é uma boa forma de começar o dia.",
+  },
+  {
+    emoji: "🥗",
+    text: "Um prato colorido costuma ser um prato mais nutritivo.",
+  },
+  {
+    emoji: "🍎",
+    text: "Frutas inteiras são mais saciantes que sucos, pois preservam as fibras.",
+  },
+  {
+    emoji: "🥜",
+    text: "Castanhas são uma ótima opção de lanche e ajudam na saciedade.",
+  },
+  {
+    emoji: "🥦",
+    text: "Vegetais verde-escuros como brócolis e espinafre são ricos em ferro e cálcio – seus ossos agradecem!",
+  },
+  {
+    emoji: "🫘",
+    text: "Arroz com feijão garante proteína completa e não pesa no bolso.",
+  },
+  {
+    emoji: "🧠",
+    text: "Comer devagar dá mais tempo para o corpo perceber quando já está satisfeito.",
+  },
+  {
+    emoji: "🥚",
+    text: "Ovos são campeões de proteína e ainda dá pra prepará-los de várias formas.",
+  },
+  {
+    emoji: "🌾",
+    text: "Carboidratos integrais dão energia gradualmente, mantendo você firme por mais tempo.",
+  },
+  {
+    emoji: "🥛",
+    text: "Iogurte natural pode contribuir para a saúde da intestinal.",
+  },
+  {
+    emoji: "🍌",
+    text: "A banana é uma ótima fonte de potássio, mineral essencial para os músculos.",
+  },
+  {
+    emoji: "🫒",
+    text: "Azeite extra-virgem é a gordurinha do bem – anti-inflamatório natural que deixa qualquer salada ainda mais gostosa.",
+  },
+  {
+    emoji: "🍵",
+    text: "Chá de ervas (sem açúcar!) é ótima pedida para manter você hidratado com sabor.",
+  },
+  {
+    emoji: "🥕",
+    text: "Cenoura é pra ver a vida inteira: rica em betacaroteno, ajuda na saúde dos olhos e da pele.",
+  },
+  {
+    emoji: "🐟",
+    text: "Salmão, sardinha e outros peixinhos são fonte de ômega-3 – seu coração e cérebro agradecem.",
+  },
+  {
+    emoji: "🌿",
+    text: "Alho, cebola e ervas dão sabor sem precisar de muito sal – temperos naturais capricham no sabor!",
+  },
+  {
+    emoji: "🥑",
+    text: "Abacate é pura gordura boa – ajuda seu corpo a aproveitar melhor as vitaminas dos alimentos.",
+  },
+  {
+    emoji: "🍠",
+    text: "Batata-doce dá energia constante – ideal pra ter pique sem altos de açúcar.",
+  },
+  {
+    emoji: "🧘",
+    text: "Comer com calma e atenção plena evita exageros – fica mais fácil curtir a comida sem culpa.",
+  },
+  {
+    emoji: "😴",
+    text: "Uma boa noite de sono acerta os hormônios da fome – resultado: menos fome maluca!",
+  },
+  {
+    emoji: "🍊",
+    text: "Frutas cítricas + vegetais verde-escuro: a vitamina C ajuda seu corpo a absorver melhor o ferro!",
+  },
+  {
+    emoji: "🥬",
+    text: "Couve, rúcula e outras folhas verdes carregam muita fibra – ajudam a manter o intestino em ordem!",
+  },
+  {
+    emoji: "🏃",
+    text: "Exercício + alimentação equilibrada = um combo que turbina sua saúde!",
+  },
+  {
+    emoji: "🫐",
+    text: "Frutas vermelhas e roxas estão lotadas de antioxidantes – protegem suas células do envelhecimento!",
+  },
+  {
+    emoji: "⏰",
+    text: "Comer em horários regulares ajuda o corpo a ajustar o metabolismo – e a controlar a fome.",
+  },
+  {
+    emoji: "🥒",
+    text: "Pepino e melancia são praticamente água pura – ótimos para hidratar nos dias quentes.",
+  },
+  {
+    emoji: "🍞",
+    text: "Fique de olho no rótulo: ele revela açúcares e sódio escondidos nos processados.",
+  },
+  {
+    emoji: "🌰",
+    text: "Aveia é cheia de fibra boa (beta-glucana), que ajuda a manter o colesterol sob controle.",
+  },
+  {
+    emoji: "🧄",
+    text: "Alho tem poderes: combate bactérias e inflamações de forma natural.",
+  },
+  {
+    emoji: "🥩",
+    text: "Inclua proteína em todas as refeições: ajuda a segurar a fome e manter os músculos firmes.",
+  },
+  {
+    emoji: "🍋",
+    text: "Comece o dia com água com limão – dizem que ajuda na digestão.",
+  },
+  {
+    emoji: "🌽",
+    text: "Milho tem fibra e antioxidantes (luteína e zeaxantina) – ótimo para a saúde dos olhos.",
+  },
+  {
+    emoji: "🍇",
+    text: "Não pule refeições – além de ficar faminto, você acaba comendo mais depois.",
+  },
+  {
+    emoji: "🥗",
+    text: "Comece a refeição pelas folhas: a fibra dá aquela segurada na fome antes do prato principal.",
+  },
+  {
+    emoji: "☀️",
+    text: "Solzinho + bons alimentos = vitamina D, aquela força pros ossos e pra imunidade!",
+  },
+  {
+    emoji: "🧊",
+    text: "Preparar marmitas no fim de semana deixa a dieta na linha durante a semana toda!",
+  },
+  { emoji: "🫑", text: "Pimentão tem vitamina C até mais do que a laranja!" },
+  {
+    emoji: "🥝",
+    text: "Kiwi combina fibras e vitamina C em dobro – ótimo para o intestino funcionar direitinho!",
+  },
+  {
+    emoji: "🍫",
+    text: "Um pedacinho de chocolate 70%+ cacau entrega antioxidantes e ainda dá um up no humor!",
+  },
+  {
+    emoji: "💪",
+    text: "Nem precisa ser perfeito: pequenas mudanças todo dia fazem uma baita diferença!",
+  },
+];
 
 /**
  * Returns the tip for a specific day (deterministic based on date).
  * Same tip for all users on the same day.
  */
-export function getTipOfTheDay(): typeof DAILY_TIPS[number] {
-  const now = new Date()
+export function getTipOfTheDay(): (typeof DAILY_TIPS)[number] {
+  const now = new Date();
   const dayOfYear = Math.floor(
     (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000,
-  )
-  return DAILY_TIPS[dayOfYear % DAILY_TIPS.length]
+  );
+  return DAILY_TIPS[dayOfYear % DAILY_TIPS.length];
 }

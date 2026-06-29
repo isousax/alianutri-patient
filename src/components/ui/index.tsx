@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChevronLeft, ChevronRight } from 'lucide-react-native'
 import Svg, { Circle as SvgCircle } from 'react-native-svg'
+import { AliaAvatar } from './AliaAvatar'
 import Animated, {
   FadeIn, FadeInDown,
   useSharedValue, useAnimatedProps, withTiming, withSpring, Easing,
@@ -226,7 +227,8 @@ export function ProgressRing({
 // ══════════════════════════════════════════════════════
 
 interface EmptyStateProps {
-  icon: React.ReactNode
+  icon?: React.ReactNode
+  alia?: boolean
   iconBg?: string
   title: string
   description: string
@@ -234,7 +236,7 @@ interface EmptyStateProps {
   onAction?: () => void
 }
 
-export function EmptyState({ icon, iconBg, title, description, actionLabel, onAction }: EmptyStateProps) {
+export function EmptyState({ icon, alia, iconBg, title, description, actionLabel, onAction }: EmptyStateProps) {
   const t = useThemeColors()
   const aScale = useSharedValue(1)
   const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: aScale.value }] }))
@@ -249,17 +251,23 @@ export function EmptyState({ icon, iconBg, title, description, actionLabel, onAc
         paddingHorizontal: space['5xl'],
       }}
     >
-      <View style={{
-        width: 72,
-        height: 72,
-        borderRadius: radius['2xl'],
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: iconBg ?? t.primaryLight,
-        marginBottom: space.xl,
-      }}>
-        {icon}
-      </View>
+      {alia ? (
+        <View style={{ marginBottom: space.xl }}>
+          <AliaAvatar size={104} />
+        </View>
+      ) : (
+        <View style={{
+          width: 72,
+          height: 72,
+          borderRadius: radius['2xl'],
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: iconBg ?? t.primaryLight,
+          marginBottom: space.xl,
+        }}>
+          {icon}
+        </View>
+      )}
       <Text style={[typography.headingMd, { color: t.text, textAlign: 'center', marginBottom: space.sm }]}>
         {title}
       </Text>

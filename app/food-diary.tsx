@@ -8,7 +8,7 @@ import { router } from 'expo-router'
 import {
   ChevronLeft, ChevronRight, Flame, Check, CircleDashed,
   Camera, Clock, Utensils, Undo2, Plus,
-  Sparkles, ChevronDown, X, Trophy,
+  ChevronDown, X,
 } from 'lucide-react-native'
 import { Image } from 'expo-image'
 import * as ImagePicker from 'expo-image-picker'
@@ -17,7 +17,7 @@ import Animated, {
   FadeIn, FadeInDown, FadeInUp,
   LinearTransition,
   useSharedValue, useAnimatedStyle, withTiming,
-  withSequence, withSpring, withRepeat, interpolate, Easing,
+  withSequence, withSpring,
 } from 'react-native-reanimated'
 import { useThemeColors, type ThemeColors } from '../src/stores/theme'
 import { toast } from '../src/stores/toast'
@@ -28,6 +28,8 @@ import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, use
 import type { DiaryTimelineMeal, PortalFoodDiaryEntry } from '../src/types/portal'
 import { ScreenHeader, SkeletonBlock } from '../src/components/ui'
 import { ConfettiCelebration } from '../src/components/ui/ConfettiCelebration'
+import { RewardTrophy } from '../src/components/ui/RewardTrophy'
+import { AliaAvatar } from '../src/components/ui/AliaAvatar'
 import { typography, space } from '../src/theme/tokens'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://api.alianutri.com.br'
@@ -657,45 +659,36 @@ function FreeDiary({
 
 const CELEBRATE_MESSAGES = [
   'Todas as refeições registradas!',
-  'Dia 100% completo!',
+  'Dia completo!',
   'Mandou muito bem hoje!',
   'Compromisso é tudo!',
   'Consistência gera resultados!',
+  'Um passo de cada vez!',
+  'Você manteve o ritmo hoje!',
+  'Mais um dia de consistência!',
+  'Parabéns pelo registro de hoje!',
+  'Até amanhã! 👋',
+  'Você está criando um bom hábito!',
+  'Cada dia conta!',
+  'Valeu pelo comprometimento!',
 ]
 
 function CompletionCard({ t, justCompleted, streak }: { t: ThemeColors; justCompleted: boolean; streak: number }) {
   const scale = useSharedValue(0)
-  const glow = useSharedValue(0)
   const messageIdx = useMemo(() => Math.floor(Math.random() * CELEBRATE_MESSAGES.length), [])
 
   useEffect(() => {
-    if (justCompleted) {
-      scale.value = withSequence(
-        withTiming(0, { duration: 0 }),
-        withSpring(1.15, { damping: 6, stiffness: 150 }),
-        withSpring(1, { damping: 10, stiffness: 200 }),
-      )
-      glow.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.3, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-        ),
-        -1,
-        true,
-      )
-    } else {
-      scale.value = withTiming(1, { duration: 300 })
-      glow.value = 0
-    }
-  }, [justCompleted, scale, glow])
+    scale.value = justCompleted
+      ? withSequence(
+          withTiming(0, { duration: 0 }),
+          withSpring(1.15, { damping: 6, stiffness: 150 }),
+          withSpring(1, { damping: 10, stiffness: 200 }),
+        )
+      : withTiming(1, { duration: 300 })
+  }, [justCompleted, scale])
 
   const iconStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-  }))
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(glow.value, [0, 1], [0, 0.6]),
-    transform: [{ scale: interpolate(glow.value, [0, 1], [1, 1.6]) }],
   }))
 
   return (
@@ -703,31 +696,17 @@ function CompletionCard({ t, justCompleted, streak }: { t: ThemeColors; justComp
       className="rounded-2xl p-6 items-center overflow-hidden"
       style={{ backgroundColor: t.primaryLight, borderWidth: 1.5, borderColor: t.primaryMuted }}
     >
-      {/* Glow ring behind icon */}
-      <View className="items-center justify-center mb-4" style={{ width: 72, height: 72 }}>
-        <Animated.View
-          style={[{
-            position: 'absolute', width: 72, height: 72, borderRadius: 36,
-            backgroundColor: t.primary,
-          }, glowStyle]}
-        />
-        <Animated.View
-          style={[{
-            width: 56, height: 56, borderRadius: 28,
-            backgroundColor: t.primaryMuted,
-            alignItems: 'center', justifyContent: 'center',
-          }, iconStyle]}
-        >
-          {justCompleted ? (
-            <Trophy size={28} color={t.primary} />
-          ) : (
-            <Sparkles size={24} color={t.primary} />
-          )}
-        </Animated.View>
-      </View>
+      {/* Celebration icon — premium trophy + lights (just completed) or Alia (already complete) */}
+      <Animated.View className="items-center justify-center mb-4" style={[{ width: 100, height: 100 }, iconStyle]}>
+        {justCompleted ? (
+          <RewardTrophy size={120} />
+        ) : (
+          <AliaAvatar size={80} />
+        )}
+      </Animated.View>
 
       <Text style={{ color: t.primary }} className="text-lg font-sans-bold mb-1">
-        {justCompleted ? 'Parabéns! 🎉' : 'Dia completo'}
+        {justCompleted ? 'Parabéns! 🎉' : 'Dia concluído'}
       </Text>
 
       <Text style={{ color: t.textSecondary }} className="text-sm font-sans text-center mb-3">

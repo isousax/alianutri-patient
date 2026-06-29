@@ -6,6 +6,7 @@ import { Check, ChevronRight, ChevronDown, Plus, Utensils } from 'lucide-react-n
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 import { Card } from '../ui'
+import { SuccessBurst } from '../ui/SuccessBurst'
 import type { DiaryTimelineMeal } from '../../types/portal'
 
 interface RefeicoesDeHojeProps {
@@ -101,16 +102,14 @@ export function RefeicoesDeHoje({ meals }: RefeicoesDeHojeProps) {
           >
             <View
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: radius.md,
+                width: 44,
+                height: 44,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: t.successLight,
                 marginRight: space.md,
               }}
             >
-              <Check size={20} color={t.success} />
+              <SuccessBurst size={100} />
             </View>
             <Text style={[typography.labelMd, { color: t.text, flex: 1 }]}>
               Todas as refeições registradas

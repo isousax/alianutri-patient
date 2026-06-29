@@ -220,10 +220,10 @@ export default function FeedScreen() {
         <SkeletonList />
       ) : posts.length === 0 ? (
         <EmptyState
-          icon={<Camera size={28} color={t.primary} />}
+          alia
           title="Seu diário está vazio"
           description="Tire uma foto da sua refeição e comece sua jornada!"
-          actionLabel={canWrite ? '📸 Primeira postagem' : undefined}
+          actionLabel={canWrite ? 'Primeira postagem' : undefined}
           onAction={canWrite ? () => router.push('/post-compose' as never) : undefined}
         />
       ) : filtered.length === 0 ? (

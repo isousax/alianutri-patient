@@ -1,52 +1,19 @@
 import { useEffect } from 'react'
-import { View, Text, Modal, StyleSheet } from 'react-native'
+import { View, Text, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
-import Animated, {
-  useSharedValue, useAnimatedStyle, withDelay, withTiming,
-  interpolate, Easing, FadeIn, ZoomIn,
-} from 'react-native-reanimated'
-import { Trophy, Sparkles } from 'lucide-react-native'
+import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated'
+import { Sparkles } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, shadows } from '../../theme/tokens'
 import { AuroraBackground, Button } from '../ui'
-
-// ── Single confetti piece (falls + drifts + spins, then fades) ──
-function ConfettiPiece({ index, color }: { index: number; color: string }) {
-  const progress = useSharedValue(0)
-  const startX = (index * 37) % 100
-  const drift = ((index % 5) - 2) * 34
-  const rot = (index % 2 === 0 ? 1 : -1) * (180 + (index % 3) * 120)
-
-  useEffect(() => {
-    progress.value = withDelay(
-      index * 28,
-      withTiming(1, { duration: 1800 + (index % 4) * 320, easing: Easing.out(Easing.cubic) }),
-    )
-  }, [])
-
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: interpolate(progress.value, [0, 1], [-50, 560]) },
-      { translateX: interpolate(progress.value, [0, 1], [0, drift]) },
-      { rotate: `${interpolate(progress.value, [0, 1], [0, rot])}deg` },
-    ],
-    opacity: interpolate(progress.value, [0, 0.1, 0.82, 1], [0, 1, 1, 0]),
-  }))
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        { position: 'absolute', top: 0, left: `${startX}%`, width: 8, height: 13, borderRadius: 2, backgroundColor: color },
-        style,
-      ]}
-    />
-  )
-}
+import { ConfettiCelebration } from '../ui/ConfettiCelebration'
+import { RewardLight } from '../ui/RewardLight'
+import { RewardTrophy } from '../ui/RewardTrophy'
 
 interface CelebrationModalProps {
-  icon: React.ReactNode
+  icon?: React.ReactNode
+  hero?: React.ReactNode
   eyebrow: string
   title: string
   subtitle?: string
@@ -55,9 +22,8 @@ interface CelebrationModalProps {
 }
 
 /** Generic fullscreen celebration — Aurora hero + confetti + haptics. */
-export function CelebrationModal({ icon, eyebrow, title, subtitle, message, onDismiss }: CelebrationModalProps) {
+export function CelebrationModal({ icon, hero, eyebrow, title, subtitle, message, onDismiss }: CelebrationModalProps) {
   const t = useThemeColors()
-  const confettiColors = [t.primary, t.info, t.accent, t.warning]
 
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
@@ -69,27 +35,30 @@ export function CelebrationModal({ icon, eyebrow, title, subtitle, message, onDi
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onDismiss} statusBarTranslucent>
       <AuroraBackground variant="hero" style={{ flex: 1, backgroundColor: t.background }}>
-        <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-          {Array.from({ length: 28 }).map((_, i) => (
-            <ConfettiPiece key={i} index={i} color={confettiColors[i % confettiColors.length]} />
-          ))}
-        </View>
+        <ConfettiCelebration />
 
         <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space['3xl'] }}>
           <Animated.View entering={ZoomIn.springify().damping(12)} style={{ alignItems: 'center' }}>
-            <View
-              style={{
-                width: 112,
-                height: 112,
-                borderRadius: 56,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: t.primary,
-                ...shadows.glow(t.primary),
-              }}
-            >
-              {icon}
-            </View>
+            {hero ? (
+              hero
+            ) : (
+              <View style={{ width: 152, height: 152, alignItems: 'center', justifyContent: 'center' }}>
+                <RewardLight size={208} />
+                <View
+                  style={{
+                    width: 112,
+                    height: 112,
+                    borderRadius: 56,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: t.primary,
+                    ...shadows.glow(t.primary),
+                  }}
+                >
+                  {icon}
+                </View>
+              </View>
+            )}
             <Text style={[typography.overline, { color: t.primary, marginTop: space.xl }]}>{eyebrow}</Text>
             <Text style={[typography.displayLg, { color: t.text, marginTop: space.xs, textAlign: 'center' }]}>{title}</Text>
             {subtitle && (
@@ -119,10 +88,9 @@ function levelTitle(level: number): string {
 
 /** Level-up celebration (thin wrapper over CelebrationModal). */
 export function LevelUpCelebration({ level, onDismiss }: { level: number; onDismiss: () => void }) {
-  const t = useThemeColors()
   return (
     <CelebrationModal
-      icon={<Trophy size={52} color={t.primaryFg} />}
+      hero={<RewardTrophy size={132} />}
       eyebrow="Subiu de nível"
       title={`Nível ${level}`}
       subtitle={levelTitle(level)}

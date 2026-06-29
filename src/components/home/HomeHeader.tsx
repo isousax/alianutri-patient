@@ -66,19 +66,23 @@ export function HomeHeader({ displayName, nutritionistName, weather, streak, cha
             ) : null}
             <Avatar name={displayName} uri={photoUrl} size={53} onPress={() => router.push('/profile')} />
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.xs }}>
-            <GreetingIcon size={14} color={t.primary} strokeWidth={2} />
-            <Text style={[typography.labelSm, { color: t.primary, marginLeft: 6 }]}>{greeting.text}</Text>
-            {weather && (
-              <Text style={[typography.caption, { color: t.textMuted, marginLeft: space.sm }]}>
-                {weather.icon} {Math.round(weather.temperature)}°C
-              </Text>
-            )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.xs }}>
+                <GreetingIcon size={14} color={t.primary} strokeWidth={2} />
+                <Text style={[typography.labelSm, { color: t.primary, marginLeft: 6 }]}>{greeting.text}</Text>
+                {weather && (
+                  <Text style={[typography.caption, { color: t.textMuted, marginLeft: space.sm }]}>
+                    {weather.icon} {Math.round(weather.temperature)}°C
+                  </Text>
+                )}
+              </View>
+              <Text style={[typography.displayMd, { color: t.text }]}>{displayName}</Text>
+              {nutritionistName && (
+                <Text style={[typography.caption, { color: t.textMuted, marginTop: 4 }]}>com {nutritionistName}</Text>
+              )}
+            </View>
           </View>
-          <Text style={[typography.displayMd, { color: t.text }]}>{displayName}</Text>
-          {nutritionistName && (
-            <Text style={[typography.caption, { color: t.textMuted, marginTop: 4 }]}>com {nutritionistName}</Text>
-          )}
         </Animated.View>
       </AuroraBackground>
 

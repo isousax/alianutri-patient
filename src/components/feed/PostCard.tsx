@@ -1,6 +1,6 @@
 import { View, Text, Pressable } from 'react-native'
 import { Image } from 'expo-image'
-import { Utensils, Dumbbell, Smile, Pencil, Sparkles, MessageCircle, CloudOff } from 'lucide-react-native'
+import { Utensils, Dumbbell, Smile, Pencil, MessageCircle, CloudOff } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
 import { useUpdatePostType } from '../../hooks/usePortal'
@@ -8,6 +8,7 @@ import { confirm } from '../../stores/confirm'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 import { Card, MacrosBar, AuroraBackground } from '../ui'
 import { AILoader } from '../ui/AILoader'
+import { AliaAvatar } from '../ui/AliaAvatar'
 import { diaryPhotoUrl } from '../../lib/diaryPhoto'
 import type { DiaryPost, DiaryPostType } from '../../types/portal'
 
@@ -103,7 +104,7 @@ export function PostCard({ post }: { post: DiaryPost }) {
             <AuroraBackground variant="subtle" style={{ borderRadius: radius.lg, padding: space.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Sparkles size={14} color={t.primary} />
+                  <AliaAvatar size={20} />
                   <Text style={[typography.labelMd, { color: t.text }]}>~{Math.round(ai.calories ?? 0)} kcal</Text>
                 </View>
                 {ai.confidence && <ConfidenceDots level={ai.confidence} />}

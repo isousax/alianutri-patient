@@ -102,6 +102,7 @@ import { RefeicoesDeHoje } from "../../src/components/home/RefeicoesDeHoje";
 import { MiniPostCard } from "../../src/components/home/MiniPostCard";
 import { GoalsPreview } from "../../src/components/home/GoalsPreview";
 import { LevelUpCelebration, CelebrationModal } from "../../src/components/home/LevelUpCelebration";
+import { AliaAvatar } from "../../src/components/ui/AliaAvatar";
 import { QuickActionTile } from "../../src/components/ui/QuickActionTile";
 import {
   radius,
@@ -692,18 +693,8 @@ function DailyTipCard({ onDismiss }: { onDismiss: () => void }) {
     >
       <Card style={{ backgroundColor: t.primaryLight }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: radius.md,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: t.primary + "18",
-              marginRight: space.md,
-            }}
-          >
-            <Text style={{ fontSize: 18 }}>{tip.emoji}</Text>
+          <View style={{ marginRight: space.md }}>
+            <AliaAvatar size={44} />
           </View>
           <View style={{ flex: 1 }}>
             <Text

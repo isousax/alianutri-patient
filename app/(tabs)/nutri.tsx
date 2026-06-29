@@ -172,7 +172,7 @@ function QuestionnairesSegment({ pending, total }: { pending: PortalQuestionnair
     return (
       <View style={{ minHeight: 340 }}>
         <EmptyState
-          icon={<ClipboardList size={28} color={t.primary} />}
+          alia
           title="Sem questionários"
           description="Os questionários enviados pela sua nutricionista aparecerão aqui."
         />
