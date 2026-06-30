@@ -8,7 +8,7 @@ import { useThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
 import { confirm } from '../../src/stores/confirm'
 import { toast } from '../../src/stores/toast'
-import { usePostDetail, useDeletePost } from '../../src/hooks/usePortal'
+import { usePostDetail, useDeletePost, usePortalHome } from '../../src/hooks/usePortal'
 import { ScreenHeader, SkeletonList, EmptyState } from '../../src/components/ui'
 import { PostCard } from '../../src/components/feed/PostCard'
 import { space } from '../../src/theme/tokens'
@@ -19,6 +19,7 @@ export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { data: post, isLoading } = usePostDetail(id ?? null)
   const del = useDeletePost()
+  const { data: home } = usePortalHome()
 
   const handleDelete = useCallback(() => {
     if (!post) return
@@ -65,7 +66,7 @@ export default function PostDetailScreen() {
         />
       ) : (
         <ScrollView contentContainerStyle={{ paddingTop: space.md, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-          <PostCard post={post} />
+          <PostCard post={post} nutriName={home?.nutritionist?.name ?? 'Seu nutricionista'} nutriPhoto={home?.nutritionist?.photo_url ?? null} />
         </ScrollView>
       )}
     </SafeAreaView>

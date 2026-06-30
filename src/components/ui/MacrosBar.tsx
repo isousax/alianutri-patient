@@ -9,6 +9,8 @@ interface MacrosBarProps {
   carbs_g: number
   fat_g: number
   showLegend?: boolean
+  /** Reveal the bar with a width animation. Disable inside scrolling lists. */
+  animated?: boolean
 }
 
 /**
@@ -16,7 +18,7 @@ interface MacrosBarProps {
  * calórica, com reveal animado da esquerda pra direita. Cores via tema:
  * proteína=info, carbo=warning, gordura=error.
  */
-export function MacrosBar({ protein_g, carbs_g, fat_g, showLegend = true }: MacrosBarProps) {
+export function MacrosBar({ protein_g, carbs_g, fat_g, showLegend = true, animated = true }: MacrosBarProps) {
   const t = useThemeColors()
 
   const pCal = Math.max(protein_g, 0) * 4
@@ -31,19 +33,22 @@ export function MacrosBar({ protein_g, carbs_g, fat_g, showLegend = true }: Macr
   ]
 
   const [w, setW] = useState(0)
-  const p = useSharedValue(0)
+  const p = useSharedValue(animated ? 0 : 1)
   useEffect(() => {
+    if (!animated) return
     if (w > 0) {
       p.value = 0
       p.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) })
     }
-  }, [w, protein_g, carbs_g, fat_g])
-  const fillStyle = useAnimatedStyle(() => ({ width: interpolate(p.value, [0, 1], [0, w]) }))
+  }, [w, protein_g, carbs_g, fat_g, animated])
+  const fillStyle = useAnimatedStyle(() => ({
+    width: animated ? interpolate(p.value, [0, 1], [0, w]) : '100%',
+  }))
 
   return (
     <View>
       <View
-        onLayout={(e) => setW(e.nativeEvent.layout.width)}
+        onLayout={animated ? (e) => setW(e.nativeEvent.layout.width) : undefined}
         style={{ height: 10, borderRadius: 5, overflow: 'hidden', backgroundColor: t.borderLight }}
       >
         <Animated.View style={[{ height: 10, flexDirection: 'row' }, fillStyle]}>

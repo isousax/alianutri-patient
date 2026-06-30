@@ -1,9 +1,10 @@
+import { memo } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { Image } from 'expo-image'
 import { Utensils, Dumbbell, Smile, Pencil, CloudOff } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
-import { useUpdatePostType, usePortalHome } from '../../hooks/usePortal'
+import { useUpdatePostType } from '../../hooks/usePortal'
 import { confirm } from '../../stores/confirm'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 import { Card, MacrosBar, AuroraBackground, Avatar } from '../ui'
@@ -42,16 +43,13 @@ function ConfidenceDots({ level }: { level: 'high' | 'medium' | 'low' }) {
   )
 }
 
-export function PostCard({ post }: { post: DiaryPost }) {
+export const PostCard = memo(function PostCard({ post, nutriName, nutriPhoto }: { post: DiaryPost; nutriName: string; nutriPhoto: string | null }) {
   const t = useThemeColors()
   const accessCode = useAuthStore((s) => s.accessCode)
   const updateType = useUpdatePostType()
   const meta = TYPE_META[post.type]
   const TypeIcon = meta.Icon
   const ai = post.ai_analysis
-  const { data: home } = usePortalHome()
-  const nutriName = home?.nutritionist?.name ?? 'Seu nutricionista'
-  const nutriPhoto = home?.nutritionist?.photo_url ?? null
   const isLocal = !!post._local
   const photoUri = post.has_photo
     ? isLocal && post._localPhotoUri
@@ -91,7 +89,14 @@ export function PostCard({ post }: { post: DiaryPost }) {
 
       {/* Foto */}
       {photoUri && (
-        <Image source={{ uri: photoUri }} style={{ width: '100%', height: 300 }} contentFit="cover" transition={200} />
+        <Image
+          source={{ uri: photoUri }}
+          style={{ width: '100%', height: 300, backgroundColor: t.surfaceSecondary }}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          recyclingKey={post.id}
+          transition={0}
+        />
       )}
 
       {/* Análise de IA (só refeição já sincronizada) */}
@@ -104,7 +109,7 @@ export function PostCard({ post }: { post: DiaryPost }) {
             </View>
           )}
           {post.ai_status === 'completed' && ai && (
-            <AuroraBackground variant="subtle" style={{ borderRadius: radius.lg, padding: space.md }}>
+            <AuroraBackground variant="subtle" animated={false} style={{ borderRadius: radius.lg, padding: space.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <AliaAvatar size={20} />
@@ -112,7 +117,7 @@ export function PostCard({ post }: { post: DiaryPost }) {
                 </View>
                 {ai.confidence && <ConfidenceDots level={ai.confidence} />}
               </View>
-              <MacrosBar protein_g={ai.protein_g ?? 0} carbs_g={ai.carbs_g ?? 0} fat_g={ai.fat_g ?? 0} />
+              <MacrosBar protein_g={ai.protein_g ?? 0} carbs_g={ai.carbs_g ?? 0} fat_g={ai.fat_g ?? 0} animated={false} />
               {ai.meal_name ? (
                 <Text style={[typography.caption, { color: t.textMuted, marginTop: space.sm }]} numberOfLines={2}>
                   {ai.meal_name}
@@ -178,4 +183,4 @@ export function PostCard({ post }: { post: DiaryPost }) {
       )}
     </Card>
   )
-}
+})

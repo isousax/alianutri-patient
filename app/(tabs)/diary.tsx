@@ -13,7 +13,7 @@ import { PostCard } from '../../src/components/feed/PostCard'
 import { diaryPhotoUrl } from '../../src/lib/diaryPhoto'
 import { useIsOnline } from '../../src/lib/network'
 import { typography, space, radius, SCREEN_PADDING, shadows } from '../../src/theme/tokens'
-import type { DiaryPost, DiaryPostType } from '../../src/types/portal'
+import type { DiaryPost } from '../../src/types/portal'
 import { useDiarySeenStore } from '../../src/stores/diarySeen'
 import { ProgressView } from '../../src/components/progress/ProgressView'
 import { Conquistas } from '../../src/components/diary/Conquistas'
@@ -23,30 +23,7 @@ const GRID_GAP = 8
 const COLS = 3
 const SCREEN_W = Dimensions.get('window').width
 
-type TypeFilter = 'all' | DiaryPostType
-type PeriodFilter = 'all' | 'today' | 'week' | 'month'
 type Segment = 'feed' | 'progress' | 'achievements'
-
-const TYPE_FILTERS: { id: TypeFilter; label: string }[] = [
-  { id: 'all', label: 'Todos' },
-  { id: 'meal', label: '🍽' },
-  { id: 'exercise', label: '🏋️' },
-  { id: 'free', label: '✏️' },
-]
-const PERIOD_FILTERS: { id: PeriodFilter; label: string }[] = [
-  { id: 'today', label: 'Hoje' },
-  { id: 'week', label: 'Semana' },
-  { id: 'month', label: 'Mês' },
-  { id: 'all', label: 'Tudo' },
-]
-
-function withinPeriod(iso: string, period: PeriodFilter): boolean {
-  if (period === 'all') return true
-  const ts = new Date(iso).getTime()
-  if (isNaN(ts)) return true
-  const days = period === 'today' ? 1 : period === 'week' ? 7 : 30
-  return Date.now() - ts <= days * 86400000
-}
 
 export default function FeedScreen() {
   const t = useThemeColors()
@@ -58,17 +35,11 @@ export default function FeedScreen() {
   const [view, setView] = useState<'timeline' | 'grid'>('timeline')
   const [segment, setSegment] = useState<Segment>('feed')
   const { data: home } = usePortalHome()
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all')
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const { data, isLoading, isRefetching, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useDiaryFeed()
 
   const posts: DiaryPost[] = data?.pages.flatMap((p) => p.posts) ?? []
-  const filtered = useMemo(
-    () => posts.filter((p) => (typeFilter === 'all' || p.type === typeFilter) && withinPeriod(p.created_at, periodFilter)),
-    [posts, typeFilter, periodFilter],
-  )
-  const photoPosts = filtered.filter((p) => p.has_photo)
+  const photoPosts = posts.filter((p) => p.has_photo)
   const cell = (SCREEN_W - SCREEN_PADDING * 2 - GRID_GAP * (COLS - 1)) / COLS
   const isOnline = useIsOnline()
   const gridUri = (p: DiaryPost) =>
@@ -114,32 +85,6 @@ export default function FeedScreen() {
     ...(home?.gamification_enabled ? [{ key: 'achievements' as Segment, label: 'Conquistas' }] : []),
   ]
 
-  const filterBar = posts.length > 0 ? (
-    <View style={{ gap: space.sm, paddingBottom: space.sm }}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.xs, paddingHorizontal: SCREEN_PADDING }}>
-        {TYPE_FILTERS.map((f) => {
-          const active = typeFilter === f.id
-          return (
-            <Pressable key={f.id} onPress={() => setTypeFilter(f.id)} accessibilityRole="button" accessibilityState={{ selected: active }}
-              style={{ paddingHorizontal: space.md, paddingVertical: 6, borderRadius: radius.full, backgroundColor: active ? t.primary : t.surfaceSecondary }}>
-              <Text style={[typography.labelSm, { color: active ? t.primaryFg : t.textSecondary }]}>{f.label}</Text>
-            </Pressable>
-          )
-        })}
-      </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.xs, paddingHorizontal: SCREEN_PADDING }}>
-        {PERIOD_FILTERS.map((f) => {
-          const active = periodFilter === f.id
-          return (
-            <Pressable key={f.id} onPress={() => setPeriodFilter(f.id)} accessibilityRole="button" accessibilityState={{ selected: active }}
-              style={{ paddingHorizontal: space.md, paddingVertical: 5, borderRadius: radius.full, backgroundColor: active ? t.primaryLight : 'transparent' }}>
-              <Text style={[typography.labelSm, { color: active ? t.primary : t.textMuted }]}>{f.label}</Text>
-            </Pressable>
-          )
-        })}
-      </ScrollView>
-    </View>
-  ) : null
 
   const fab = canWrite ? (
     <Pressable
@@ -213,7 +158,6 @@ export default function FeedScreen() {
           <Text style={[typography.caption, { color: t.info, flex: 1 }]}>Sem internet — seus posts serão enviados quando reconectar.</Text>
         </View>
       )}
-      {filterBar}
 
       {isLoading ? (
         <SkeletonList />
@@ -225,20 +169,14 @@ export default function FeedScreen() {
           actionLabel={canWrite ? 'Primeira postagem' : undefined}
           onAction={canWrite ? () => router.push('/post-compose' as never) : undefined}
         />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={<Camera size={28} color={t.primary} />}
-          title="Nenhum post com esse filtro"
-          description="Tente outro tipo ou período."
-        />
       ) : view === 'timeline' ? (
         <FlatList
-          data={filtered}
+          data={posts}
           keyExtractor={(p) => p.id}
           ListHeaderComponent={<WeeklyRecap />}
           renderItem={({ item }) => (
             <Pressable onPress={() => router.push(`/post/${item.id}` as never)}>
-              <PostCard post={item} />
+              <PostCard post={item} nutriName={home?.nutritionist?.name ?? 'Seu nutricionista'} nutriPhoto={home?.nutritionist?.photo_url ?? null} />
             </Pressable>
           )}
           contentContainerStyle={{ paddingTop: space.sm, paddingBottom: 100 }}
@@ -247,6 +185,11 @@ export default function FeedScreen() {
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
           ListFooterComponent={isFetchingNextPage ? <ActivityIndicator size="small" color={t.primary} style={{ marginVertical: space.lg }} /> : null}
+          removeClippedSubviews={false}
+          windowSize={11}
+          maxToRenderPerBatch={4}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={6}
         />
       ) : (
         <FlatList
@@ -260,12 +203,17 @@ export default function FeedScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
+          removeClippedSubviews={true}
+          windowSize={21}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={15}
           renderItem={({ item, index }) => {
             const gi = item.ai_analysis
             const kcal = item.type === 'meal' && item.ai_status === 'completed' && gi ? Math.round(gi.calories ?? 0) : null
             return (
               <Pressable onPress={() => setViewerIndex(index)} style={{ width: cell, height: cell, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: t.surfaceSecondary }}>
-                <Image source={{ uri: gridUri(item) }} style={{ width: cell, height: cell }} contentFit="cover" transition={150} />
+                <Image source={{ uri: gridUri(item) }} style={{ width: cell, height: cell }} contentFit="cover" cachePolicy="memory-disk" recyclingKey={item.id} transition={0} />
                 {kcal != null ? (
                   <View style={{ position: 'absolute', left: 6, bottom: 6, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.full, backgroundColor: 'rgba(0,0,0,0.55)' }}>
                     <Text style={[typography.caption, { color: '#fff', fontSize: 10 }]}>{kcal} kcal</Text>

@@ -36,6 +36,21 @@ interface BlobSpec {
   delay: number
 }
 
+function BlobSvg({ id, color, size }: { id: string; color: string; size: number }) {
+  return (
+    <Svg width={size} height={size}>
+      <Defs>
+        <RadialGradient id={id} cx="50%" cy="50%" r="50%">
+          <Stop offset="0" stopColor={color} stopOpacity={1} />
+          <Stop offset="0.55" stopColor={color} stopOpacity={0.5} />
+          <Stop offset="1" stopColor={color} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Circle cx={size / 2} cy={size / 2} r={size / 2} fill={`url(#${id})`} />
+    </Svg>
+  )
+}
+
 function AuroraBlob({ spec, baseSize }: { spec: BlobSpec; baseSize: number }) {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '')
   const size = Math.round(baseSize * spec.size)
@@ -74,17 +89,31 @@ function AuroraBlob({ spec, baseSize }: { spec: BlobSpec; baseSize: number }) {
         animStyle,
       ]}
     >
-      <Svg width={size} height={size}>
-        <Defs>
-          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={spec.color} stopOpacity={1} />
-            <Stop offset="0.55" stopColor={spec.color} stopOpacity={0.5} />
-            <Stop offset="1" stopColor={spec.color} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={size / 2} cy={size / 2} r={size / 2} fill={`url(#${id})`} />
-      </Svg>
+      <BlobSvg id={id} color={spec.color} size={size} />
     </Animated.View>
+  )
+}
+
+// Static blob: paints the SVG once (no reanimated driver). Use inside
+// scrolling lists so we never run continuous animations per row.
+function StaticBlob({ spec, baseSize }: { spec: BlobSpec; baseSize: number }) {
+  const id = useId().replace(/[^a-zA-Z0-9]/g, '')
+  const size = Math.round(baseSize * spec.size)
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        width: size,
+        height: size,
+        top: spec.top,
+        left: spec.left,
+        right: spec.right,
+        bottom: spec.bottom,
+      }}
+    >
+      <BlobSvg id={id} color={spec.color} size={size} />
+    </View>
   )
 }
 
@@ -95,6 +124,13 @@ interface AuroraBackgroundProps {
   colors?: [string, string] | [string, string, string]
   /** approximate layer width used to scale blobs (defaults to a wide value) */
   baseSize?: number
+  /**
+   * Drift the blobs with a continuous reanimated loop. Defaults to true.
+   * Set false inside scrolling lists (e.g. feed cards) so we don't run
+   * many infinite animations at once — that competes with the scroll on
+   * the UI thread and causes jank/freezing.
+   */
+  animated?: boolean
   style?: StyleProp<ViewStyle>
 }
 
@@ -103,6 +139,7 @@ export function AuroraBackground({
   variant = 'subtle',
   colors,
   baseSize = 420,
+  animated = true,
   style,
 }: AuroraBackgroundProps) {
   const t = useThemeColors()
@@ -114,6 +151,8 @@ export function AuroraBackground({
     { color: palette[2] ?? palette[1] ?? palette[0], size: 0.8, bottom: '-22%', left: '14%', driftX: 18, driftY: -20, duration: 12500, delay: 1600 },
   ]
 
+  const Blob = animated ? AuroraBlob : StaticBlob
+
   return (
     <View style={[{ position: 'relative', overflow: 'hidden' }, style]}>
       <View
@@ -121,7 +160,7 @@ export function AuroraBackground({
         style={[StyleSheet.absoluteFillObject, { opacity: VARIANT_OPACITY[variant] }]}
       >
         {blobs.map((spec, i) => (
-          <AuroraBlob key={i} spec={spec} baseSize={baseSize} />
+          <Blob key={i} spec={spec} baseSize={baseSize} />
         ))}
       </View>
       {children}
