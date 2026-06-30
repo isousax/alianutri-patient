@@ -5,11 +5,10 @@ describe('createActions', () => {
   it('tem as ações P0 na ordem esperada', () => {
     expect(CREATE_ACTIONS.map((a) => a.id)).toEqual([
       'meal',
+      'diary',
       'weight',
       'mood',
       'progress',
-      'exercise',
-      'note',
     ])
   })
 
@@ -20,11 +19,10 @@ describe('createActions', () => {
 
   it('roteia cada id para a rota correta', () => {
     expect(routeForCreateAction('meal')).toBe('/post-compose?type=meal')
+    expect(routeForCreateAction('diary')).toBe('/post-compose?type=diary')
     expect(routeForCreateAction('weight')).toBe('/weight')
     expect(routeForCreateAction('mood')).toBe('/wellness?focus=mood')
     expect(routeForCreateAction('progress')).toBe('/progress-photos')
-    expect(routeForCreateAction('exercise')).toBe('/post-compose?type=exercise')
-    expect(routeForCreateAction('note')).toBe('/post-compose?type=free')
   })
 
   it('retorna null para id inexistente', () => {

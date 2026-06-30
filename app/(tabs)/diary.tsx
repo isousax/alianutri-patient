@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { View, Text, FlatList, Pressable, RefreshControl, ActivityIndicator, Dimensions, Modal, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Image } from 'expo-image'
 import { router, useFocusEffect } from 'expo-router'
-import { List, LayoutGrid, Plus, Camera, X, WifiOff } from 'lucide-react-native'
+import { List, LayoutGrid, Plus, Camera, X, WifiOff, Utensils, BookOpen } from 'lucide-react-native'
 import { useThemeColors } from '../../src/stores/theme'
 import { useAuthStore } from '../../src/stores/auth'
 import { useFeaturesStore } from '../../src/stores/features'
@@ -20,10 +20,39 @@ import { Conquistas } from '../../src/components/diary/Conquistas'
 import { WeeklyRecap } from '../../src/components/diary/WeeklyRecap'
 
 const GRID_GAP = 8
-const COLS = 3
 const SCREEN_W = Dimensions.get('window').width
+// Mosaico estilo "explorar": 2 colunas — 1 tile grande (retrato) ladeado por 2 pequenos.
+const COL_W = (SCREEN_W - SCREEN_PADDING * 2 - GRID_GAP) / 2
+const SMALL_H = COL_W
+const BIG_H = SMALL_H * 2 + GRID_GAP
 
 type Segment = 'feed' | 'progress' | 'achievements'
+
+type MosaicRowData = { items: DiaryPost[]; base: number; bigLeft: boolean }
+
+// Tile do mosaico: foto + overlay (ícone da categoria + rótulo + kcal quando refeição).
+const GridTile = memo(function GridTile({
+  post, width, height, big, accessCode, onPress,
+}: { post: DiaryPost; width: number; height: number; big: boolean; accessCode: string | null; onPress: () => void }) {
+  const t = useThemeColors()
+  const uri = post._local && post._localPhotoUri
+    ? post._localPhotoUri
+    : diaryPhotoUrl(accessCode, post.id, big ? 'medium' : 'thumb')
+  const isMeal = post.type === 'meal'
+  const ai = post.ai_analysis
+  const kcal = isMeal && post.ai_status === 'completed' && ai ? Math.round(ai.calories ?? 0) : null
+  const Icon = isMeal ? Utensils : BookOpen
+  return (
+    <Pressable onPress={onPress} style={{ width, height, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: t.surfaceSecondary }}>
+      <Image source={{ uri }} style={{ width, height }} contentFit="cover" cachePolicy="memory-disk" recyclingKey={post.id} transition={0} />
+      <View style={{ position: 'absolute', left: 6, bottom: 6, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: radius.full, backgroundColor: 'rgba(0,0,0,0.55)' }}>
+        <Icon size={11} color="#fff" />
+        {big ? <Text style={[typography.caption, { color: '#fff', fontSize: 10, fontWeight: '600' }]}>{isMeal ? 'Refeição' : 'Diário'}</Text> : null}
+        {kcal != null ? <Text style={[typography.caption, { color: '#fff', fontSize: 10 }]}>{big ? `· ${kcal} kcal` : `${kcal} kcal`}</Text> : null}
+      </View>
+    </Pressable>
+  )
+})
 
 export default function FeedScreen() {
   const t = useThemeColors()
@@ -40,12 +69,18 @@ export default function FeedScreen() {
 
   const posts: DiaryPost[] = data?.pages.flatMap((p) => p.posts) ?? []
   const photoPosts = posts.filter((p) => p.has_photo)
-  const cell = (SCREEN_W - SCREEN_PADDING * 2 - GRID_GAP * (COLS - 1)) / COLS
   const isOnline = useIsOnline()
-  const gridUri = (p: DiaryPost) =>
-    p._local && p._localPhotoUri ? p._localPhotoUri : diaryPhotoUrl(accessCode, p.id, 'thumb')
   const fullUri = (p: DiaryPost) =>
     p._local && p._localPhotoUri ? p._localPhotoUri : diaryPhotoUrl(accessCode, p.id, 'original')
+
+  // Agrupa as fotos em blocos de 3 (1 grande + 2 pequenas), alternando o lado do grande.
+  const photoRows = useMemo<MosaicRowData[]>(() => {
+    const rows: MosaicRowData[] = []
+    for (let i = 0, r = 0; i < photoPosts.length; i += 3, r++) {
+      rows.push({ items: photoPosts.slice(i, i + 3), base: i, bigLeft: r % 2 === 0 })
+    }
+    return rows
+  }, [photoPosts])
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage()
@@ -194,10 +229,8 @@ export default function FeedScreen() {
       ) : (
         <FlatList
           key="grid"
-          data={photoPosts}
-          numColumns={COLS}
-          keyExtractor={(p) => p.id}
-          columnWrapperStyle={{ gap: GRID_GAP }}
+          data={photoRows}
+          keyExtractor={(row) => row.items[0]?.id ?? String(row.base)}
           contentContainerStyle={{ gap: GRID_GAP, paddingHorizontal: SCREEN_PADDING, paddingTop: space.sm, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
@@ -205,21 +238,34 @@ export default function FeedScreen() {
           onEndReachedThreshold={0.5}
           removeClippedSubviews={true}
           windowSize={21}
-          maxToRenderPerBatch={10}
+          maxToRenderPerBatch={8}
           updateCellsBatchingPeriod={50}
-          initialNumToRender={15}
-          renderItem={({ item, index }) => {
-            const gi = item.ai_analysis
-            const kcal = item.type === 'meal' && item.ai_status === 'completed' && gi ? Math.round(gi.calories ?? 0) : null
+          initialNumToRender={6}
+          renderItem={({ item: row }) => {
+            // Resto (1–2 fotos no fim): quadrados simples, sem tile grande.
+            if (row.items.length < 3) {
+              return (
+                <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
+                  {row.items.map((p, k) => (
+                    <GridTile key={p.id} post={p} width={COL_W} height={SMALL_H} big={false} accessCode={accessCode} onPress={() => setViewerIndex(row.base + k)} />
+                  ))}
+                </View>
+              )
+            }
+            const [a, b, c] = row.items
+            const bigTile = (
+              <GridTile post={a} width={COL_W} height={BIG_H} big accessCode={accessCode} onPress={() => setViewerIndex(row.base)} />
+            )
+            const smallCol = (
+              <View style={{ gap: GRID_GAP }}>
+                <GridTile post={b} width={COL_W} height={SMALL_H} big={false} accessCode={accessCode} onPress={() => setViewerIndex(row.base + 1)} />
+                <GridTile post={c} width={COL_W} height={SMALL_H} big={false} accessCode={accessCode} onPress={() => setViewerIndex(row.base + 2)} />
+              </View>
+            )
             return (
-              <Pressable onPress={() => setViewerIndex(index)} style={{ width: cell, height: cell, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: t.surfaceSecondary }}>
-                <Image source={{ uri: gridUri(item) }} style={{ width: cell, height: cell }} contentFit="cover" cachePolicy="memory-disk" recyclingKey={item.id} transition={0} />
-                {kcal != null ? (
-                  <View style={{ position: 'absolute', left: 6, bottom: 6, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.full, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-                    <Text style={[typography.caption, { color: '#fff', fontSize: 10 }]}>{kcal} kcal</Text>
-                  </View>
-                ) : null}
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
+                {row.bigLeft ? <>{bigTile}{smallCol}</> : <>{smallCol}{bigTile}</>}
+              </View>
             )
           }}
         />

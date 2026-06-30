@@ -163,6 +163,16 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
     )
   }, [metric, charts])
 
+  // A Nutrição vem só de fotos de refeição analisadas pela IA; os registros de
+  // hoje só entram no gráfico depois que a análise conclui. Detecta se hoje já
+  // tem ponto para avisar o usuário (evita a impressão de "faltou dado").
+  const todayStr = (() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })()
+  const nutritionMissingToday =
+    metric === 'nutrition' && !(charts?.nutrition ?? []).some((d) => d.date === todayStr)
+
   const chartWidth = Dimensions.get('window').width - SCREEN_PADDING * 2 - space.lg * 2
   const fmtVal = (v: number) => `${v.toFixed(series.decimals).replace('.', ',')}${series.unit ? ` ${series.unit}` : ''}`
   const currentLabel = metric === 'nutrition' || metric === 'water' ? 'Último dia' : 'Atual'
@@ -271,6 +281,13 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
             <Text style={[typography.caption, { color: t.textMuted, marginTop: space.sm }]}>
               {points.length} {points.length === 1 ? 'registro' : 'registros'} no período
             </Text>
+
+            {metric === 'nutrition' && (
+              <Text style={[typography.caption, { color: t.textMuted, marginTop: space.xs }]}>
+                Calorias estimadas pela IA a partir das fotos de refeição.
+                {nutritionMissingToday ? ' Os registros de hoje aparecem aqui assim que a análise das fotos concluir.' : ''}
+              </Text>
+            )}
           </Card>
         </Animated.View>
       )}

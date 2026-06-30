@@ -5,7 +5,7 @@ import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
-import { Camera, Utensils, Dumbbell, Pencil, Sparkles, X, Images } from 'lucide-react-native'
+import { Camera, Utensils, BookOpen, Sparkles, X, Images } from 'lucide-react-native'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { toast } from '../src/stores/toast'
@@ -17,16 +17,12 @@ import type { DiaryPostType } from '../src/types/portal'
 
 const TYPES: { id: DiaryPostType; label: string; Icon: typeof Utensils }[] = [
   { id: 'meal', label: 'Refeição', Icon: Utensils },
-  { id: 'exercise', label: 'Exercício', Icon: Dumbbell },
-  { id: 'free', label: 'Nota', Icon: Pencil },
+  { id: 'diary', label: 'Diário', Icon: BookOpen },
 ]
-// Título por tipo — dá identidade própria a cada intenção.
-// Humor não vive aqui: é um check-in estruturado (1–5) em /wellness.
+// Diário = foto de um momento (sem IA). Refeição = foto do prato (com IA).
 const HEADER_TITLE: Record<DiaryPostType, string> = {
   meal: 'Nova publicação',
-  exercise: 'Nova publicação',
-  mood: 'Como me sinto',
-  free: 'Anotação',
+  diary: 'Nova publicação',
 }
 
 export default function PostComposeScreen() {
@@ -35,7 +31,7 @@ export default function PostComposeScreen() {
   const { mutateAsync: createPost, isPending } = useCreatePost()
   const scrollRef = useRef<ScrollView>(null)
   const params = useLocalSearchParams<{ type?: string; meal_plan_id?: string; meal_index?: string; meal_name?: string }>()
-  const validTypes: DiaryPostType[] = ['meal', 'exercise', 'free']
+  const validTypes: DiaryPostType[] = ['meal', 'diary']
   // Fase 5: quando vem da tela de Diário (anexar foto a uma refeição do plano), recebe o slot.
   const slotMealPlanId = typeof params.meal_plan_id === 'string' && params.meal_plan_id ? params.meal_plan_id : null
   const slotMealIndexNum = params.meal_index != null && params.meal_index !== '' ? Number(params.meal_index) : NaN
@@ -59,9 +55,11 @@ export default function PostComposeScreen() {
       toast.error(mode === 'camera' ? 'Precisamos de acesso à câmera.' : 'Precisamos de acesso às fotos.')
       return
     }
+    // Sem crop (allowsEditing:false) — preserva a foto inteira; o peso é controlado por
+    // compressão (qualidade ~0.6–0.7 nas variantes), não por recorte.
     const result = mode === 'camera'
-      ? await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: true })
+      ? await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: false })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: false })
     const asset = result.canceled ? null : result.assets?.[0]
     if (asset) {
       setPhotoUri(asset.uri)
@@ -79,9 +77,8 @@ export default function PostComposeScreen() {
     })
   }, [pick, t])
 
-  // Foto faz sentido para refeição/exercício; humor e anotação são texto/emoji.
-  const showPhoto = type === 'meal' || type === 'exercise'
-  const canPublish = canWrite && !isPending && (!!photoUri || !!caption.trim())
+  // Todo post do diário é foto (texto puro saiu) — foto é obrigatória pra publicar.
+  const canPublish = canWrite && !isPending && !!photoUri
 
   const handlePublish = useCallback(async () => {
     if (!canPublish) return
@@ -114,8 +111,7 @@ export default function PostComposeScreen() {
             </View>
           ) : null}
 
-          {/* Foto — só refeição e exercício (humor/anotação não precisam de imagem) */}
-          {showPhoto && (
+          {/* Foto — obrigatória para todo post do diário */}
           <Pressable
             onPress={canWrite ? choosePhoto : undefined}
             accessibilityRole="button"
@@ -142,7 +138,6 @@ export default function PostComposeScreen() {
               </View>
             )}
           </Pressable>
-          )}
 
           {/* Tipo — só quando a intenção não veio definida (FAB genérico do Diário) */}
           {!typeLocked && (
@@ -155,7 +150,7 @@ export default function PostComposeScreen() {
               return (
                 <Pressable
                   key={ty.id}
-                  onPress={() => { setType(ty.id); if (ty.id === 'free') setPhotoUri(null); Haptics.selectionAsync().catch(() => {}) }}
+                  onPress={() => { setType(ty.id); Haptics.selectionAsync().catch(() => {}) }}
                   disabled={!canWrite}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
@@ -170,20 +165,19 @@ export default function PostComposeScreen() {
           </>
           )}
 
-          {/* Texto: legenda (refeição/exercício) ou a anotação */}
+          {/* Legenda (opcional) */}
           <Text style={[typography.overline, { color: t.textMuted, marginBottom: space.sm }]}>
-            {type === 'free' ? 'ANOTAÇÃO' : 'LEGENDA'}
+            LEGENDA
           </Text>
           <TextInput
             value={caption}
             onChangeText={setCaption}
             editable={canWrite}
-            autoFocus={type === 'free'}
-            placeholder={type === 'free' ? 'Escreva sua anotação…' : 'Escreva uma legenda (opcional)'}
+            placeholder="Escreva uma legenda (opcional)"
             placeholderTextColor={t.textMuted}
             multiline
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
-            style={[typography.bodyLg, { color: t.text, backgroundColor: t.surfaceSecondary, borderRadius: radius.lg, padding: space.lg, minHeight: type === 'free' ? 160 : 90, textAlignVertical: 'top', marginBottom: space.lg }]}
+            style={[typography.bodyLg, { color: t.text, backgroundColor: t.surfaceSecondary, borderRadius: radius.lg, padding: space.lg, minHeight: 90, textAlignVertical: 'top', marginBottom: space.lg }]}
           />
 
           {/* Dica IA */}

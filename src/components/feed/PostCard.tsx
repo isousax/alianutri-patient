@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { Image } from 'expo-image'
-import { Utensils, Dumbbell, Smile, Pencil, CloudOff } from 'lucide-react-native'
+import { Utensils, BookOpen, CloudOff } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
 import { useUpdatePostType } from '../../hooks/usePortal'
@@ -15,9 +15,7 @@ import type { DiaryPost, DiaryPostType } from '../../types/portal'
 
 const TYPE_META: Record<DiaryPostType, { Icon: typeof Utensils; label: string }> = {
   meal: { Icon: Utensils, label: 'Refeição' },
-  exercise: { Icon: Dumbbell, label: 'Exercício' },
-  mood: { Icon: Smile, label: 'Humor' },
-  free: { Icon: Pencil, label: 'Post' },
+  diary: { Icon: BookOpen, label: 'Diário' },
 }
 
 function timeAgo(iso: string): string {
@@ -61,10 +59,10 @@ export const PostCard = memo(function PostCard({ post, nutriName, nutriPhoto }: 
   const handleConvert = () => {
     confirm({
       title: 'Converter post',
-      message: 'Transformar em post livre? A análise de macros será removida.',
+      message: 'Transformar em post do diário? A análise de macros será removida.',
       cancelLabel: 'Cancelar',
       confirmLabel: 'Converter',
-      onConfirm: () => updateType.mutate({ postId: post.id, type: 'free' }),
+      onConfirm: () => updateType.mutate({ postId: post.id, type: 'diary' }),
     })
   }
 

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import { Droplets, Check, Utensils, Scale, Smile, Camera, Dumbbell, Pencil, LayoutGrid, type LucideIcon } from 'lucide-react-native'
+import { Droplets, Check, Utensils, Scale, Smile, Camera, BookOpen, LayoutGrid, type LucideIcon } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, fmtWater, todayStr } from '../../theme/tokens'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -16,21 +16,19 @@ const WATER_QUICK = [200, 300, 500]
 // Ícone lucide por ação (robusto a encoding — substitui os emojis).
 const ACTION_ICONS: Record<CreateActionId, LucideIcon> = {
   meal: Utensils,
+  diary: BookOpen,
   weight: Scale,
   mood: Smile,
   progress: Camera,
-  exercise: Dumbbell,
-  note: Pencil,
 }
 
 // Rótulos curtos para os tiles do grid (o label completo vai na acessibilidade).
 const SHORT_LABEL: Record<CreateActionId, string> = {
   meal: 'Refeição',
+  diary: 'Diário',
   weight: 'Peso',
   mood: 'Humor',
   progress: 'Progresso',
-  exercise: 'Exercício',
-  note: 'Anotação',
 }
 
 interface RegistroSheetProps {
@@ -51,11 +49,10 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
   // Cor do ícone + fundo do chip (token *Light) por ação — sem hex-alpha frágil.
   const ACTION_STYLE: Record<CreateActionId, { color: string; light: string }> = {
     meal: { color: t.primary, light: t.primaryLight },
+    diary: { color: t.warning, light: t.warningLight },
     weight: { color: t.accent, light: t.accentLight },
     mood: { color: t.info, light: t.infoLight },
     progress: { color: t.success, light: t.successLight },
-    exercise: { color: t.warning, light: t.warningLight },
-    note: { color: t.textSecondary, light: t.border },
   }
 
   const go = (route: string) => {

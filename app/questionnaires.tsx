@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -176,7 +176,8 @@ export default function QuestionnairesScreen() {
                     (pending.length + i) * 60,
                   )}
                 >
-                  <View
+                  <Pressable
+                    onPress={() => setSelected(q)}
                     style={{
                       marginBottom: space.md,
                       borderRadius: radius.xl,
@@ -210,10 +211,11 @@ export default function QuestionnairesScreen() {
                           { color: t.success, marginTop: 4 },
                         ]}
                       >
-                        Respondido
+                        Respondido · toque para ver
                       </Text>
                     </View>
-                  </View>
+                    <CheckCircle size={16} color={t.textMuted} />
+                  </Pressable>
                 </Animated.View>
               ))}
             </View>
@@ -237,8 +239,21 @@ function AnswerForm({
   );
   const [responses, setResponses] = useState<Record<string, string>>({});
   const { mutateAsync, isPending } = useAnswerQuestionnaire();
+  const readOnly = questionnaire.status === "answered";
+
+  // Modo leitura: pré-preenche com as respostas já enviadas (chaveadas por índice).
+  useEffect(() => {
+    if (detail?.responses) {
+      const prefilled: Record<string, string> = {};
+      for (const [k, v] of Object.entries(detail.responses)) {
+        prefilled[k] = v == null ? "" : String(v);
+      }
+      setResponses(prefilled);
+    }
+  }, [detail]);
 
   function setAnswer(questionIdx: number, value: string) {
+    if (readOnly) return;
     setResponses((prev) => ({ ...prev, [String(questionIdx)]: value }));
   }
 
@@ -305,10 +320,13 @@ function AnswerForm({
                 { color: t.textMuted, marginBottom: space.lg },
               ]}
             >
-              Responda as perguntas abaixo.{" "}
-              {requiredCount > 0
-                ? `${requiredCount} obrigatória${requiredCount > 1 ? "s" : ""}.`
-                : ""}
+              {readOnly
+                ? "Estas foram as respostas que você enviou."
+                : `Responda as perguntas abaixo. ${
+                    requiredCount > 0
+                      ? `${requiredCount} obrigatória${requiredCount > 1 ? "s" : ""}.`
+                      : ""
+                  }`}
             </Text>
 
             {questions.map((q, idx) => (
@@ -346,6 +364,7 @@ function AnswerForm({
                       onChangeText={(txt) => setAnswer(idx, txt)}
                       placeholder="Digite sua resposta..."
                       placeholderTextColor={t.textMuted}
+                      editable={!readOnly}
                       multiline
                       style={[
                         typography.bodyMd,
@@ -519,6 +538,7 @@ function AnswerForm({
             ))}
           </ScrollView>
 
+          {!readOnly && (
           <View
             style={{
               paddingHorizontal: SCREEN_PADDING,
@@ -551,6 +571,7 @@ function AnswerForm({
               )}
             </Pressable>
           </View>
+          )}
         </>
       )}
     </SafeAreaView>

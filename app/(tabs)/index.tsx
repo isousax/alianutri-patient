@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import {
   Calendar,
+  Navigation,
   AlertCircle,
   ClipboardList,
   Target,
@@ -84,6 +85,7 @@ import type {
   PortalHome,
 } from "../../src/types/portal";
 import { computeGamification, type BadgeIconKey } from "../../src/lib/gamification";
+import { openMeetingLink, openAddressInMaps } from "../../src/lib/appointment";
 import { getTipOfTheDay } from "../../src/data/dailyTips";
 import { useDailyTipStore } from "../../src/stores/dailyTip";
 import { useSmartWaterGoal } from "../../src/hooks/useSmartWaterGoal";
@@ -94,6 +96,7 @@ import {
   EmptyState,
   LoadingScreen,
   AuroraBackground,
+  Button,
 } from "../../src/components/ui";
 import { HomeHeader } from "../../src/components/home/HomeHeader";
 import { AnelDoDia } from "../../src/components/home/AnelDoDia";
@@ -186,7 +189,7 @@ export default function HomeScreen() {
             loggedDays: streakData?.logged_dates?.length ?? 0,
             goals: goals ?? [],
             mealPhotoCount: chartsToday?.counts?.meal_photos,
-            exercisePostCount: chartsToday?.counts?.exercise_posts,
+            diaryPostCount: chartsToday?.counts?.diary_posts,
             nutriLikeCount: chartsToday?.counts?.nutri_reactions,
             nutriCommentCount: chartsToday?.counts?.nutri_comments,
           })
@@ -589,7 +592,7 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
 function AppointmentCard({
   apt,
 }: {
-  apt: { starts_at: string; type: string };
+  apt: NonNullable<PortalHome["next_appointment"]>;
 }) {
   const t = useThemeColors();
 
@@ -671,6 +674,36 @@ function AppointmentCard({
             {isOnline ? "Online" : "Presencial"}
           </Text>
         </View>
+
+        {!isOnline && apt.location?.address ? (
+          <View style={{ marginTop: space.md }}>
+            <Text style={[typography.labelSm, { color: t.text }]}>{apt.location.name}</Text>
+            <Text style={[typography.caption, { color: t.textMuted, marginTop: 1 }]}>{apt.location.address}</Text>
+          </View>
+        ) : null}
+
+        {isOnline && apt.meeting_url ? (
+          <View style={{ marginTop: space.md }}>
+            <Button
+              label="Entrar na consulta"
+              leftIcon={<Video size={18} color={t.primaryFg} />}
+              onPress={() => openMeetingLink(apt.meeting_url)}
+              fullWidth
+            />
+          </View>
+        ) : null}
+
+        {!isOnline && apt.location?.address ? (
+          <View style={{ marginTop: space.sm }}>
+            <Button
+              label="Abrir no mapa"
+              variant="secondary"
+              leftIcon={<Navigation size={18} color={t.text} />}
+              onPress={() => openAddressInMaps(apt.location?.address)}
+              fullWidth
+            />
+          </View>
+        ) : null}
       </Card>
     </Animated.View>
   );
@@ -892,7 +925,7 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
     loggedDays: home.logged_dates?.length ?? 0,
     goals: goals ?? [],
     mealPhotoCount: charts?.counts?.meal_photos,
-    exercisePostCount: charts?.counts?.exercise_posts,
+    diaryPostCount: charts?.counts?.diary_posts,
     nutriLikeCount: charts?.counts?.nutri_reactions,
     nutriCommentCount: charts?.counts?.nutri_comments,
   });

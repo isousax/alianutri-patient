@@ -19,9 +19,9 @@ export interface ImageVariants {
  */
 export async function generateImageVariants(uri: string): Promise<ImageVariants> {
   const [original, medium, thumb] = await Promise.all([
-    manipulateAsync(uri, [{ resize: { width: 1200 } }], { compress: 0.8, format: SaveFormat.JPEG }),
-    manipulateAsync(uri, [{ resize: { width: 600 } }], { compress: 0.75, format: SaveFormat.JPEG }),
-    manipulateAsync(uri, [{ resize: { width: 200 } }], { compress: 0.7, format: SaveFormat.JPEG }),
+    manipulateAsync(uri, [{ resize: { width: 1200 } }], { compress: 0.7, format: SaveFormat.JPEG }),
+    manipulateAsync(uri, [{ resize: { width: 600 } }], { compress: 0.65, format: SaveFormat.JPEG }),
+    manipulateAsync(uri, [{ resize: { width: 220 } }], { compress: 0.6, format: SaveFormat.JPEG }),
   ])
   return { original, medium, thumb }
 }

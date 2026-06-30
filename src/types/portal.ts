@@ -21,7 +21,10 @@ export interface PortalHome {
     starts_at: string
     ends_at: string
     type: 'online' | 'in_person'
+    status: AppointmentStatus
     meeting_provider: string | null
+    meeting_url: string | null
+    location: PortalLocationSnapshot | null
   } | null
   diary_streak: number
   logged_dates: string[]
@@ -245,12 +248,20 @@ export interface PortalLocationSnapshot {
   address: string | null
 }
 
+export type AppointmentStatus =
+  | 'scheduled'
+  | 'rescheduled'
+  | 'completed'
+  | 'no_show'
+  | 'canceled'
+  | 'pending_approval'
+
 export interface PortalAppointment {
   id: string
   starts_at: string
   ends_at: string
   type: 'online' | 'in_person'
-  status: 'scheduled' | 'completed' | 'confirmed' | 'pending_approval' | 'canceled'
+  status: AppointmentStatus
   meeting_provider: string | null
   meeting_url: string | null
   location: PortalLocationSnapshot | null
@@ -454,7 +465,7 @@ export interface PortalEvolution {
 // Diário / Feed social — GET/POST /p/:code/diary/posts
 // ==========================================
 
-export type DiaryPostType = 'meal' | 'exercise' | 'mood' | 'free'
+export type DiaryPostType = 'meal' | 'diary'
 export type DiaryAiStatus = 'pending' | 'completed' | 'failed' | 'skipped' | 'not_food' | 'partial'
 
 export interface DiaryAiAnalysis {
@@ -511,5 +522,5 @@ export interface ChartsSummary {
   nutrition: Array<{ date: string; calories: number; protein_g: number; carbs_g: number; fat_g: number }>
   water: Array<{ date: string; total_ml: number }>
   wellness: Array<{ date: string; energy: number }>
-  counts: { meal_photos: number; exercise_posts: number; nutri_reactions: number; nutri_comments: number }
+  counts: { meal_photos: number; diary_posts: number; nutri_reactions: number; nutri_comments: number }
 }

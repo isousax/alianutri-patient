@@ -5,11 +5,10 @@
 
 export type CreateActionId =
   | 'meal'
+  | 'diary'
   | 'weight'
   | 'mood'
   | 'progress'
-  | 'exercise'
-  | 'note'
 
 export interface CreateAction {
   id: CreateActionId
@@ -32,6 +31,13 @@ export const CREATE_ACTIONS: readonly CreateAction[] = [
     route: '/post-compose?type=meal',
   },
   {
+    id: 'diary',
+    label: 'Diário',
+    description: 'Foto de um momento do seu dia',
+    emoji: '�',
+    route: '/post-compose?type=diary',
+  },
+  {
     id: 'weight',
     label: 'Peso',
     description: 'Atualize seu peso de hoje',
@@ -49,22 +55,8 @@ export const CREATE_ACTIONS: readonly CreateAction[] = [
     id: 'progress',
     label: 'Foto de progresso',
     description: 'Acompanhe sua evolução em fotos',
-    emoji: '📸',
+    emoji: '�',
     route: '/progress-photos',
-  },
-  {
-    id: 'exercise',
-    label: 'Exercício',
-    description: 'Registre um treino ou atividade',
-    emoji: '🏃',
-    route: '/post-compose?type=exercise',
-  },
-  {
-    id: 'note',
-    label: 'Anotação',
-    description: 'Escreva uma nota no diário',
-    emoji: '📝',
-    route: '/post-compose?type=free',
   },
 ] as const
 

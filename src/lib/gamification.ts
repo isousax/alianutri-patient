@@ -64,13 +64,13 @@ export function computeGamification(params: {
   loggedDays: number
   goals: PortalGoal[]
   mealPhotoCount?: number
-  exercisePostCount?: number
+  diaryPostCount?: number
   nutriLikeCount?: number
   nutriCommentCount?: number
 }): GamificationState {
   const {
     streak, loggedDays, goals,
-    mealPhotoCount = 0, exercisePostCount = 0, nutriLikeCount = 0, nutriCommentCount = 0,
+    mealPhotoCount = 0, diaryPostCount = 0, nutriLikeCount = 0, nutriCommentCount = 0,
   } = params
   const goalsActive = goals.filter((g) => g.status === 'active').length
   const goalsCompleted = goals.filter((g) => g.status === 'completed').length
@@ -95,7 +95,7 @@ export function computeGamification(params: {
     b('goalDone', 'Missão cumprida', 'Concluiu uma meta', 'star', goalsCompleted >= 1),
     b('habit', 'Constância', '10 check-ins de hábito', 'sparkles', habitCheckins >= 10),
     b('photographer', 'Fotógrafo', '30 fotos de refeição', 'utensils', mealPhotoCount >= 30),
-    b('athlete', 'Atleta', '10 registros de exercício', 'target', exercisePostCount >= 10),
+    b('diarist', 'Diarista', '10 momentos no diário', 'star', diaryPostCount >= 10),
     b('nutriFav', 'Favorito do Nutri', '20 curtidas do seu nutri', 'star', nutriLikeCount >= 20),
   ]
 

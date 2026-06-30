@@ -1,6 +1,6 @@
 import { View, Text, Pressable } from 'react-native'
 import { Image } from 'expo-image'
-import { Utensils, Dumbbell, Smile, Pencil } from 'lucide-react-native'
+import { Utensils, BookOpen } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
 import { typography, space, radius } from '../../theme/tokens'
@@ -10,15 +10,11 @@ import type { DiaryPost, DiaryPostType } from '../../types/portal'
 
 const ICON: Record<DiaryPostType, typeof Utensils> = {
   meal: Utensils,
-  exercise: Dumbbell,
-  mood: Smile,
-  free: Pencil,
+  diary: BookOpen,
 }
 const FALLBACK: Record<DiaryPostType, string> = {
   meal: 'Refeição',
-  exercise: 'Exercício',
-  mood: 'Humor',
-  free: 'Post',
+  diary: 'Diário',
 }
 
 /** Card compacto (preview) de um post do diário — usado na Home. */

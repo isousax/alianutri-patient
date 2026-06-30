@@ -36,7 +36,7 @@ export function Conquistas({ bottomPadding = 100 }: { bottomPadding?: number }) 
     loggedDays: streakData?.logged_dates?.length ?? 0,
     goals: goals ?? [],
     mealPhotoCount: counts?.meal_photos ?? 0,
-    exercisePostCount: counts?.exercise_posts ?? 0,
+    diaryPostCount: counts?.diary_posts ?? 0,
     nutriLikeCount: counts?.nutri_reactions ?? 0,
     nutriCommentCount: counts?.nutri_comments ?? 0,
   })
@@ -44,7 +44,7 @@ export function Conquistas({ bottomPadding = 100 }: { bottomPadding?: number }) 
   const challenges = computeWeeklyChallenges({
     loggedDaysThisWeek: (adherence?.days ?? []).filter((d) => d.logged > 0).length,
     waterDaysThisWeek: (week?.water ?? []).filter((d) => (d.total_ml ?? 0) > 0).length,
-    postsThisWeek: (week?.counts?.meal_photos ?? 0) + (week?.counts?.exercise_posts ?? 0),
+    postsThisWeek: (week?.counts?.meal_photos ?? 0) + (week?.counts?.diary_posts ?? 0),
     streak: gam.streak,
   })
 

@@ -172,11 +172,13 @@ export default function DiaryScreen() {
     setLoggingIndex(meal.meal_index)
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+      // Adesão é sinal LEVE (streak/gamificação/animação) — grava só o mínimo:
+      // nome da refeição + slot + status. Sem copiar a lista de alimentos do plano.
       await logEntry({
         meal_type: meal.meal_type,
         entry_date: date,
         entry_time: nowTime(),
-        food_description: meal.foods.map((f) => f.name).join(', ') || meal.meal_name,
+        food_description: meal.meal_name,
         compliance_status: 'followed',
         meal_plan_id: mealPlan.id,
         meal_index: meal.meal_index,
@@ -198,11 +200,10 @@ export default function DiaryScreen() {
         meal_type: meal.meal_type,
         entry_date: date,
         entry_time: nowTime(),
-        food_description: `${meal.meal_name} (parcial)`,
+        food_description: meal.meal_name,
         compliance_status: 'partial',
         meal_plan_id: mealPlan.id,
         meal_index: meal.meal_index,
-        notes: 'Segui parcialmente',
       })
       setFocusedIndex(null)
     } catch {
