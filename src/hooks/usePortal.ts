@@ -285,6 +285,9 @@ export interface CreatePostInput {
   photoUri?: string
   caption?: string
   emoji?: string
+  /** Fase 5: vincula a foto a um slot do plano (quando o post vem da tela de Diário). */
+  mealPlanId?: string
+  mealIndex?: number
 }
 
 export function useCreatePost() {
@@ -299,6 +302,8 @@ export function useCreatePost() {
       fd.append('type', input.type)
       if (input.caption) fd.append('caption', input.caption)
       if (input.emoji) fd.append('emoji', input.emoji)
+      if (input.mealPlanId) fd.append('meal_plan_id', input.mealPlanId)
+      if (input.mealIndex != null) fd.append('meal_index', String(input.mealIndex))
       if (input.photoUri) {
         // 3 variantes geradas no app (sem Cloudflare Image Resizing).
         const variants = await generateImageVariants(input.photoUri)
@@ -347,6 +352,8 @@ export function useCreatePost() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'diary-posts'] })
       qc.invalidateQueries({ queryKey: ['portal', 'diary-recent'] })
+      // Fase 5: foto vinculada a um slot atualiza o Diário (marca a refeição como registrada).
+      qc.invalidateQueries({ queryKey: ['portal', 'diary-today'] })
     },
   })
 }

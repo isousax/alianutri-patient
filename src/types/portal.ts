@@ -212,6 +212,8 @@ export interface DiaryTimelineMeal {
   meal_index: number
   meal_name: string
   meal_time: string
+  /** Tipo derivado no servidor a partir do plano (nome/horário ou type explícito). */
+  meal_type: PortalFoodDiaryEntry['meal_type']
   foods: { name: string; quantity?: string; [key: string]: unknown }[]
   entry: PortalFoodDiaryEntry | null
 }

@@ -34,14 +34,19 @@ export default function PostComposeScreen() {
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const { mutateAsync: createPost, isPending } = useCreatePost()
   const scrollRef = useRef<ScrollView>(null)
-  const params = useLocalSearchParams<{ type?: string }>()
+  const params = useLocalSearchParams<{ type?: string; meal_plan_id?: string; meal_index?: string; meal_name?: string }>()
   const validTypes: DiaryPostType[] = ['meal', 'exercise', 'free']
-  const initialType: DiaryPostType = validTypes.includes(params.type as DiaryPostType)
+  // Fase 5: quando vem da tela de Diário (anexar foto a uma refeição do plano), recebe o slot.
+  const slotMealPlanId = typeof params.meal_plan_id === 'string' && params.meal_plan_id ? params.meal_plan_id : null
+  const slotMealIndexNum = params.meal_index != null && params.meal_index !== '' ? Number(params.meal_index) : NaN
+  const fromSlot = slotMealPlanId != null && Number.isInteger(slotMealIndexNum)
+  const initialType: DiaryPostType = fromSlot
+    ? 'meal'
+    : validTypes.includes(params.type as DiaryPostType)
     ? (params.type as DiaryPostType)
     : 'meal'
-  // Veio de um atalho do "+" (tipo explícito) → tela focada, sem abas de tipo.
-  // Veio do FAB genérico do Diário (sem tipo) → mostra as abas para escolher.
-  const typeLocked = validTypes.includes(params.type as DiaryPostType)
+  // Veio de um atalho do "+" (tipo explícito) ou de um slot do Diário → tela focada, sem abas de tipo.
+  const typeLocked = fromSlot || validTypes.includes(params.type as DiaryPostType)
   const [photoUri, setPhotoUri] = useState<string | null>(null)
   const [type, setType] = useState<DiaryPostType>(initialType)
   const [caption, setCaption] = useState('')
@@ -85,13 +90,15 @@ export default function PostComposeScreen() {
         type,
         photoUri: photoUri ?? undefined,
         caption: caption.trim() || undefined,
+        mealPlanId: fromSlot ? slotMealPlanId! : undefined,
+        mealIndex: fromSlot ? slotMealIndexNum : undefined,
       })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
       router.back()
     } catch {
       toast.error('Não foi possível publicar. Tente novamente.')
     }
-  }, [canPublish, createPost, type, photoUri, caption])
+  }, [canPublish, createPost, type, photoUri, caption, fromSlot, slotMealPlanId, slotMealIndexNum])
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
@@ -99,6 +106,13 @@ export default function PostComposeScreen() {
         <ScreenHeader title={HEADER_TITLE[type]} />
         <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: SCREEN_PADDING, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {!canWrite && <ReadOnlyBanner />}
+
+          {fromSlot && params.meal_name ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.md }}>
+              <Utensils size={14} color={t.primary} />
+              <Text style={[typography.bodySm, { color: t.textSecondary }]}>Refeição do plano: {params.meal_name}</Text>
+            </View>
+          ) : null}
 
           {/* Foto — só refeição e exercício (humor/anotação não precisam de imagem) */}
           {showPhoto && (

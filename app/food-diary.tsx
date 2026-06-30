@@ -11,7 +11,6 @@ import {
   ChevronDown, X,
 } from 'lucide-react-native'
 import { Image } from 'expo-image'
-import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
@@ -24,7 +23,7 @@ import { toast } from '../src/stores/toast'
 import { confirm } from '../src/stores/confirm'
 import { useFeaturesStore } from '../src/stores/features'
 import { useAuthStore } from '../src/stores/auth'
-import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useUploadDiaryPhoto, useFoodDiary } from '../src/hooks/usePortal'
+import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useFoodDiary } from '../src/hooks/usePortal'
 import type { DiaryTimelineMeal, PortalFoodDiaryEntry } from '../src/types/portal'
 import { ScreenHeader, SkeletonBlock } from '../src/components/ui'
 import { ConfettiCelebration } from '../src/components/ui/ConfettiCelebration'
@@ -89,7 +88,6 @@ export default function DiaryScreen() {
   const { data: streakData } = useDiaryStreak()
   const { mutateAsync: logEntry } = useLogFoodDiary()
   const { mutateAsync: deleteEntry, isPending: isDeleting } = useDeleteFoodDiary()
-  const { mutateAsync: uploadPhoto } = useUploadDiaryPhoto()
 
   const isToday = date === todayStr()
   const streak = streakData?.streak ?? 0
@@ -175,7 +173,7 @@ export default function DiaryScreen() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
       await logEntry({
-        meal_type: 'other',
+        meal_type: meal.meal_type,
         entry_date: date,
         entry_time: nowTime(),
         food_description: meal.foods.map((f) => f.name).join(', ') || meal.meal_name,
@@ -197,7 +195,7 @@ export default function DiaryScreen() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       await logEntry({
-        meal_type: 'other',
+        meal_type: meal.meal_type,
         entry_date: date,
         entry_time: nowTime(),
         food_description: `${meal.meal_name} (parcial)`,
@@ -214,44 +212,15 @@ export default function DiaryScreen() {
     }
   }, [mealPlan, date, logEntry, loggingIndex])
 
-  const handlePhoto = useCallback(async (meal: DiaryTimelineMeal) => {
-    if (loggingIndex !== null) return
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') {
-      toast.error('Precisamos de acesso às fotos para registrar.')
-      return
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-      allowsEditing: true,
-      aspect: [4, 3],
-    })
-
-    if (result.canceled || !result.assets?.[0]) return
-
-    setLoggingIndex(meal.meal_index)
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-      const { photo_url } = await uploadPhoto(result.assets[0].uri)
-      await logEntry({
-        meal_type: 'other',
-        entry_date: date,
-        entry_time: nowTime(),
-        food_description: meal.meal_name,
-        compliance_status: 'photo_only',
-        meal_plan_id: mealPlan?.id,
-        meal_index: meal.meal_index,
-        photo_url,
-      })
-      setFocusedIndex(null)
-    } catch {
-      toast.error('Não foi possível salvar a foto.')
-    } finally {
-      setLoggingIndex(null)
-    }
-  }, [mealPlan, date, logEntry, uploadPhoto, loggingIndex])
+  // Fase 5: a foto de uma refeição do plano é registrada pelo COMPOSITOR de post, vinculada
+  // ao slot (meal_plan_id/meal_index) — caminho único para fotos (some o upload duplicado).
+  const handlePhoto = useCallback((meal: DiaryTimelineMeal) => {
+    if (!mealPlan) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(
+      `/post-compose?type=meal&meal_plan_id=${encodeURIComponent(mealPlan.id)}&meal_index=${meal.meal_index}&meal_name=${encodeURIComponent(meal.meal_name)}` as never,
+    )
+  }, [mealPlan])
 
   const handleUndo = useCallback(async (meal: DiaryTimelineMeal) => {
     if (!meal.entry) return
