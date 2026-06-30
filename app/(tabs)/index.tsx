@@ -140,7 +140,8 @@ export default function HomeScreen() {
 
   const { data: diaryToday } = useDiaryToday(today);
   const { data: chartsToday } = useChartsSummary(1);
-  const aiCalories = Math.round((chartsToday?.nutrition ?? []).reduce((s, d) => s + (d.calories || 0), 0));
+  // Calorias de HOJE: pega o bucket do dia local (BRT) — não somar a janela inteira (cruzava a meia-noite e contava ontem).
+  const aiCalories = Math.round((chartsToday?.nutrition ?? []).find((d) => d.date === today)?.calories || 0);
   const { data: recentPosts } = useRecentPosts(3);
   const { data: goals } = useGoals();
   const { data: evolution } = useEvolution();
@@ -297,7 +298,7 @@ export default function HomeScreen() {
           waterGoal={waterGoal}
           waterPct={waterPct}
           aiCalories={aiCalories}
-          targetKcal={data.active_meal_plan?.target_kcal ?? null}
+          targetKcal={data.active_meal_plan?.total_kcal ?? data.active_meal_plan?.target_kcal ?? null}
         />
 
         {/* ═══════ REFEIÇÕES DE HOJE — checklist do plano ═══════ */}

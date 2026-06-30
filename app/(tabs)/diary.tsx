@@ -19,7 +19,7 @@ import { ProgressView } from '../../src/components/progress/ProgressView'
 import { Conquistas } from '../../src/components/diary/Conquistas'
 import { WeeklyRecap } from '../../src/components/diary/WeeklyRecap'
 
-const GRID_GAP = 2
+const GRID_GAP = 8
 const COLS = 3
 const SCREEN_W = Dimensions.get('window').width
 
@@ -31,7 +31,6 @@ const TYPE_FILTERS: { id: TypeFilter; label: string }[] = [
   { id: 'all', label: 'Todos' },
   { id: 'meal', label: '🍽' },
   { id: 'exercise', label: '🏋️' },
-  { id: 'mood', label: '😊' },
   { id: 'free', label: '✏️' },
 ]
 const PERIOD_FILTERS: { id: PeriodFilter; label: string }[] = [
@@ -70,7 +69,7 @@ export default function FeedScreen() {
     [posts, typeFilter, periodFilter],
   )
   const photoPosts = filtered.filter((p) => p.has_photo)
-  const cell = (SCREEN_W - GRID_GAP * (COLS - 1)) / COLS
+  const cell = (SCREEN_W - SCREEN_PADDING * 2 - GRID_GAP * (COLS - 1)) / COLS
   const isOnline = useIsOnline()
   const gridUri = (p: DiaryPost) =>
     p._local && p._localPhotoUri ? p._localPhotoUri : diaryPhotoUrl(accessCode, p.id, 'thumb')
@@ -256,16 +255,25 @@ export default function FeedScreen() {
           numColumns={COLS}
           keyExtractor={(p) => p.id}
           columnWrapperStyle={{ gap: GRID_GAP }}
-          contentContainerStyle={{ gap: GRID_GAP, paddingBottom: 100 }}
+          contentContainerStyle={{ gap: GRID_GAP, paddingHorizontal: SCREEN_PADDING, paddingTop: space.sm, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
-          renderItem={({ item, index }) => (
-            <Pressable onPress={() => setViewerIndex(index)} style={{ width: cell, height: cell }}>
-              <Image source={{ uri: gridUri(item) }} style={{ width: cell, height: cell }} contentFit="cover" transition={150} />
-            </Pressable>
-          )}
+          renderItem={({ item, index }) => {
+            const gi = item.ai_analysis
+            const kcal = item.type === 'meal' && item.ai_status === 'completed' && gi ? Math.round(gi.calories ?? 0) : null
+            return (
+              <Pressable onPress={() => setViewerIndex(index)} style={{ width: cell, height: cell, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: t.surfaceSecondary }}>
+                <Image source={{ uri: gridUri(item) }} style={{ width: cell, height: cell }} contentFit="cover" transition={150} />
+                {kcal != null ? (
+                  <View style={{ position: 'absolute', left: 6, bottom: 6, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.full, backgroundColor: 'rgba(0,0,0,0.55)' }}>
+                    <Text style={[typography.caption, { color: '#fff', fontSize: 10 }]}>{kcal} kcal</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            )
+          }}
         />
       )}
     </>

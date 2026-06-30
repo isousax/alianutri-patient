@@ -1,12 +1,12 @@
 import { View, Text, Pressable } from 'react-native'
 import { Image } from 'expo-image'
-import { Utensils, Dumbbell, Smile, Pencil, MessageCircle, CloudOff } from 'lucide-react-native'
+import { Utensils, Dumbbell, Smile, Pencil, CloudOff } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
-import { useUpdatePostType } from '../../hooks/usePortal'
+import { useUpdatePostType, usePortalHome } from '../../hooks/usePortal'
 import { confirm } from '../../stores/confirm'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
-import { Card, MacrosBar, AuroraBackground } from '../ui'
+import { Card, MacrosBar, AuroraBackground, Avatar } from '../ui'
 import { AILoader } from '../ui/AILoader'
 import { AliaAvatar } from '../ui/AliaAvatar'
 import { diaryPhotoUrl } from '../../lib/diaryPhoto'
@@ -49,6 +49,9 @@ export function PostCard({ post }: { post: DiaryPost }) {
   const meta = TYPE_META[post.type]
   const TypeIcon = meta.Icon
   const ai = post.ai_analysis
+  const { data: home } = usePortalHome()
+  const nutriName = home?.nutritionist?.name ?? 'Seu nutricionista'
+  const nutriPhoto = home?.nutritionist?.photo_url ?? null
   const isLocal = !!post._local
   const photoUri = post.has_photo
     ? isLocal && post._localPhotoUri
@@ -163,9 +166,12 @@ export function PostCard({ post }: { post: DiaryPost }) {
             </View>
           )}
           {post.comments.map((cm) => (
-            <View key={cm.id} style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
-              <MessageCircle size={13} color={t.primary} style={{ marginTop: 2 }} />
-              <Text style={[typography.bodySm, { color: t.textSecondary, flex: 1 }]}>{cm.comment_text}</Text>
+            <View key={cm.id} style={{ flexDirection: 'row', gap: space.sm, marginTop: space.xs, alignItems: 'flex-start' }}>
+              <Avatar name={nutriName} uri={nutriPhoto} size={26} ring={false} />
+              <View style={{ flex: 1, backgroundColor: t.surfaceSecondary, borderRadius: radius.lg, paddingHorizontal: space.md, paddingVertical: space.sm }}>
+                <Text style={[typography.labelSm, { color: t.text }]}>{nutriName}</Text>
+                <Text style={[typography.bodySm, { color: t.textSecondary }]}>{cm.comment_text}</Text>
+              </View>
             </View>
           ))}
         </View>

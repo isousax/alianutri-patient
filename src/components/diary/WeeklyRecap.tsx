@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, { FadeInDown } from 'react-native-reanimated'
-import { Sparkles, Flame, Droplets, CalendarCheck, Heart } from 'lucide-react-native'
+import { Sparkles, Heart } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useWeeklyAdherence, useChartsSummary, useDiaryStreak } from '../../hooks/usePortal'
 import { typography, space, radius, SCREEN_PADDING, shadows } from '../../theme/tokens'
@@ -28,7 +28,6 @@ export function WeeklyRecap() {
   const days = adherence?.days ?? []
   const totalDays = days.length || 7
   const loggedDays = days.filter((d) => d.logged > 0).length
-  const loggedMeals = days.reduce((s, d) => s + (d.logged || 0), 0)
   const waterL = (charts?.water ?? []).reduce((s, d) => s + (d.total_ml || 0), 0) / 1000
   const mealPhotos = charts?.counts?.meal_photos ?? 0
   const nutriLove = (charts?.counts?.nutri_reactions ?? 0) + (charts?.counts?.nutri_comments ?? 0)
@@ -37,48 +36,38 @@ export function WeeklyRecap() {
   // Nada relevante p/ recapitular ainda — não mostra o card.
   if (loggedDays === 0 && streak === 0 && mealPhotos === 0 && waterL === 0) return null
 
-  const tiles = [
-    { key: 'days', icon: <CalendarCheck size={18} color={t.primaryFg} />, label: 'Dias', value: `${loggedDays}/${totalDays}` },
-    { key: 'streak', icon: <Flame size={18} color={t.primaryFg} />, label: 'Sequência', value: `${streak}` },
-    { key: 'water', icon: <Droplets size={18} color={t.primaryFg} />, label: 'Água', value: `${waterL.toFixed(1).replace('.', ',')} L` },
-    { key: 'meals', icon: <Sparkles size={18} color={t.primaryFg} />, label: 'Refeições', value: `${loggedMeals || mealPhotos}` },
+  const stats = [
+    { key: 'days', value: `${loggedDays}/${totalDays}`, label: totalDays === 1 ? 'dia' : 'dias' },
+    { key: 'streak', value: `${streak}`, label: streak === 1 ? 'dia seguido' : 'dias seguidos' },
+    { key: 'water', value: waterL.toFixed(1).replace('.', ','), label: 'litros' },
   ]
 
   return (
     <Animated.View entering={FadeInDown.duration(350)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.md }}>
-      <View style={{ borderRadius: radius.xl, overflow: 'hidden', ...shadows.md }}>
+      <View style={{ borderRadius: radius.xl, overflow: 'hidden', ...shadows.sm }}>
         <LinearGradient colors={[t.primary, t.primaryMuted]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: space.lg }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.xs }}>
-            <Sparkles size={16} color={t.primaryFg} />
-            <Text style={[typography.labelMd, { color: t.primaryFg, opacity: 0.9 }]}>Sua semana</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: space.xs }}>
+            <Sparkles size={14} color={t.primaryFg} />
+            <Text style={[typography.overline, { color: t.primaryFg, opacity: 0.85 }]}>SUA SEMANA</Text>
           </View>
           <Text style={[typography.headingMd, { color: t.primaryFg }]}>{recapHeadline(loggedDays, totalDays)}</Text>
 
-          <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.lg }}>
-            {tiles.map((tile) => (
-              <View
-                key={tile.key}
-                style={{
-                  flex: 1,
-                  backgroundColor: 'rgba(255,255,255,0.16)',
-                  borderRadius: radius.lg,
-                  paddingVertical: space.md,
-                  paddingHorizontal: space.sm,
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                {tile.icon}
-                <Text style={[typography.headingSm, { color: t.primaryFg }]} numberOfLines={1}>{tile.value}</Text>
-                <Text style={[typography.caption, { color: t.primaryFg, opacity: 0.85 }]} numberOfLines={1}>{tile.label}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: space.lg }}>
+            {stats.map((s, i) => (
+              <View key={s.key} style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                {i > 0 ? <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255,255,255,0.22)', marginRight: space.md }} /> : null}
+                <View style={{ flex: 1 }}>
+                  <Text style={[typography.headingMd, { color: t.primaryFg }]} numberOfLines={1}>{s.value}</Text>
+                  <Text style={[typography.caption, { color: t.primaryFg, opacity: 0.8 }]} numberOfLines={1}>{s.label}</Text>
+                </View>
               </View>
             ))}
           </View>
 
           {nutriLove > 0 && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.md }}>
-              <Heart size={14} color={t.primaryFg} fill={t.primaryFg} />
-              <Text style={[typography.caption, { color: t.primaryFg }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.md, paddingTop: space.md, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.18)' }}>
+              <Heart size={13} color={t.primaryFg} fill={t.primaryFg} />
+              <Text style={[typography.caption, { color: t.primaryFg, opacity: 0.95 }]}>
                 Sua nutri reagiu {nutriLove} {nutriLove === 1 ? 'vez' : 'vezes'} essa semana
               </Text>
             </View>
