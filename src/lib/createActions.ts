@@ -9,6 +9,7 @@ export type CreateActionId =
   | 'weight'
   | 'mood'
   | 'progress'
+  | 'wellness'
 
 export interface CreateAction {
   id: CreateActionId
@@ -57,6 +58,13 @@ export const CREATE_ACTIONS: readonly CreateAction[] = [
     description: 'Acompanhe sua evolução em fotos',
     emoji: '�',
     route: '/progress-photos',
+  },
+  {
+    id: 'wellness',
+    label: 'Bem-estar',
+    description: 'Check-in completo: sono, energia e mais',
+    emoji: '🧘',
+    route: '/wellness',
   },
 ] as const
 

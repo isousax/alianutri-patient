@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import { Droplets, Check, Utensils, Scale, Smile, Camera, BookOpen, LayoutGrid, type LucideIcon } from 'lucide-react-native'
+import { Droplets, Check, Utensils, Scale, Smile, Camera, BookOpen, HeartPulse, LayoutGrid, type LucideIcon } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, fmtWater, todayStr } from '../../theme/tokens'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -20,6 +20,7 @@ const ACTION_ICONS: Record<CreateActionId, LucideIcon> = {
   weight: Scale,
   mood: Smile,
   progress: Camera,
+  wellness: HeartPulse,
 }
 
 // Rótulos curtos para os tiles do grid (o label completo vai na acessibilidade).
@@ -29,6 +30,7 @@ const SHORT_LABEL: Record<CreateActionId, string> = {
   weight: 'Peso',
   mood: 'Humor',
   progress: 'Progresso',
+  wellness: 'Bem-estar',
 }
 
 interface RegistroSheetProps {
@@ -53,6 +55,7 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
     weight: { color: t.accent, light: t.accentLight },
     mood: { color: t.info, light: t.infoLight },
     progress: { color: t.success, light: t.successLight },
+    wellness: { color: t.error, light: t.errorLight },
   }
 
   const go = (route: string) => {

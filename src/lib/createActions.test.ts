@@ -9,6 +9,7 @@ describe('createActions', () => {
       'weight',
       'mood',
       'progress',
+      'wellness',
     ])
   })
 
@@ -23,6 +24,7 @@ describe('createActions', () => {
     expect(routeForCreateAction('weight')).toBe('/weight')
     expect(routeForCreateAction('mood')).toBe('/wellness?focus=mood')
     expect(routeForCreateAction('progress')).toBe('/progress-photos')
+    expect(routeForCreateAction('wellness')).toBe('/wellness')
   })
 
   it('retorna null para id inexistente', () => {

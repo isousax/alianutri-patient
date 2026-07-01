@@ -397,6 +397,10 @@ export function useDeletePost() {
     mutationFn: (postId: string) => portalApi.delete<{ message: string }>(`/diary/posts/${postId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'diary-posts'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'diary-recent'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'diary-today'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'diary-streak'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'charts-summary'] })
     },
   })
 }
