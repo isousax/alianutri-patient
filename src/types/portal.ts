@@ -168,8 +168,16 @@ export interface PortalHabit {
   checkins: string[]
 }
 
+/** Progresso canônico calculado no servidor (fonte única web/app). */
+export interface PortalGoalProgress {
+  pct: number | null
+  remaining: number | null
+  reached: boolean
+}
+
 export interface PortalGoal {
   habit?: PortalHabit | null
+  progress?: PortalGoalProgress | null
   id: string
   type: 'weight' | 'measurement' | 'behavioral' | 'nutritional' | 'lab_value' | 'custom'
   title: string

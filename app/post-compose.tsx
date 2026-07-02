@@ -92,8 +92,10 @@ export default function PostComposeScreen() {
       })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
       router.back()
-    } catch {
-      toast.error('Não foi possível publicar. Tente novamente.')
+    } catch (err) {
+      console.error('[post-compose] Falha ao publicar:', err)
+      const msg = err instanceof Error && err.message ? err.message : 'Não foi possível publicar. Tente novamente.'
+      toast.error(msg)
     }
   }, [canPublish, createPost, type, photoUri, caption, fromSlot, slotMealPlanId, slotMealIndexNum])
 

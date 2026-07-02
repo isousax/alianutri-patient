@@ -12,16 +12,30 @@ export interface ImageVariants {
   thumb: ImageVariant // ~200px (grid + preview)
 }
 
+/** Redimensiona/comprime uma variante; se o manipulador falhar, usa a foto original. */
+async function makeVariant(uri: string, width: number, compress: number): Promise<ImageVariant> {
+  try {
+    return await manipulateAsync(uri, [{ resize: { width } }], { compress, format: SaveFormat.JPEG })
+  } catch (err) {
+    console.warn(`[generateImageVariants] Falha ao gerar variante ${width}px, usando original:`, err)
+    return { uri, width: 0, height: 0 }
+  }
+}
+
 /**
  * Gera 3 variantes de tamanho a partir da URI de uma foto, no próprio app
  * (expo-image-manipulator — funciona no Expo Go). A compressão acontece aqui,
  * então NÃO precisamos do Cloudflare Image Resizing (que é pago por transformação).
+ *
+ * Resiliente: se o manipulador falhar (imagem grande, HEIC, erro nativo), cada
+ * variante cai para a foto ORIGINAL em vez de derrubar a publicação inteira — a
+ * API aceita `photo_original` e faz medium/thumb caírem para ela.
  */
 export async function generateImageVariants(uri: string): Promise<ImageVariants> {
   const [original, medium, thumb] = await Promise.all([
-    manipulateAsync(uri, [{ resize: { width: 1200 } }], { compress: 0.7, format: SaveFormat.JPEG }),
-    manipulateAsync(uri, [{ resize: { width: 600 } }], { compress: 0.65, format: SaveFormat.JPEG }),
-    manipulateAsync(uri, [{ resize: { width: 220 } }], { compress: 0.6, format: SaveFormat.JPEG }),
+    makeVariant(uri, 1200, 0.7),
+    makeVariant(uri, 600, 0.65),
+    makeVariant(uri, 220, 0.6),
   ])
   return { original, medium, thumb }
 }

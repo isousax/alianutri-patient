@@ -18,6 +18,7 @@ import type {
   PortalQuestionnaire,
   PortalQuestionnaireDetail,
   PortalGoal,
+  PortalGoalProgress,
   PortalFoodDiaryEntry,
   PortalAppointment,
   PortalEvolution,
@@ -145,6 +146,26 @@ export function useToggleGoalCheckin() {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'goals'] })
+    },
+  })
+}
+
+// P1-5: paciente reporta progresso de metas numéricas (peso/medida/custom).
+// Peso flui pela série canônica no backend; demais atualizam current_value.
+export function useReportGoalProgress() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ goalId, value, date }: { goalId: string; value: number; date?: string }) =>
+      portalApi.post<{ current_value: number; progress: PortalGoalProgress | null; reached: boolean; message: string }>(
+        `/goals/${goalId}/progress`,
+        date ? { value, date } : { value },
+      ),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['portal', 'goals'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'weight-history'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'evolution'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'home'] })
+      useXpToast.getState().show(data.reached ? 50 : 15)
     },
   })
 }

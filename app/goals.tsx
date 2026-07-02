@@ -1,12 +1,14 @@
-import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native'
+import { useState } from 'react'
+import { View, Text, ScrollView, RefreshControl, Pressable, TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Target, CheckCircle2, Circle, Flag, Flame } from 'lucide-react-native'
+import { Target, CheckCircle2, Circle, Flag, Flame, TrendingUp, Trophy } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
-import { useGoals, useToggleGoalCheckin } from '../src/hooks/usePortal'
+import { useGoals, useToggleGoalCheckin, useReportGoalProgress } from '../src/hooks/usePortal'
 import { habitStreak, isCheckedToday, streakUnit, cadenceLabel } from '../src/lib/habit'
+import { computeWeeklySummary, nextGoalMilestone, nextStreakMilestone, GOAL_MILESTONES } from '../src/lib/goalMilestones'
 import type { PortalGoal } from '../src/types/portal'
 import { ScreenHeader, Card, SectionLabel, EmptyState, SkeletonList } from '../src/components/ui'
 import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
@@ -27,10 +29,7 @@ const TYPE_LABELS: Record<string, string> = {
   custom: 'Personalizada',
 }
 
-function progressPct(goal: PortalGoal): number | null {
-  if (goal.target_value == null || goal.current_value == null || goal.target_value === 0) return null
-  return Math.min(100, Math.round((goal.current_value / goal.target_value) * 100))
-}
+// P0-1: progresso vem pronto do servidor (fonte única). Sem cálculo local.
 
 export default function GoalsScreen() {
   const t = useThemeColors()
@@ -77,6 +76,7 @@ export default function GoalsScreen() {
             <ReadOnlyBanner />
           </View>
         )}
+        <WeeklySummaryCard goals={goalList} />
         {active.length > 0 && (
           <>
             <SectionLabel text={`ATIVAS (${active.length})`} />
@@ -102,12 +102,44 @@ export default function GoalsScreen() {
   )
 }
 
+// P1-6: revisão semanal — snapshot dos últimos 7 dias derivado das metas ativas.
+function WeeklySummaryCard({ goals }: { goals: PortalGoal[] }) {
+  const t = useThemeColors()
+  const s = computeWeeklySummary(goals)
+  if (s.activeGoals === 0) return null
+
+  const stats = [
+    { icon: <CheckCircle2 size={16} color={t.primary} />, value: String(s.checkins), label: s.checkins === 1 ? 'check-in' : 'check-ins' },
+    { icon: <Flame size={16} color={t.warning} />, value: String(s.bestStreak), label: 'sequência' },
+    { icon: <Trophy size={16} color={t.success} />, value: `${s.reachedGoals}/${s.activeGoals}`, label: 'atingidas' },
+  ]
+
+  return (
+    <Card style={{ marginBottom: space.md }}>
+      <Text style={[typography.headingSm, { color: t.text, marginBottom: space.md }]}>Resumo da semana</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        {stats.map((st, i) => (
+          <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+            {st.icon}
+            <Text style={[typography.headingMd, { color: t.text }]}>{st.value}</Text>
+            <Text style={[typography.caption, { color: t.textMuted }]}>{st.label}</Text>
+          </View>
+        ))}
+      </View>
+    </Card>
+  )
+}
+
 function GoalCard({ goal }: { goal: PortalGoal }) {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
-  const pct = progressPct(goal)
+  const progress = goal.progress ?? null
+  const pct = progress?.pct ?? null
+  const hasValues = goal.target_value != null && goal.current_value != null
+  const unit = goal.target_unit ? ` ${goal.target_unit}` : ''
   const isCompleted = goal.status === 'completed'
   const toggle = useToggleGoalCheckin()
+  const report = useReportGoalProgress()
   const habit = goal.habit ?? null
   const checkedToday = habit ? isCheckedToday(habit) : false
   const streak = habit ? habitStreak(habit) : 0
@@ -115,6 +147,17 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
     if (!canWrite) return
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
     toggle.mutate(goal.id)
+  }
+
+  // P1-5: paciente reporta progresso de metas numéricas (não-hábito, não-exame).
+  const [reporting, setReporting] = useState(false)
+  const [reportValue, setReportValue] = useState('')
+  const canReport = canWrite && !isCompleted && !habit && goal.type !== 'lab_value' && goal.type !== 'behavioral'
+  const onSaveReport = () => {
+    const num = parseFloat(reportValue.replace(',', '.'))
+    if (!Number.isFinite(num)) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+    report.mutate({ goalId: goal.id, value: num }, { onSuccess: () => setReporting(false) })
   }
 
   const prioColor = goal.priority === 'high' ? t.error : goal.priority === 'medium' ? t.warning : t.textMuted
@@ -161,56 +204,141 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
         </View>
       </View>
 
-      {pct !== null && (
+      {hasValues && (
         <View style={{ marginTop: space.md, marginLeft: 28 + space.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
             <Text style={[typography.caption, { color: t.textMuted }]}>
-              {goal.current_value}{goal.target_unit ? ` ${goal.target_unit}` : ''} de {goal.target_value}{goal.target_unit ? ` ${goal.target_unit}` : ''}
+              {goal.current_value}{unit} de {goal.target_value}{unit}
             </Text>
-            <Text style={[typography.captionBold, { color: isCompleted ? t.success : t.primary }]}>
-              {pct}%
+            <Text style={[typography.captionBold, { color: isCompleted || progress?.reached ? t.success : t.primary }]}>
+              {isCompleted || progress?.reached
+                ? 'Meta atingida'
+                : pct != null
+                  ? `${Math.round(pct)}%`
+                  : progress?.remaining != null
+                    ? `faltam ${progress.remaining}${unit}`
+                    : ''}
             </Text>
           </View>
-          <View style={{ height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: t.borderLight }}>
-            <View style={{
-              height: 6,
-              borderRadius: 3,
-              width: `${pct}%`,
-              backgroundColor: isCompleted ? t.success : t.primary,
-            }} />
-          </View>
+          {pct != null && (
+            <>
+              <View
+                accessibilityRole="progressbar"
+                accessibilityLabel={`Progresso da meta: ${Math.round(pct)}%`}
+                accessibilityValue={{ min: 0, max: 100, now: Math.round(pct) }}
+                style={{ height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: t.borderLight }}
+              >
+                <View style={{
+                  height: 6,
+                  borderRadius: 3,
+                  width: `${pct}%`,
+                  backgroundColor: isCompleted || progress?.reached ? t.success : t.primary,
+                }} />
+                {/* P1-6: marcos (25/50/75%) como divisórias sobre a barra */}
+                {GOAL_MILESTONES.slice(0, -1).map((m) => (
+                  <View key={m} style={{
+                    position: 'absolute', left: `${m}%`, top: 0, bottom: 0, width: 1.5,
+                    backgroundColor: pct >= m ? t.background : t.border, opacity: 0.6,
+                  }} />
+                ))}
+              </View>
+              {!isCompleted && !progress?.reached && nextGoalMilestone(pct) != null && (
+                <Text style={[typography.caption, { color: t.textMuted, marginTop: 5 }]}>
+                  Próximo marco: {nextGoalMilestone(pct)}%
+                </Text>
+              )}
+            </>
+          )}
+        </View>
+      )}
+      {canReport && (
+        <View style={{ marginTop: space.md, marginLeft: 28 + space.md }}>
+          {!reporting ? (
+            <Pressable
+              onPress={() => { setReportValue(goal.current_value != null ? String(goal.current_value) : ''); setReporting(true) }}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+                paddingHorizontal: 12, paddingVertical: 7,
+                borderRadius: radius.md, backgroundColor: t.primaryLight,
+              }}
+            >
+              <TrendingUp size={15} color={t.primary} />
+              <Text style={[typography.captionBold, { color: t.primary }]}>Atualizar progresso</Text>
+            </Pressable>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+              <TextInput
+                value={reportValue}
+                onChangeText={setReportValue}
+                keyboardType="numeric"
+                autoFocus
+                placeholder={goal.target_unit ? `Valor (${goal.target_unit})` : 'Valor atual'}
+                placeholderTextColor={t.textMuted}
+                style={[typography.bodyMd, {
+                  flex: 1, color: t.text,
+                  borderWidth: 1, borderColor: t.border, borderRadius: radius.md,
+                  paddingHorizontal: 12, paddingVertical: 8,
+                }]}
+              />
+              <Pressable
+                onPress={onSaveReport}
+                disabled={report.isPending}
+                style={{
+                  paddingHorizontal: 14, paddingVertical: 9,
+                  borderRadius: radius.md, backgroundColor: t.primary,
+                  opacity: report.isPending ? 0.6 : 1,
+                }}
+              >
+                <Text style={[typography.captionBold, { color: '#fff' }]}>Salvar</Text>
+              </Pressable>
+              <Pressable onPress={() => setReporting(false)} style={{ paddingHorizontal: 8, paddingVertical: 9 }}>
+                <Text style={[typography.captionBold, { color: t.textMuted }]}>Cancelar</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       )}
       {habit && (
-        <View style={{ marginTop: space.md, marginLeft: 28 + space.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
-            {streak > 0 ? (
-              <>
-                <Flame size={14} color={t.warning} />
-                <Text style={[typography.captionBold, { color: t.text }]}>{streak}</Text>
-                <Text style={[typography.caption, { color: t.textMuted }]}>{streakUnit(habit, streak)} · {cadenceLabel(habit)}</Text>
-              </>
-            ) : (
-              <Text style={[typography.caption, { color: t.textMuted }]}>Hábito {cadenceLabel(habit)}</Text>
+        <View style={{ marginTop: space.md, marginLeft: 28 + space.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
+              {streak > 0 ? (
+                <>
+                  <Flame size={14} color={t.warning} />
+                  <Text style={[typography.captionBold, { color: t.text }]}>{streak}</Text>
+                  <Text style={[typography.caption, { color: t.textMuted }]}>{streakUnit(habit, streak)} · {cadenceLabel(habit)}</Text>
+                </>
+              ) : (
+                <Text style={[typography.caption, { color: t.textMuted }]}>Hábito {cadenceLabel(habit)}</Text>
+              )}
+            </View>
+            {!isCompleted && (
+              <Pressable
+                onPress={onToggle}
+                disabled={toggle.isPending || !canWrite}
+                accessibilityRole="button"
+                accessibilityState={{ checked: checkedToday, disabled: toggle.isPending || !canWrite }}
+                accessibilityLabel={checkedToday ? 'Check-in de hoje feito. Toque para desmarcar.' : 'Marcar check-in de hoje.'}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 5,
+                  paddingHorizontal: 12, paddingVertical: 7,
+                  borderRadius: radius.md,
+                  backgroundColor: checkedToday ? t.successLight : t.primaryLight,
+                  opacity: toggle.isPending || !canWrite ? 0.6 : 1,
+                }}
+              >
+                {checkedToday ? <CheckCircle2 size={15} color={t.success} /> : <Circle size={15} color={t.primary} />}
+                <Text style={[typography.captionBold, { color: checkedToday ? t.success : t.primary }]}>
+                  {checkedToday ? 'Feito hoje' : 'Marcar hoje'}
+                </Text>
+              </Pressable>
             )}
           </View>
-          {!isCompleted && (
-            <Pressable
-              onPress={onToggle}
-              disabled={toggle.isPending || !canWrite}
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 5,
-                paddingHorizontal: 12, paddingVertical: 7,
-                borderRadius: radius.md,
-                backgroundColor: checkedToday ? t.successLight : t.primaryLight,
-                opacity: toggle.isPending || !canWrite ? 0.6 : 1,
-              }}
-            >
-              {checkedToday ? <CheckCircle2 size={15} color={t.success} /> : <Circle size={15} color={t.primary} />}
-              <Text style={[typography.captionBold, { color: checkedToday ? t.success : t.primary }]}>
-                {checkedToday ? 'Feito hoje' : 'Marcar hoje'}
-              </Text>
-            </Pressable>
+          {/* P1-6: marco de sequência (só cadência diária) */}
+          {!isCompleted && habit.cadence === 'daily' && streak > 0 && nextStreakMilestone(streak) != null && (
+            <Text style={[typography.caption, { color: t.textMuted, marginTop: 6 }]}>
+              {(() => { const nm = nextStreakMilestone(streak)!; const d = nm - streak; return `Faltam ${d} ${d === 1 ? 'dia' : 'dias'} para o marco de ${nm} dias 🔥` })()}
+            </Text>
           )}
         </View>
       )}
