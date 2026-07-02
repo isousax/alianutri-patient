@@ -24,6 +24,7 @@ interface AuthState {
   nutritionist: NutritionistInfo | null
   isHydrated: boolean
   setAuth: (code: string, patient: PatientInfo, nutritionist: NutritionistInfo) => void
+  updatePatientPhoto: (photoUrl: string | null) => void
   logout: () => void
   hydrate: () => Promise<void>
 }
@@ -39,6 +40,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     SecureStore.setItemAsync(PATIENT_KEY, JSON.stringify(patient)).catch(() => {})
     SecureStore.setItemAsync(NUTRI_KEY, JSON.stringify(nutritionist)).catch(() => {})
     set({ accessCode: code, patient, nutritionist })
+  },
+
+  updatePatientPhoto: (photoUrl) => {
+    set((state) => {
+      if (!state.patient) return state
+      const patient = { ...state.patient, photo_url: photoUrl }
+      SecureStore.setItemAsync(PATIENT_KEY, JSON.stringify(patient)).catch(() => {})
+      return { patient }
+    })
   },
 
   logout: () => {

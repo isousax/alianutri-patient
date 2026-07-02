@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, type InfiniteData } from '@tanstack/react-query'
 import { portalApi } from '../services/api'
 import { compressImage } from '../lib/compressImage'
+import { compressAvatar } from '../lib/compressAvatar'
 import { generateImageVariants } from '../lib/imageVariants'
+import { useAuthStore } from '../stores/auth'
 import { useXpToast } from '../stores/xpToast'
 import { todayISO } from '../lib/habit'
 import { generateClientId } from '../lib/clientId'
@@ -54,6 +56,52 @@ export function usePortalProfile() {
   return useQuery({
     queryKey: ['portal', 'profile'],
     queryFn: () => portalApi.get<PortalProfile>('/profile'),
+  })
+}
+
+/**
+ * Envia/troca a foto de perfil do paciente.
+ * Recorte quadrado é feito pelo ImagePicker (allowsEditing + aspect 1:1);
+ * aqui só comprimimos para ~512px JPEG antes do upload multipart.
+ */
+export function useUploadProfilePhoto() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (uri: string) => {
+      const compressed = await compressAvatar(uri)
+      const fd = new FormData()
+      fd.append('photo', {
+        uri: compressed,
+        type: 'image/jpeg',
+        name: 'avatar.jpg',
+      } as unknown as Blob)
+      return portalApi.upload<{ profile_photo_url: string }>('/profile/photo', fd)
+    },
+    onSuccess: (data) => {
+      // A URL nova já é cache-busted (sufixo único), então basta propagá-la.
+      useAuthStore.getState().updatePatientPhoto(data.profile_photo_url)
+      qc.setQueryData<PortalProfile>(['portal', 'profile'], (prev) =>
+        prev ? { ...prev, profile_photo_url: data.profile_photo_url } : prev,
+      )
+      qc.invalidateQueries({ queryKey: ['portal', 'profile'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'home'] })
+    },
+  })
+}
+
+/** Remove a foto de perfil do paciente. */
+export function useDeleteProfilePhoto() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => portalApi.delete<{ message: string }>('/profile/photo'),
+    onSuccess: () => {
+      useAuthStore.getState().updatePatientPhoto(null)
+      qc.setQueryData<PortalProfile>(['portal', 'profile'], (prev) =>
+        prev ? { ...prev, profile_photo_url: null } : prev,
+      )
+      qc.invalidateQueries({ queryKey: ['portal', 'profile'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'home'] })
+    },
   })
 }
 

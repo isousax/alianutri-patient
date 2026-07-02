@@ -1,17 +1,23 @@
-import { View, Text, ScrollView, Pressable, RefreshControl, Dimensions } from 'react-native'
+import { useState, useCallback } from 'react'
+import { View, Text, ScrollView, Pressable, RefreshControl, Dimensions, ActivityIndicator, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   Ruler, Weight, Phone, Mail,
   Settings, Calendar, TrendingDown, TrendingUp, ChevronLeft,
+  Camera, Image as ImageIcon, Trash2, X,
 } from 'lucide-react-native'
 import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import { usePortalProfile, useEvolution } from '../src/hooks/usePortal'
+import * as ImagePicker from 'expo-image-picker'
+import { usePortalProfile, useEvolution, useUploadProfilePhoto, useDeleteProfilePhoto } from '../src/hooks/usePortal'
 import type { PortalEvolution } from '../src/types/portal'
 import { useThemeColors } from '../src/stores/theme'
+import { useFeaturesStore } from '../src/stores/features'
+import { toast } from '../src/stores/toast'
+import { confirm } from '../src/stores/confirm'
 import { Card, LoadingScreen } from '../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING, fmtDateLabel } from '../src/theme/tokens'
 
@@ -21,6 +27,74 @@ const AVATAR_SIZE = 88
 export default function ProfileScreen() {
   const t = useThemeColors()
   const { data: profile, isLoading, refetch, isRefetching } = usePortalProfile()
+  const canWrite = useFeaturesStore((s) => s.canWrite)
+  const { mutateAsync: uploadPhoto, isPending: isUploading } = useUploadProfilePhoto()
+  const { mutateAsync: deletePhoto, isPending: isDeleting } = useDeleteProfilePhoto()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const hasPhoto = !!profile?.profile_photo_url
+  const isBusy = isUploading || isDeleting
+
+  const runPicker = useCallback(
+    async (source: 'library' | 'camera') => {
+      setMenuOpen(false)
+      try {
+        if (source === 'library') {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+          if (!perm.granted) { toast.error('Precisamos de acesso às fotos.'); return }
+        } else {
+          const perm = await ImagePicker.requestCameraPermissionsAsync()
+          if (!perm.granted) { toast.error('Precisamos de acesso à câmera.'); return }
+        }
+
+        const opts: ImagePicker.ImagePickerOptions = {
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.9,
+        }
+        const result = source === 'library'
+          ? await ImagePicker.launchImageLibraryAsync(opts)
+          : await ImagePicker.launchCameraAsync(opts)
+
+        if (result.canceled || !result.assets?.[0]) return
+
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
+        await uploadPhoto(result.assets[0].uri)
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+        toast.success('Foto de perfil atualizada!')
+      } catch {
+        toast.error('Não foi possível atualizar a foto. Tente novamente.')
+      }
+    },
+    [uploadPhoto],
+  )
+
+  const handleRemove = useCallback(() => {
+    setMenuOpen(false)
+    confirm({
+      title: 'Remover foto de perfil?',
+      message: 'Sua foto voltará a mostrar suas iniciais.',
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await deletePhoto()
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+          toast.success('Foto removida.')
+        } catch {
+          toast.error('Não foi possível remover a foto.')
+        }
+      },
+    })
+  }, [deletePhoto])
+
+  const openMenu = useCallback(() => {
+    if (!canWrite || isBusy) return
+    Haptics.selectionAsync().catch(() => {})
+    setMenuOpen(true)
+  }, [canWrite, isBusy])
 
   if (isLoading) return <LoadingScreen />
 
@@ -90,35 +164,77 @@ export default function ProfileScreen() {
           alignItems: 'center',
           paddingBottom: space['3xl'],
         }}>
-          {profile?.profile_photo_url ? (
-            <View style={{
-              width: AVATAR_SIZE, height: AVATAR_SIZE,
-              borderRadius: AVATAR_SIZE / 2,
-              overflow: 'hidden',
-              marginBottom: space.lg,
-              borderWidth: 3,
-              borderColor: t.primaryLight,
-              ...shadows.md,
-            }}>
-              <Image
-                source={{ uri: profile.profile_photo_url }}
-                style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
-                contentFit="cover"
-              />
-            </View>
-          ) : (
-            <View style={{
-              width: AVATAR_SIZE, height: AVATAR_SIZE,
-              borderRadius: AVATAR_SIZE / 2,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: space.lg,
-              backgroundColor: t.primary,
-              ...shadows.md,
-            }}>
-              <Text style={[typography.displaySm, { color: t.primaryFg }]}>{initials}</Text>
-            </View>
-          )}
+          <Pressable
+            onPress={openMenu}
+            disabled={!canWrite || isBusy}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={hasPhoto ? 'Alterar foto de perfil' : 'Adicionar foto de perfil'}
+            style={{ marginBottom: space.lg }}
+          >
+            {hasPhoto ? (
+              <View style={{
+                width: AVATAR_SIZE, height: AVATAR_SIZE,
+                borderRadius: AVATAR_SIZE / 2,
+                overflow: 'hidden',
+                borderWidth: 3,
+                borderColor: t.primaryLight,
+                ...shadows.md,
+              }}>
+                <Image
+                  source={{ uri: profile!.profile_photo_url! }}
+                  style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={150}
+                />
+              </View>
+            ) : (
+              <View style={{
+                width: AVATAR_SIZE, height: AVATAR_SIZE,
+                borderRadius: AVATAR_SIZE / 2,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: t.primary,
+                ...shadows.md,
+              }}>
+                <Text style={[typography.displaySm, { color: t.primaryFg }]}>{initials}</Text>
+              </View>
+            )}
+
+            {/* Overlay de upload/remoção em andamento */}
+            {isBusy && (
+              <View style={{
+                position: 'absolute',
+                width: AVATAR_SIZE, height: AVATAR_SIZE,
+                borderRadius: AVATAR_SIZE / 2,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0,0,0,0.45)',
+              }}>
+                <ActivityIndicator color="#fff" />
+              </View>
+            )}
+
+            {/* Badge de edição (câmera) — só quando pode escrever e não está ocupado */}
+            {canWrite && !isBusy && (
+              <View style={{
+                position: 'absolute',
+                right: 0,
+                bottom: 0,
+                width: 30, height: 30,
+                borderRadius: 15,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: t.primary,
+                borderWidth: 2,
+                borderColor: t.background,
+                ...shadows.sm,
+              }}>
+                <Camera size={15} color={t.primaryFg} strokeWidth={2} />
+              </View>
+            )}
+          </Pressable>
           <Text style={[typography.displaySm, { color: t.text }]}>{displayName}</Text>
         </Animated.View>
 
@@ -161,7 +277,95 @@ export default function ProfileScreen() {
         {/* ═══════ EVOLUTION CHART ═══════ */}
         <WeightChart />
       </ScrollView>
+
+      {/* ═══════ BOTTOM SHEET: opções da foto de perfil ═══════ */}
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <Pressable
+          onPress={() => setMenuOpen(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: t.surface,
+              borderTopLeftRadius: radius.xl,
+              borderTopRightRadius: radius.xl,
+              paddingTop: space.md,
+              paddingBottom: space['2xl'] + space.md,
+              paddingHorizontal: SCREEN_PADDING,
+            }}
+          >
+            <View style={{ alignItems: 'center', marginBottom: space.lg }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: t.borderLight }} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.md }}>
+              <Text style={[typography.headingSm, { color: t.text }]}>Foto de perfil</Text>
+              <Pressable onPress={() => setMenuOpen(false)} hitSlop={12} accessibilityLabel="Fechar">
+                <X size={20} color={t.textSecondary} />
+              </Pressable>
+            </View>
+
+            <SheetOption
+              icon={<Camera size={19} color={t.primary} />}
+              label="Tirar foto"
+              onPress={() => runPicker('camera')}
+            />
+            <SheetOption
+              icon={<ImageIcon size={19} color={t.primary} />}
+              label="Escolher da galeria"
+              onPress={() => runPicker('library')}
+            />
+            {hasPhoto && (
+              <SheetOption
+                icon={<Trash2 size={19} color={t.error} />}
+                label="Remover foto atual"
+                destructive
+                onPress={handleRemove}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
+  )
+}
+
+function SheetOption({ icon, label, onPress, destructive }: {
+  icon: React.ReactNode
+  label: string
+  onPress: () => void
+  destructive?: boolean
+}) {
+  const t = useThemeColors()
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.md,
+        paddingVertical: space.md + 2,
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <View style={{
+        width: 38, height: 38,
+        borderRadius: radius.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: destructive ? t.errorLight : t.primaryLight,
+      }}>
+        {icon}
+      </View>
+      <Text style={[typography.labelMd, { color: destructive ? t.error : t.text }]}>{label}</Text>
+    </Pressable>
   )
 }
 
