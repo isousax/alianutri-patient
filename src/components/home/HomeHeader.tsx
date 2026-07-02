@@ -64,7 +64,7 @@ export function HomeHeader({ displayName, nutritionistName, weather, streak, cha
                 <Lightbulb size={18} color={t.warning} />
               </Pressable>
             ) : null}
-            <Avatar name={displayName} uri={photoUrl} size={53} onPress={() => router.push('/profile')} />
+            <Avatar name={displayName} uri={photoUrl} size={60} onPress={() => router.push('/profile')} />
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
             <View style={{ flex: 1 }}>

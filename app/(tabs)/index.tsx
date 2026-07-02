@@ -69,6 +69,7 @@ import {
   useDiaryToday,
   useChartsSummary,
   useRecentPosts,
+  useAiMealSync,
   useGoals,
   useEvolution,
   useWaterIntake,
@@ -146,6 +147,8 @@ export default function HomeScreen() {
   // Calorias de HOJE: pega o bucket do dia local (BRT) — não somar a janela inteira (cruzava a meia-noite e contava ontem).
   const aiCalories = Math.round((chartsToday?.nutrition ?? []).find((d) => d.date === today)?.calories || 0);
   const { data: recentPosts } = useRecentPosts(3);
+  // Quando a IA termina de analisar uma refeição, atualiza o Anel do Dia (calorias) na hora.
+  useAiMealSync(recentPosts?.posts);
   const { data: goals } = useGoals();
   const { data: evolution } = useEvolution();
   const { data: waterData } = useWaterIntake(today);
@@ -158,6 +161,8 @@ export default function HomeScreen() {
   const handleRefresh = useCallback(() => {
     refetch();
     qc.invalidateQueries({ queryKey: ["portal", "diary-today"] });
+    qc.invalidateQueries({ queryKey: ["portal", "charts-summary"] });
+    qc.invalidateQueries({ queryKey: ["portal", "diary-recent"] });
     qc.invalidateQueries({ queryKey: ["portal", "goals"] });
     qc.invalidateQueries({ queryKey: ["portal", "evolution"] });
     qc.invalidateQueries({ queryKey: ["portal", "water"] });

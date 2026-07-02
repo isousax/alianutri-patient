@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, type InfiniteData } from '@tanstack/react-query'
 import { portalApi } from '../services/api'
 import { compressImage } from '../lib/compressImage'
@@ -448,6 +449,43 @@ export function useRecentPosts(limit = 3) {
     refetchInterval: (query) =>
       query.state.data?.posts.some((p) => p.ai_status === 'pending') ? 5000 : false,
   })
+}
+
+/**
+ * Sincroniza os agregados do dia (calorias/macros da IA) quando a análise de uma
+ * refeição termina.
+ *
+ * O problema: a IA analisa a foto de forma ASSÍNCRONA no servidor. useDiaryFeed/
+ * useRecentPosts já pollam enquanto há post `pending`, mas nada invalidava o
+ * `charts-summary` (fonte do Anel do Dia na home) quando a análise concluía — então
+ * as calorias só apareciam depois de um pull-to-refresh ou ao reabrir a tela.
+ *
+ * Aqui observamos a transição `pending → resolvido` na lista de posts que já é pollada
+ * e invalidamos os agregados no momento certo (sem requests extras de polling).
+ *
+ * @param posts lista de posts que está sendo pollada (ex.: recentPosts?.posts)
+ */
+export function useAiMealSync(posts: DiaryPost[] | undefined) {
+  const qc = useQueryClient()
+  const pendingRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!posts) return
+    const stillPending = new Set(
+      posts.filter((p) => p.type === 'meal' && p.ai_status === 'pending').map((p) => p.id),
+    )
+    // Um post estava pendente e agora existe com status resolvido → totais mudaram.
+    const resolvedSome = [...pendingRef.current].some((id) => {
+      const p = posts.find((x) => x.id === id)
+      return p != null && p.ai_status !== 'pending'
+    })
+    pendingRef.current = stillPending
+    if (resolvedSome) {
+      qc.invalidateQueries({ queryKey: ['portal', 'charts-summary'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'diary-today'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'home'] })
+    }
+  }, [posts, qc])
 }
 
 export function usePostDetail(postId: string | null) {

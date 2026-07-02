@@ -1,15 +1,9 @@
-import { View, Text } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
-import Animated, { FadeInDown } from 'react-native-reanimated'
-import { Sparkles, Heart } from 'lucide-react-native'
+import { View, Text, StyleSheet } from 'react-native'
+import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated'
+import { Sparkles, Heart, CalendarDays, Flame, Droplets } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useWeeklyAdherence, useChartsSummary, useDiaryStreak } from '../../hooks/usePortal'
 import { typography, space, radius, SCREEN_PADDING, shadows } from '../../theme/tokens'
-
-// "Sua semana" — recap estilo Wrapped no topo do Feed (P1). Resume os últimos 7
-// dias a partir de sinais que o paciente já gera (adesão, sequência, água,
-// carinho do nutri). Peak-end rule: tom sempre encorajador. Some quando não há
-// nada para recapitular.
 
 function recapHeadline(loggedDays: number, totalDays: number): string {
   const ratio = totalDays > 0 ? loggedDays / totalDays : 0
@@ -33,47 +27,84 @@ export function WeeklyRecap() {
   const nutriLove = (charts?.counts?.nutri_reactions ?? 0) + (charts?.counts?.nutri_comments ?? 0)
   const streak = streakData?.streak ?? 0
 
-  // Nada relevante p/ recapitular ainda — não mostra o card.
   if (loggedDays === 0 && streak === 0 && mealPhotos === 0 && waterL === 0) return null
 
-  const stats = [
-    { key: 'days', value: `${loggedDays}/${totalDays}`, label: totalDays === 1 ? 'dia' : 'dias' },
-    { key: 'streak', value: `${streak}`, label: streak === 1 ? 'dia seguido' : 'dias seguidos' },
-    { key: 'water', value: waterL.toFixed(1).replace('.', ','), label: 'litros' },
-  ]
-
   return (
-    <Animated.View entering={FadeInDown.duration(350)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.md }}>
-      <View style={{ borderRadius: radius.xl, overflow: 'hidden', ...shadows.sm }}>
-        <LinearGradient colors={[t.primary, t.primaryMuted]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: space.lg }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: space.xs }}>
-            <Sparkles size={14} color={t.primaryFg} />
-            <Text style={[typography.overline, { color: t.primaryFg, opacity: 0.85 }]}>SUA SEMANA</Text>
-          </View>
-          <Text style={[typography.headingMd, { color: t.primaryFg }]}>{recapHeadline(loggedDays, totalDays)}</Text>
+    <Animated.View entering={FadeInDown.duration(350)} style={styles.wrapper}>
+      <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border || 'transparent' }, shadows.sm]}>
+        {/* Barra colorida superior */}
+        <View style={[styles.accentBar, { backgroundColor: t.primary }]} />
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: space.lg }}>
-            {stats.map((s, i) => (
-              <View key={s.key} style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                {i > 0 ? <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255,255,255,0.22)', marginRight: space.md }} /> : null}
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.headingMd, { color: t.primaryFg }]} numberOfLines={1}>{s.value}</Text>
-                  <Text style={[typography.caption, { color: t.primaryFg, opacity: 0.8 }]} numberOfLines={1}>{s.label}</Text>
-                </View>
-              </View>
-            ))}
+        <View style={styles.content}>
+          {/* Cabeçalho */}
+          <View style={styles.header}>
+            <Text style={[typography.overline, { color: t.primary, opacity: 0.8, letterSpacing: 1 }]}>
+              SUA SEMANA
+            </Text>
           </View>
 
+          <Text style={[typography.headingMd, { color: t.text, fontWeight: '700', marginBottom: space.md }]}>
+            {recapHeadline(loggedDays, totalDays)}
+          </Text>
+
+
+          {/* Nutri */}
           {nutriLove > 0 && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.md, paddingTop: space.md, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.18)' }}>
-              <Heart size={13} color={t.primaryFg} fill={t.primaryFg} />
-              <Text style={[typography.caption, { color: t.primaryFg, opacity: 0.95 }]}>
+            <View style={[styles.nutriRow, { borderTopColor: t.border || 'rgba(0,0,0,0.06)' }]}>
+              <Heart size={13} color={t.primary} fill={t.primary} />
+              <Text style={[typography.caption, { color: t.textSecondary }]}>
                 Sua nutri reagiu {nutriLove} {nutriLove === 1 ? 'vez' : 'vezes'} essa semana
               </Text>
             </View>
           )}
-        </LinearGradient>
+        </View>
       </View>
     </Animated.View>
   )
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    paddingHorizontal: SCREEN_PADDING,
+    marginBottom: space.md,
+  },
+  card: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  accentBar: {
+    height: 4,
+    width: '100%',
+  },
+  content: {
+    padding: space.lg,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: space.xs,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(0,0,0,0.03)', // sutil, funciona em temas claros/escuros com opacidade baixa
+    borderRadius: radius.lg,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.xs,
+    marginBottom: space.md,
+  },
+  statBox: {
+    alignItems: 'center',
+    gap: 2,
+    flex: 1,
+  },
+  nutriRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: space.sm,
+    borderTopWidth: 1,
+  },
+})
