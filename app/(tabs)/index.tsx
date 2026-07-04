@@ -314,6 +314,9 @@ export default function HomeScreen() {
 
         {/* ═══════ QUICK ACTIONS — 4-column icon grid + folder ═══════ */}
         <QuickActionsGrid canWrite={canWrite} />
+        
+        {/* ═══════ NEXT APPOINTMENT ═══════ */}
+        {apt && <AppointmentCard apt={apt} />}
 
         {/* ═══════ FEED PREVIEW — últimos posts do diário ═══════ */}
         {recentPosts && recentPosts.posts.length > 0 && (
@@ -334,9 +337,6 @@ export default function HomeScreen() {
             </Card>
           </Animated.View>
         )}
-
-        {/* ═══════ NEXT APPOINTMENT ═══════ */}
-        {apt && <AppointmentCard apt={apt} />}
 
         {/* ═══════ ACTIVE GOALS ═══════ */}
         <GoalsPreview goals={activeGoals} />
