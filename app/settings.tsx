@@ -8,18 +8,23 @@ import { haptics } from '../src/lib/haptics'
 import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { useAuthStore } from '../src/stores/auth'
-import { useThemeColors, useTheme, useThemeStore } from '../src/stores/theme'
-import { THEME_LIST, type AppTheme, type ThemeColors } from '../src/theme/themes'
-import { ScreenHeader, Card, SectionLabel, Divider } from '../src/components/ui'
+import { useThemeColors, useThemeStore, type AppearanceMode, type LightThemeId } from '../src/stores/theme'
+import { THEMES, type ThemeColors } from '../src/theme/themes'
+import { ScreenHeader, Card, SectionLabel, Divider, SegmentedControl } from '../src/components/ui'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 import { REMINDER_TOGGLES } from '../src/lib/localNotifications'
 import { useRemindersStore } from '../src/stores/reminders'
 import { confirm } from '../src/stores/confirm'
 
+// Identidades claras oferecidas (o escuro é sempre Noturno).
+const LIGHT_THEMES = [THEMES.default, THEMES.rose]
+
 export default function SettingsScreen() {
   const t = useThemeColors()
-  const theme = useTheme()
-  const setTheme = useThemeStore((s) => s.setTheme)
+  const mode = useThemeStore((s) => s.mode)
+  const lightTheme = useThemeStore((s) => s.lightTheme)
+  const setMode = useThemeStore((s) => s.setMode)
+  const setLightTheme = useThemeStore((s) => s.setLightTheme)
   const logout = useAuthStore((s) => s.logout)
   const reminderEnabled = useRemindersStore((s) => s.enabled)
   const toggleReminder = useRemindersStore((s) => s.toggle)
@@ -38,11 +43,6 @@ export default function SettingsScreen() {
     })
   }
 
-  function handleThemeSelect(id: AppTheme['id']) {
-    haptics.light()
-    setTheme(id)
-  }
-
   const version = Constants.expoConfig?.version ?? '1.0.0'
 
   return (
@@ -54,41 +54,50 @@ export default function SettingsScreen() {
         <Animated.View entering={FadeInDown.duration(300).delay(50)} style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space.lg }}>
           <SectionLabel text="APARÊNCIA" />
           <Card>
-            <Text style={[typography.caption, { color: t.textSecondary, marginBottom: space.md }]}>
-              Escolha o tema visual do app
+            <Text style={[typography.labelMd, { color: t.text }]}>Modo</Text>
+            <Text style={[typography.caption, { color: t.textMuted, marginTop: 2, marginBottom: space.md }]}>
+              “Automático” acompanha o claro/escuro do seu aparelho.
             </Text>
-            <View style={{ flexDirection: 'row', gap: space.sm + 2 }}>
-              {THEME_LIST.map((th: AppTheme) => {
-                const selected = theme.id === th.id
+            <SegmentedControl
+              options={[
+                { key: 'system', label: 'Automático' },
+                { key: 'light', label: 'Claro' },
+                { key: 'dark', label: 'Escuro' },
+              ]}
+              value={mode}
+              onChange={(k) => { haptics.light(); setMode(k as AppearanceMode) }}
+            />
+
+            <View style={{ height: 1, backgroundColor: t.borderLight, marginVertical: space.lg }} />
+
+            <Text style={[typography.labelMd, { color: t.text }]}>Tema claro</Text>
+            <Text style={[typography.caption, { color: t.textMuted, marginTop: 2, marginBottom: space.md }]}>
+              Usado no modo claro — e quando o sistema está claro.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: space.sm + 2, opacity: mode === 'dark' ? 0.5 : 1 }}>
+              {LIGHT_THEMES.map((th) => {
+                const selected = lightTheme === th.id
                 return (
                   <Pressable
                     key={th.id}
-                    onPress={() => handleThemeSelect(th.id)}
+                    onPress={() => { haptics.light(); setLightTheme(th.id as LightThemeId) }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Tema ${th.name}`}
+                    accessibilityLabel={`Tema claro ${th.name}`}
                     accessibilityState={{ selected }}
                     style={{
                       flex: 1,
                       borderRadius: radius.lg,
                       alignItems: 'center',
                       paddingVertical: space.md,
-                      backgroundColor: selected ? t.primary : t.surfacePressed,
+                      backgroundColor: selected ? t.primaryLight : t.surfaceSecondary,
                       borderWidth: 1.5,
                       borderColor: selected ? t.primary : t.borderLight,
                     }}
                   >
-                    <Text style={{ fontSize: 20, marginBottom: 4 }}>{th.emoji}</Text>
-                    <Text style={[typography.captionBold, { color: selected ? t.primaryFg : t.textSecondary }]}>
+                    <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: th.colors.primary, marginBottom: 6 }} />
+                    <Text style={[typography.captionBold, { color: selected ? t.text : t.textSecondary }]}>
                       {th.name}
                     </Text>
-                    {selected && (
-                      <View style={{
-                        width: 6, height: 6,
-                        borderRadius: 3,
-                        marginTop: 6,
-                        backgroundColor: t.primaryFg,
-                      }} />
-                    )}
                   </Pressable>
                 )
               })}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { chooseNextStep, parseTimeToMinutes, type NextStepMeal } from './nextStep'
+import { chooseNextStep, parseTimeToMinutes, dayPhase, type NextStepMeal } from './nextStep'
 
 const M = (
   meal_index: number,
@@ -107,5 +107,52 @@ describe('chooseNextStep', () => {
     const meals = [M(0, 'Café', '08:00', true)]
     const s = chooseNextStep({ ...base, meals, waterTotalMl: 500 })
     expect(s.kind).toBe('water')
+  })
+
+  it('refeição vencida + sequência viva + nada logado → tom de sequência em risco', () => {
+    const meals = [M(1, 'Almoço', '12:00', false)]
+    const s = chooseNextStep({ ...base, meals, streak: 5 })
+    expect(s.kind).toBe('meal')
+    expect(s.subtitle).toContain('sequência')
+    expect(s.subtitle).toContain('5 dias')
+  })
+
+  it('refeição vencida + sequência viva MAS já logou algo hoje → subtítulo padrão', () => {
+    const meals = [M(0, 'Café', '08:00', true), M(1, 'Almoço', '12:00', false)]
+    const s = chooseNextStep({ ...base, meals, streak: 5 })
+    expect(s.kind).toBe('meal')
+    expect(s.subtitle).toBe('Estava previsto para 12:00')
+  })
+
+  it('sem streak não injeta tom de sequência (compat)', () => {
+    const meals = [M(1, 'Almoço', '12:00', false)]
+    const s = chooseNextStep({ ...base, meals })
+    expect(s.subtitle).toBe('Estava previsto para 12:00')
+  })
+
+  it('próxima refeição de manhã + nada logado → saudação matinal', () => {
+    const meals = [M(0, 'Café', '08:00', false)]
+    const s = chooseNextStep({ ...base, nowMinutes: 7 * 60, meals })
+    expect(s.kind).toBe('upcoming')
+    expect(s.subtitle).toContain('Bom dia')
+  })
+
+  it('allDone + sequência > 1 → elogio com dias seguidos', () => {
+    const meals = [M(0, 'Café', '08:00', true)]
+    const s = chooseNextStep({ ...base, meals, streak: 7 })
+    expect(s.kind).toBe('allDone')
+    expect(s.title).toContain('🔥')
+    expect(s.subtitle).toContain('7 dias')
+  })
+})
+
+describe('dayPhase', () => {
+  it('classifica manhã/tarde/noite por minutos locais', () => {
+    expect(dayPhase(0)).toBe('morning')
+    expect(dayPhase(11 * 60 + 59)).toBe('morning')
+    expect(dayPhase(12 * 60)).toBe('afternoon')
+    expect(dayPhase(17 * 60 + 59)).toBe('afternoon')
+    expect(dayPhase(18 * 60)).toBe('evening')
+    expect(dayPhase(23 * 60 + 59)).toBe('evening')
   })
 })

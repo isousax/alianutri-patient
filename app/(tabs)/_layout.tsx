@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Platform, StyleSheet, View, Pressable } from 'react-native'
 import { Tabs } from 'expo-router'
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withRepeat, withTiming, Easing, cancelAnimation } from 'react-native-reanimated'
 import { haptics } from '../../src/lib/haptics'
 import { Home, Utensils, BookOpen, Plus, HeartHandshake, type LucideIcon } from 'lucide-react-native'
 import { useTheme, useThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
 import { radius, shadows, motion } from '../../src/theme/tokens'
 import { RegistroSheet } from '../../src/components/registro/RegistroSheet'
-import { useRecentPosts } from '../../src/hooks/usePortal'
+import { useRecentPosts, usePortalHome } from '../../src/hooks/usePortal'
 import { useDiarySeenStore } from '../../src/stores/diarySeen'
 import { hasUnseenNutriActivity } from '../../src/lib/diaryUnseen'
 
@@ -16,30 +16,39 @@ const ICON_SIZE = 24
 const SLOT_W = 56
 const SLOT_H = 34
 
-// Destaque do item ativo SEM fundo pesado: o ícone faz cross-fade da cor inativa
-// para a `primary` (evita flash de glifo branco no meio da transição), cresce de
-// leve (escala) e um ponto discreto "você está aqui" aparece acima. Junto com o
-// label que já fica primary, o realce vem de cor + peso + escala + micro-animação.
+// Destaque do item ativo SEM fundo pesado e SEM ponto flutuante: o ícone faz
+// cross-fade da cor inativa → `primary` (evita flash de glifo branco), engrossa o
+// traço e cresce de leve; o label já fica primary. O antigo ponto "você está aqui"
+// acima do ícone era inconsistente entre glifos (Home/Utensils "colavam" no SVG,
+// BookOpen/HeartHandshake respiravam) porque a folga superior de cada glifo varia —
+// removido em favor de sinais glyph-independentes (cor+peso+escala+label).
+// O canto superior-direito fica livre para o badge de "algo novo" (ponto pulsante).
 function TabIcon({ Icon, focused, badge }: { Icon: LucideIcon; focused: boolean; badge?: boolean }) {
   const t = useThemeColors()
   const p = useSharedValue(focused ? 1 : 0)
+  const pulse = useSharedValue(0)
 
   useEffect(() => {
     p.value = withSpring(focused ? 1 : 0, motion.spring)
   }, [focused])
 
+  // Pulso "radar" contínuo e lento só quando há algo novo — extremamente sutil.
+  useEffect(() => {
+    if (badge) {
+      pulse.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.out(Easing.ease) }), -1, false)
+    } else {
+      cancelAnimation(pulse)
+      pulse.value = 0
+    }
+  }, [badge])
+
   const iconScale = useAnimatedStyle(() => ({ transform: [{ scale: 0.94 + p.value * 0.12 }] }))
   const inactiveStyle = useAnimatedStyle(() => ({ opacity: 1 - p.value }))
   const activeStyle = useAnimatedStyle(() => ({ opacity: p.value }))
-  const dotStyle = useAnimatedStyle(() => ({ opacity: p.value, transform: [{ scale: 0.3 + p.value * 0.7 }] }))
+  const haloStyle = useAnimatedStyle(() => ({ opacity: 0.4 * (1 - pulse.value), transform: [{ scale: 1 + pulse.value * 2.2 }] }))
 
   return (
     <View style={{ width: SLOT_W, height: SLOT_H, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Indicador discreto — um ponto, sem pill/halo atrás do ícone. */}
-      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' }, dotStyle]}>
-        <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: t.primary }} />
-      </Animated.View>
-
       <Animated.View style={[{ width: ICON_SIZE, height: ICON_SIZE }, iconScale]}>
         <Animated.View style={[StyleSheet.absoluteFillObject, styles.center, inactiveStyle]}>
           <Icon size={ICON_SIZE} color={t.tabBarInactive} strokeWidth={1.9} />
@@ -50,19 +59,10 @@ function TabIcon({ Icon, focused, badge }: { Icon: LucideIcon; focused: boolean;
       </Animated.View>
 
       {badge ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: 3,
-            right: 13,
-            width: 10,
-            height: 10,
-            borderRadius: 5,
-            backgroundColor: t.error,
-            borderWidth: 2,
-            borderColor: t.tabBar,
-          }}
-        />
+        <View style={{ position: 'absolute', top: 2, right: 12, width: 8, height: 8, alignItems: 'center', justifyContent: 'center' }}>
+          <Animated.View style={[{ position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: t.primary }, haloStyle]} />
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.primary, borderWidth: 1.5, borderColor: t.tabBar }} />
+        </View>
       ) : null}
     </View>
   )
@@ -114,6 +114,11 @@ export default function TabLayout() {
   const seenAt = useDiarySeenStore((s) => s.seenAt)
   const seenHydrated = useDiarySeenStore((s) => s.hydrated)
   const diaryBadge = seenHydrated && hasUnseenNutriActivity(recent?.posts ?? [], seenAt)
+
+  // Badge "algo novo" no Nutri: mensagem não lida OU questionário pendente.
+  // Reusa o payload da Home (já carregado) — sem fetch extra dedicado.
+  const { data: home } = usePortalHome()
+  const nutriBadge = ((home?.chat_unread ?? 0) > 0) || ((home?.pending_questionnaires ?? 0) > 0)
 
   return (
     <>
@@ -183,7 +188,7 @@ export default function TabLayout() {
         name="nutri"
         options={{
           title: 'Nutri',
-          tabBarIcon: ({ focused }) => <TabIcon Icon={HeartHandshake} focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon Icon={HeartHandshake} focused={focused} badge={nutriBadge && !focused} />,
         }}
       />
     </Tabs>

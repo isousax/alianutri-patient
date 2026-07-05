@@ -26,6 +26,8 @@ export interface NextStepInput {
   waterTotalMl: number
   waterGoalMl: number
   pendingQuestionnaires: number
+  /** sequência atual de dias — habilita o tom "não perca a sequência"; 0 ignora */
+  streak?: number
 }
 
 export interface NextStep {
@@ -59,6 +61,23 @@ function fmtMl(ml: number): string {
   return ml >= 1000 ? `${(ml / 1000).toFixed(1).replace('.', ',')}L` : `${ml}ml`
 }
 
+export type DayPhase = 'morning' | 'afternoon' | 'evening'
+
+/** Fase do dia por hora local — ajusta o TOM da mensagem (não a prioridade). */
+export function dayPhase(nowMinutes: number): DayPhase {
+  if (nowMinutes < 12 * 60) return 'morning'
+  if (nowMinutes < 18 * 60) return 'afternoon'
+  return 'evening'
+}
+
+function greeting(phase: DayPhase): string {
+  return phase === 'morning' ? 'Bom dia' : phase === 'afternoon' ? 'Boa tarde' : 'Boa noite'
+}
+
+function days(n: number): string {
+  return `${n} ${n === 1 ? 'dia' : 'dias'}`
+}
+
 /**
  * Decide o "próximo passo" mais relevante para o paciente AGORA.
  *
@@ -72,7 +91,10 @@ function fmtMl(ml: number): string {
  * Função pura — recebe `nowMinutes` injetado para ser determinística.
  */
 export function chooseNextStep(input: NextStepInput): NextStep {
-  const { nowMinutes, meals, waterTotalMl, waterGoalMl, pendingQuestionnaires } = input
+  const { nowMinutes, meals, waterTotalMl, waterGoalMl, pendingQuestionnaires, streak = 0 } = input
+  const phase = dayPhase(nowMinutes)
+  const loggedCount = meals.filter((m) => m.logged).length
+  const nothingLogged = meals.length > 0 && loggedCount === 0
 
   if (pendingQuestionnaires > 0) {
     return {
@@ -104,7 +126,7 @@ export function chooseNextStep(input: NextStepInput): NextStep {
     return {
       kind: 'noPlan',
       title: 'Registre sua refeição',
-      subtitle: 'Anote o que você comeu para acompanhar seu dia',
+      subtitle: `${greeting(phase)}! Anote o que você comeu para acompanhar seu dia`,
       cta: 'Registrar',
       route: ROUTE_DIARY,
       mealIndex: null,
@@ -121,10 +143,15 @@ export function chooseNextStep(input: NextStepInput): NextStep {
 
   if (pastDue.length > 0) {
     const { m, t } = pastDue[pastDue.length - 1]
+    const base = t === null ? 'Toque para registrar' : `Estava previsto para ${m.meal_time}`
+    // Sequência em risco: há uma sequência viva e NADA foi registrado hoje ainda.
+    const subtitle = streak > 0 && nothingLogged
+      ? `Mantenha sua sequência de ${days(streak)} — registre agora`
+      : base
     return {
       kind: 'meal',
       title: `Registre: ${m.meal_name}`,
-      subtitle: t === null ? 'Toque para registrar' : `Estava previsto para ${m.meal_time}`,
+      subtitle,
       cta: 'Registrar',
       route: ROUTE_DIARY,
       mealIndex: m.meal_index,
@@ -145,18 +172,22 @@ export function chooseNextStep(input: NextStepInput): NextStep {
     return {
       kind: 'upcoming',
       title: `Próxima: ${m.meal_name}`,
-      subtitle: `Prevista para ${m.meal_time}`,
+      subtitle: nothingLogged && phase === 'morning'
+        ? `Bom dia! Prevista para ${m.meal_time}`
+        : `Prevista para ${m.meal_time}`,
       cta: 'Ver plano',
       route: ROUTE_DIARY,
       mealIndex: m.meal_index,
     }
   }
 
-  // Tudo registrado e hidratação ok.
+  // Tudo registrado e hidratação ok — elogio (varia com a sequência).
   return {
     kind: 'allDone',
-    title: 'Você está em dia!',
-    subtitle: 'Todas as refeições de hoje registradas',
+    title: streak > 1 ? 'Você está em dia! 🔥' : 'Você está em dia!',
+    subtitle: streak > 1
+      ? `Todas as refeições registradas · ${days(streak)} seguidos`
+      : 'Todas as refeições de hoje registradas',
     cta: null,
     route: null,
     mealIndex: null,

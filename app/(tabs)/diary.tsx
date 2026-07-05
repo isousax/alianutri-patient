@@ -7,17 +7,19 @@ import { List, LayoutGrid, Plus, Camera, X, WifiOff, Utensils, BookOpen } from '
 import { useThemeColors } from '../../src/stores/theme'
 import { useAuthStore } from '../../src/stores/auth'
 import { useFeaturesStore } from '../../src/stores/features'
-import { useDiaryFeed, usePortalHome } from '../../src/hooks/usePortal'
+import { useDiaryFeed, usePortalHome, useDiaryToday, useDiaryStreak } from '../../src/hooks/usePortal'
 import { EmptyState, ErrorState, SkeletonList, ReadOnlyBanner, SegmentedControl } from '../../src/components/ui'
 import { PostCard } from '../../src/components/feed/PostCard'
 import { diaryPhotoSource } from '../../src/lib/diaryPhoto'
 import { useIsOnline } from '../../src/lib/network'
+import { todayStr } from '../../src/lib/date'
 import { typography, space, radius, SCREEN_PADDING, shadows } from '../../src/theme/tokens'
 import type { DiaryPost } from '../../src/types/portal'
 import { useDiarySeenStore } from '../../src/stores/diarySeen'
 import { ProgressView } from '../../src/components/progress/ProgressView'
 import { Conquistas } from '../../src/components/diary/Conquistas'
 import { WeeklyRecap } from '../../src/components/diary/WeeklyRecap'
+import { MealNudge } from '../../src/components/diary/MealNudge'
 
 const GRID_GAP = 8
 const SCREEN_W = Dimensions.get('window').width
@@ -65,6 +67,9 @@ export default function FeedScreen() {
   const [view, setView] = useState<'timeline' | 'grid'>('timeline')
   const [segment, setSegment] = useState<Segment>('feed')
   const { data: home } = usePortalHome()
+  // Empurrãozinho contextual (refeição atrasada) — reusa o motor nextStep da Home.
+  const { data: diaryToday } = useDiaryToday(todayStr())
+  const { data: streakData } = useDiaryStreak()
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const { data, isLoading, isError, isRefetching, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useDiaryFeed()
 
@@ -194,6 +199,8 @@ export default function FeedScreen() {
           <Text style={[typography.caption, { color: t.info, flex: 1 }]}>Sem internet — seus posts serão enviados quando reconectar.</Text>
         </View>
       )}
+
+      {canWrite && <MealNudge meals={diaryToday?.meals ?? []} streak={streakData?.streak ?? 0} />}
 
       {isLoading ? (
         <SkeletonList />

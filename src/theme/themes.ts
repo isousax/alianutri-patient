@@ -128,7 +128,9 @@ const AMETHYST_THEME: AppTheme = {
     borderLight: '#0F172A',   // slate-900
     cardBorder: '#1E293B',    // visible borders needed in dark mode
 
-    tabBar: '#020617',
+    tabBar: '#0F172A',        // slate-900: ELEVADO sobre o bg (#020617). No escuro a
+                              // sombra preta some contra o quase-preto — a profundidade
+                              // do "sheet flutuante" vem do contraste barra↔fundo.
     tabBarBorder: '#1E293B',
     tabBarInactive: '#64748B',
 
@@ -180,17 +182,21 @@ const ROSE_THEME: AppTheme = {
     tabBarBorder: '#FFF1F2',
     tabBarInactive: '#A8A29E',
 
-    accent: '#F59E0B',
-    accentLight: '#FFFBEB',
+    // Papéis semânticos PADRONIZADOS entre os temas (só o `primary` carrega a
+    // identidade): success = verde, info = teal (dados/hidratação), accent = indigo
+    // (toque premium). Antes o Rosé usava teal p/ success, indigo p/ info e âmbar p/
+    // accent — cruzamento que fazia telas concluídas "parecerem de outro tema".
+    accent: '#6366F1',        // indigo-500 (toques inteligentes)
+    accentLight: '#EEF2FF',   // indigo-50
 
-    success: '#0D9488',       // teal-600
-    successLight: '#CCFBF1',  // teal-100
-    warning: '#F59E0B',
-    warningLight: '#FEF3C7',
+    success: '#059669',       // emerald-600 (verde = sucesso, universal)
+    successLight: '#D1FAE5',  // emerald-100
+    warning: '#F59E0B',       // amber-500
+    warningLight: '#FEF3C7',  // amber-100
     error: '#E11D48',         // rose-600
     errorLight: '#FFE4E6',    // rose-100
-    info: '#6366F1',          // indigo-500
-    infoLight: '#EEF2FF',     // indigo-50
+    info: '#14B8A6',          // teal-500 (hidratação/dados)
+    infoLight: '#CCFBF1',     // teal-100
   },
 }
 

@@ -295,6 +295,7 @@ export default function HomeScreen() {
           waterTotalMl={waterTotal}
           waterGoalMl={waterGoal}
           pendingQuestionnaires={pendingQ}
+          streak={streak}
         />
 
         {/* ═══════ ANEL DO DIA — foco diário (refeições · calorias · água) ═══════ */}
@@ -825,7 +826,7 @@ function WeeklyAdherenceChart({ days }: { days: WeeklyAdherenceDay[] }) {
                 {
                   color:
                     overallPct >= 80
-                      ? t.success
+                      ? t.primary
                       : overallPct >= 50
                         ? t.warning
                         : t.textMuted,
@@ -853,8 +854,7 @@ function WeeklyAdherenceChart({ days }: { days: WeeklyAdherenceDay[] }) {
             const dayDate = new Date(day.date + "T12:00:00");
             const label = DAY_LABELS[dayDate.getDay()];
             const isToday = day.date === todayStr();
-            const barColor =
-              pct >= 1 ? t.success : pct > 0 ? t.primary : t.border;
+            const barColor = pct > 0 ? t.primary : t.border;
 
             return (
               <View key={i} style={{ alignItems: "center", width: barW }}>

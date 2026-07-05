@@ -32,8 +32,9 @@ export function AnelDoDia({
   targetKcal,
 }: AnelDoDiaProps) {
   const t = useThemeColors()
-  const mealsComplete = totalMeals > 0 && loggedCount >= totalMeals
-  const ringColor = mealsComplete ? t.success : t.primary
+  // O anel-herói sempre veste a cor da marca (identidade por tema); concluir é
+  // sinalizado pela volta 100% completa — nunca trocando para cor "de outro tema".
+  const ringColor = t.primary
 
   return (
     <Animated.View

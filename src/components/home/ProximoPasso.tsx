@@ -20,6 +20,7 @@ interface ProximoPassoProps {
   waterTotalMl: number
   waterGoalMl: number
   pendingQuestionnaires: number
+  streak?: number
 }
 
 const ICONS: Record<NextStepKind, LucideIcon> = {
@@ -40,6 +41,7 @@ export function ProximoPasso({
   waterTotalMl,
   waterGoalMl,
   pendingQuestionnaires,
+  streak,
 }: ProximoPassoProps) {
   const t = useThemeColors()
 
@@ -58,6 +60,7 @@ export function ProximoPasso({
     waterTotalMl,
     waterGoalMl,
     pendingQuestionnaires,
+    streak,
   })
 
   const Icon = ICONS[step.kind]
