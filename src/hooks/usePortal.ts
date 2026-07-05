@@ -712,6 +712,20 @@ export function useWeightHistory() {
   })
 }
 
+export function useDeleteWeight() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (date: string) =>
+      portalApi.delete<{ message: string }>(`/weight/${date}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'weight-history'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'evolution'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'home'] })
+      qc.invalidateQueries({ queryKey: ['portal', 'profile'] })
+    },
+  })
+}
+
 // ==========================================
 // Symptoms
 // ==========================================

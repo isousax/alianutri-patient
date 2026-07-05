@@ -4,13 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Calendar, Clock, MapPin, Video, ChevronLeft, ChevronRight, Check, Info, Wifi } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { toast } from '../src/stores/toast'
 import { useBookingConfig, useBookingSlots, useRequestBooking } from '../src/hooks/usePortal'
 import type { BookingSlot, BookingLocationItem } from '../src/types/portal'
-import { ScreenHeader, Card, EmptyState, LoadingScreen } from '../src/components/ui'
+import { ScreenHeader, Card, EmptyState, ErrorState, LoadingScreen } from '../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -29,7 +29,7 @@ function addMonths(d: Date, n: number) {
 
 export default function BookingScreen() {
   const t = useThemeColors()
-  const { data: config, isLoading: configLoading } = useBookingConfig()
+  const { data: config, isLoading: configLoading, isError: configError, refetch: refetchConfig } = useBookingConfig()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const requestBooking = useRequestBooking()
 
@@ -142,17 +142,26 @@ export default function BookingScreen() {
         type: effectiveType,
         location_id: activeLocationId ?? undefined,
       })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+      haptics.success()
       toast.success(result.message)
       router.back()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao solicitar agendamento.'
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {})
+      haptics.error()
       toast.error(msg)
     }
   }, [selectedDate, selectedSlot, effectiveType, activeLocationId, requestBooking])
 
   if (configLoading) return <LoadingScreen />
+
+  if (configError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+        <ScreenHeader title="Agendar consulta" />
+        <ErrorState onRetry={() => refetchConfig()} />
+      </SafeAreaView>
+    )
+  }
 
   if (!config || config.booking_mode === 'disabled') {
     return (
@@ -190,13 +199,13 @@ export default function BookingScreen() {
           <Card>
           {/* Month nav */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg }}>
-            <Pressable onPress={() => setCurrentMonth(addMonths(currentMonth, -1))} hitSlop={12}>
+            <Pressable onPress={() => setCurrentMonth(addMonths(currentMonth, -1))} hitSlop={12} accessibilityRole="button" accessibilityLabel="Mês anterior">
               <ChevronLeft size={20} color={t.textSecondary} />
             </Pressable>
             <Text style={[typography.headingSm, { color: t.text }]}>
               {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </Text>
-            <Pressable onPress={() => setCurrentMonth(addMonths(currentMonth, 1))} hitSlop={12}>
+            <Pressable onPress={() => setCurrentMonth(addMonths(currentMonth, 1))} hitSlop={12} accessibilityRole="button" accessibilityLabel="Próximo mês">
               <ChevronRight size={20} color={t.textSecondary} />
             </Pressable>
           </View>
@@ -218,6 +227,9 @@ export default function BookingScreen() {
                   <Pressable
                     onPress={() => d.enabled && handleDateSelect(d.date)}
                     disabled={!d.enabled}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Dia ${d.day}`}
+                    accessibilityState={{ selected: d.date === selectedDate, disabled: !d.enabled }}
                     style={{
                       width: 36, height: 36,
                       borderRadius: radius.lg,
@@ -260,6 +272,9 @@ export default function BookingScreen() {
                 <Pressable
                   key={loc.id}
                   onPress={() => handleLocationSelect(loc.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={loc.name}
+                  accessibilityState={{ selected: activeLocationId === loc.id }}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -311,8 +326,11 @@ export default function BookingScreen() {
                 {slotsData.slots.map((slot: BookingSlot) => (
                   <Pressable
                     key={slot.time}
-                    onPress={() => { if (slot.available) { Haptics.selectionAsync().catch(() => {}); setSelectedSlot(slot.time) } }}
+                    onPress={() => { if (slot.available) { haptics.selection(); setSelectedSlot(slot.time) } }}
                     disabled={!slot.available}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Horário ${slot.time}`}
+                    accessibilityState={{ selected: selectedSlot === slot.time, disabled: !slot.available }}
                     style={{
                       paddingHorizontal: space.lg,
                       paddingVertical: space.sm + 2,
@@ -356,6 +374,9 @@ export default function BookingScreen() {
               <Pressable
                 onPress={() => onlineBookable && setSelectedType('online')}
                 disabled={!onlineBookable}
+                accessibilityRole="button"
+                accessibilityLabel="Consulta online"
+                accessibilityState={{ selected: selectedType === 'online', disabled: !onlineBookable }}
                 style={{
                   flex: 1,
                   padding: space.lg,
@@ -381,6 +402,9 @@ export default function BookingScreen() {
               <Pressable
                 onPress={() => inPersonBookable && setSelectedType('in_person')}
                 disabled={!inPersonBookable}
+                accessibilityRole="button"
+                accessibilityLabel="Consulta presencial"
+                accessibilityState={{ selected: selectedType === 'in_person', disabled: !inPersonBookable }}
                 style={{
                   flex: 1,
                   padding: space.lg,
@@ -457,6 +481,9 @@ export default function BookingScreen() {
           <Pressable
             onPress={handleBook}
             disabled={requestBooking.isPending}
+            accessibilityRole="button"
+            accessibilityLabel={config.booking_mode === 'approval' ? 'Solicitar agendamento' : 'Confirmar agendamento'}
+            accessibilityState={{ disabled: requestBooking.isPending, busy: requestBooking.isPending }}
             style={{
               flexDirection: 'row',
               alignItems: 'center',

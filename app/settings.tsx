@@ -4,7 +4,7 @@ import {
   LogOut, Bell, Shield, ChevronRight,
 } from 'lucide-react-native'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { useAuthStore } from '../src/stores/auth'
@@ -39,7 +39,7 @@ export default function SettingsScreen() {
   }
 
   function handleThemeSelect(id: AppTheme['id']) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    haptics.light()
     setTheme(id)
   }
 
@@ -64,6 +64,9 @@ export default function SettingsScreen() {
                   <Pressable
                     key={th.id}
                     onPress={() => handleThemeSelect(th.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Tema ${th.name}`}
+                    accessibilityState={{ selected }}
                     style={{
                       flex: 1,
                       borderRadius: radius.lg,
@@ -112,8 +115,9 @@ export default function SettingsScreen() {
                   </View>
                   <Switch
                     value={!!reminderEnabled[r.id]}
+                    accessibilityLabel={r.label}
                     onValueChange={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+                      haptics.light()
                       toggleReminder(r.id)
                     }}
                     trackColor={{ false: t.surfacePressed, true: t.primary }}
@@ -152,6 +156,8 @@ export default function SettingsScreen() {
           <Card padded={false}>
             <Pressable
               onPress={handleLogout}
+              accessibilityRole="button"
+              accessibilityLabel="Sair da conta"
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -216,7 +222,7 @@ function SettingsRow({ icon, label, subtitle, onPress, t }: {
   )
 
   if (onPress) {
-    return <Pressable onPress={onPress}>{content}</Pressable>
+    return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityHint={subtitle}>{content}</Pressable>
   }
   return content
 }

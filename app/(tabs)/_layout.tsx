@@ -3,7 +3,7 @@ import { Platform, StyleSheet, View, Pressable } from 'react-native'
 import { Tabs } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../src/lib/haptics'
 import { Home, Utensils, BookOpen, Plus, HeartHandshake, type LucideIcon } from 'lucide-react-native'
 import { useTheme, useThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
@@ -85,7 +85,7 @@ function CreateFab({ onPress }: { onPress: () => void }) {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
+    haptics.medium()
     onPress()
   }
   return (
@@ -131,7 +131,7 @@ export default function TabLayout() {
     <>
     <Tabs
       screenListeners={{
-        tabPress: () => { Haptics.selectionAsync().catch(() => {}) },
+        tabPress: () => { haptics.selection() },
       }}
       screenOptions={{
         headerShown: false,

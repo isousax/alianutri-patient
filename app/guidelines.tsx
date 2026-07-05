@@ -5,13 +5,13 @@ import { FileText, ChevronRight } from 'lucide-react-native'
 import { useThemeColors } from '../src/stores/theme'
 import { useGuidelines, useGuidelineDetail } from '../src/hooks/usePortal'
 import type { PortalGuidelineSummary } from '../src/types/portal'
-import { Card, ScreenHeader, EmptyState, SkeletonList } from '../src/components/ui'
+import { Card, ScreenHeader, EmptyState, ErrorState, SkeletonList } from '../src/components/ui'
 import { Markdown } from '../src/components/Markdown'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 export default function GuidelinesScreen() {
   const t = useThemeColors()
-  const { data: guidelines, isLoading, refetch, isRefetching } = useGuidelines()
+  const { data: guidelines, isLoading, isError, refetch, isRefetching } = useGuidelines()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const { data: detail, isLoading: loadingDetail } = useGuidelineDetail(selectedId)
 
@@ -21,6 +21,16 @@ export default function GuidelinesScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
         <ScreenHeader title="Orientações" />
         <SkeletonList />
+      </SafeAreaView>
+    )
+  }
+
+  // ── Error state ──
+  if (isError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+        <ScreenHeader title="Orientações" />
+        <ErrorState onRetry={() => refetch()} />
       </SafeAreaView>
     )
   }

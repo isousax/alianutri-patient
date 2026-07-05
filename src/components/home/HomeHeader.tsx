@@ -77,7 +77,7 @@ export function HomeHeader({ displayName, nutritionistName, weather, streak, cha
                   </Text>
                 )}
               </View>
-              <Text style={[typography.displayMd, { color: t.text }]}>{displayName}</Text>
+              <Text accessibilityRole="header" style={[typography.displayMd, { color: t.text }]}>{displayName}</Text>
               {nutritionistName && (
                 <Text style={[typography.caption, { color: t.textMuted, marginTop: 4 }]}>com {nutritionistName}</Text>
               )}
@@ -93,7 +93,11 @@ export function HomeHeader({ displayName, nutritionistName, weather, streak, cha
           style={{ flexDirection: 'row', paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg, gap: space.sm }}
         >
           {streak > 0 && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.lg, backgroundColor: t.warningLight }}>
+            <View
+              accessible
+              accessibilityLabel={`Sequência de ${streak} ${streak === 1 ? 'dia' : 'dias'} registrando`}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.lg, backgroundColor: t.warningLight }}
+            >
               <Flame size={14} color={t.warning} />
               <Text style={[typography.labelMd, { color: t.warning, marginLeft: 4 }]}>{streak}</Text>
               <Text style={[typography.caption, { color: t.warning, marginLeft: 3, opacity: 0.8 }]}>dia{streak > 1 ? 's' : ''}</Text>

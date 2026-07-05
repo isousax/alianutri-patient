@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text, Pressable, type LayoutChangeEvent } from 'react-native'
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../lib/haptics'
 import { useThemeColors } from '../../stores/theme'
 import { radius, space, typography, shadows, motion } from '../../theme/tokens'
 
@@ -71,7 +71,7 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
             key={o.key}
             onPress={() => {
               if (active) return
-              Haptics.selectionAsync().catch(() => {})
+              haptics.selection()
               onChange(o.key)
             }}
             accessibilityRole="tab"

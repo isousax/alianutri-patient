@@ -1,6 +1,6 @@
 import '../global.css'
 import { useEffect, useState, useCallback } from 'react'
-import { Stack } from 'expo-router'
+import { Stack, router, type Href } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
@@ -58,6 +58,19 @@ function OfflineQueueSync() {
   return null
 }
 
+// Roteia para o re-pareamento quando o servidor sinaliza PAIRING_REQUIRED
+// (ex.: reset do nutri) durante o uso, mantendo o código armazenado.
+function PairingGate() {
+  const requiresPairing = useAuthStore((s) => s.requiresPairing)
+  const accessCode = useAuthStore((s) => s.accessCode)
+  useEffect(() => {
+    if (requiresPairing && accessCode) {
+      router.replace(`/pair?code=${encodeURIComponent(accessCode)}` as Href)
+    }
+  }, [requiresPairing, accessCode])
+  return null
+}
+
 // (Re)agenda lembretes locais a partir do plano/meta reais. Precisa rodar
 // DENTRO do QueryClientProvider porque consome o cache do React Query.
 function RemindersSync() {
@@ -112,6 +125,7 @@ export default function RootLayout() {
           {ready && <XpToast />}
           {ready && <FeedbackOverlays />}
           {ready && <OfflineQueueSync />}
+          {ready && <PairingGate />}
           {ready && <RemindersSync />}
           {!splashDone && <SplashGate ready={ready} onDone={() => setSplashDone(true)} />}
         </PersistQueryClientProvider>

@@ -3,13 +3,13 @@ import { ScrollView, Pressable } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, router } from 'expo-router'
 import { Trash2, FileText } from 'lucide-react-native'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../src/lib/haptics'
 import { useThemeColors } from '../../src/stores/theme'
 import { useFeaturesStore } from '../../src/stores/features'
 import { confirm } from '../../src/stores/confirm'
 import { toast } from '../../src/stores/toast'
 import { usePostDetail, useDeletePost, usePortalHome } from '../../src/hooks/usePortal'
-import { ScreenHeader, SkeletonList, EmptyState } from '../../src/components/ui'
+import { ScreenHeader, SkeletonList, EmptyState, ErrorState } from '../../src/components/ui'
 import { PostCard } from '../../src/components/feed/PostCard'
 import { space } from '../../src/theme/tokens'
 
@@ -17,7 +17,7 @@ export default function PostDetailScreen() {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const { id } = useLocalSearchParams<{ id: string }>()
-  const { data: post, isLoading } = usePostDetail(id ?? null)
+  const { data: post, isLoading, isError, refetch } = usePostDetail(id ?? null)
   const del = useDeletePost()
   const { data: home } = usePortalHome()
 
@@ -32,7 +32,7 @@ export default function PostDetailScreen() {
       onConfirm: async () => {
         try {
           await del.mutateAsync(post.id)
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+          haptics.success()
           router.back()
         } catch {
           toast.error('Não foi possível excluir a postagem.')
@@ -58,6 +58,8 @@ export default function PostDetailScreen() {
       <ScreenHeader title="Postagem" rightAction={rightAction} />
       {isLoading && !post ? (
         <SkeletonList count={1} />
+      ) : isError && !post ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !post ? (
         <EmptyState
           icon={<FileText size={28} color={t.primary} />}

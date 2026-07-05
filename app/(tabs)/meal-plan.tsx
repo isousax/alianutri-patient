@@ -1,23 +1,21 @@
 import { useState } from 'react'
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Utensils, ChevronRight, Clock, ShoppingCart, X, Scale, Replace, FileText, Check, Undo2 } from 'lucide-react-native'
+import { Utensils, ChevronRight, Clock, ShoppingCart, X, Scale, Replace, FileText, Check, Undo2, Camera } from 'lucide-react-native'
+import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../../src/stores/theme'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../src/lib/haptics'
 import { useMealPlans, useMealPlanDetail, useDiaryToday, useLogFoodDiary, useDeleteFoodDiary } from '../../src/hooks/usePortal'
 import { useFeaturesStore } from '../../src/stores/features'
 import { toast } from '../../src/stores/toast'
-import { Card, ScreenHeader, EmptyState, SkeletonList } from '../../src/components/ui'
-import { shadows, radius, space, typography, SCREEN_PADDING } from '../../src/theme/tokens'
+import { Card, ScreenHeader, EmptyState, ErrorState, SkeletonList } from '../../src/components/ui'
+import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../../src/theme/tokens'
 import type { PortalMealPlanSummary, PortalMeal, QuantMeal, QuantFood, QuantFoodSubstitute, EquivMeal, EquivGroup, EquivGroupFood, QualMeal } from '../../src/types/portal'
 
 const asArray = <T,>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : [])
 
-const todayStr = () => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+// nowTime = relógio de parede do dispositivo (hora do registro da refeição).
 const nowTime = () => {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
@@ -25,7 +23,7 @@ const nowTime = () => {
 
 export default function MealPlanScreen() {
   const t = useThemeColors()
-  const { data: plans, isLoading, refetch, isRefetching } = useMealPlans()
+  const { data: plans, isLoading, isError, refetch, isRefetching } = useMealPlans()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [shoppingOpen, setShoppingOpen] = useState(false)
   const { data: detail, isLoading: loadingDetail } = useMealPlanDetail(selectedId)
@@ -52,6 +50,18 @@ export default function MealPlanScreen() {
           <Text style={[typography.displaySm, { color: t.text }]}>Plano alimentar</Text>
         </View>
         <SkeletonList />
+      </SafeAreaView>
+    )
+  }
+
+  // ── Error state ──
+  if (isError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space.lg, paddingBottom: space.md }}>
+          <Text style={[typography.displaySm, { color: t.text }]}>Plano alimentar</Text>
+        </View>
+        <ErrorState onRetry={() => refetch()} />
       </SafeAreaView>
     )
   }
@@ -90,7 +100,7 @@ export default function MealPlanScreen() {
       const tm = todayMeals.find((m) => m.meal_index === idx)
       setBusyIdx(idx)
       try {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+        haptics.medium()
         await logEntry({
           meal_type: 'other',
           entry_date: today,
@@ -111,7 +121,7 @@ export default function MealPlanScreen() {
       const tm = todayMeals.find((m) => m.meal_index === idx)
       setBusyIdx(idx)
       try {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        haptics.light()
         await logEntry({
           meal_type: 'other',
           entry_date: today,
@@ -133,7 +143,7 @@ export default function MealPlanScreen() {
       if (!tm?.entry || busyIdx !== null) return
       setBusyIdx(idx)
       try {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        haptics.light()
         await deleteEntry(tm.entry.id)
       } catch {
         toast.error('Não foi possível desfazer.')
@@ -308,6 +318,14 @@ export default function MealPlanScreen() {
                       </Pressable>
                       <Pressable onPress={() => handlePartial(idx, meal.name || `Refeição ${idx + 1}`)} disabled={busy} style={{ paddingVertical: space.sm + 1, paddingHorizontal: space.md, borderRadius: radius.lg, backgroundColor: t.surfaceSecondary }}>
                         <Text style={[typography.labelMd, { color: t.textSecondary }]}>Parcial</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => { haptics.light(); router.push('/post-compose?type=meal' as never) }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Registrar esta refeição com foto"
+                        style={{ width: 40, height: 40, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surfaceSecondary }}
+                      >
+                        <Camera size={16} color={t.textSecondary} />
                       </Pressable>
                     </View>
                   ) : null)}

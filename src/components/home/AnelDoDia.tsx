@@ -46,7 +46,7 @@ export function AnelDoDia({
           <Pressable
             onPress={() => router.push('/food-diary' as never)}
             accessibilityRole="button"
-            accessibilityLabel="Ver diário de hoje"
+            accessibilityLabel={`${loggedCount} de ${totalMeals || 0} refeições registradas. Toque para ver o diário de hoje`}
           >
             <ProgressRing
               progress={diaryPct}
@@ -69,7 +69,13 @@ export function AnelDoDia({
 
           {/* Métricas de apoio — calorias + hidratação */}
           <View style={{ flex: 1, marginLeft: space.xl, gap: space.md }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              accessible
+              accessibilityLabel={aiCalories > 0
+                ? `Calorias de hoje: aproximadamente ${aiCalories} kcal${targetKcal ? ` de ${targetKcal}` : ''}`
+                : 'Calorias de hoje: sem registro'}
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+            >
               <View
                 style={{
                   width: 32,
@@ -98,7 +104,7 @@ export function AnelDoDia({
             <Pressable
               onPress={() => router.push('/water' as never)}
               accessibilityRole="button"
-              accessibilityLabel="Registrar água"
+              accessibilityLabel={`${waterTotal > 0 ? `Hidratação: ${fmtWater(waterTotal)} de ${fmtWater(waterGoal)}` : 'Hidratação: sem registro'}. Toque para registrar água`}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.xs }}>
                 <View

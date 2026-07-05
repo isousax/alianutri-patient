@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
 import { View, Text, ActivityIndicator } from 'react-native'
-import { useLocalSearchParams, router } from 'expo-router'
+import { useLocalSearchParams, router, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useAuthStore } from '../../src/stores/auth'
-import { validateAccessCode } from '../../src/services/api'
 import { useThemeColors } from '../../src/stores/theme'
 import { space, typography } from '../../src/theme/tokens'
 
@@ -19,7 +17,6 @@ import { space, typography } from '../../src/theme/tokens'
 export default function DeepLinkHandler() {
   const { code } = useLocalSearchParams<{ code: string }>()
   const [error, setError] = useState('')
-  const setAuth = useAuthStore((s) => s.setAuth)
   const t = useThemeColors()
 
   useEffect(() => {
@@ -28,36 +25,8 @@ export default function DeepLinkHandler() {
       return
     }
 
-    let cancelled = false
-
-    async function authenticate() {
-      const result = await validateAccessCode(code!)
-      if (cancelled) return
-
-      if (!result.valid) {
-        setError(result.error || 'Código inválido ou expirado')
-        setTimeout(() => router.replace('/login'), 2000)
-        return
-      }
-
-      setAuth(
-        code!,
-        {
-          id: result.patient?.id || '',
-          name: result.patient?.name || '',
-          preferred_name: null,
-          photo_url: result.patient?.photo_url || null,
-        },
-        {
-          name: result.nutritionist?.name || '',
-          photo_url: result.nutritionist?.photo_url || null,
-        },
-      )
-      router.replace('/')
-    }
-
-    authenticate()
-    return () => { cancelled = true }
+    // S-2: o pareamento (start/verify) valida o código e vincula o device.
+    router.replace(`/pair?code=${encodeURIComponent(code)}` as Href)
   }, [code])
 
   return (

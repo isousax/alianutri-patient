@@ -28,6 +28,7 @@
         "foregroundImage": "./assets/alianutriIconWhite.png",
         "backgroundColor": "#10B981"
       },
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.alianutri.patient",
       "intentFilters": [
         {

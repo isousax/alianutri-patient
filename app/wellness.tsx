@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams } from 'expo-router'
 import { Check, Send, Plus } from 'lucide-react-native'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOutUp } from 'react-native-reanimated'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
@@ -112,7 +112,7 @@ export default function WellnessScreen() {
   }, [existing])
 
   const handleSelect = useCallback((key: SymptomKey, value: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    haptics.light()
     setValues((prev) => ({ ...prev, [key]: value }))
     setSaved(false)
   }, [])
@@ -134,7 +134,7 @@ export default function WellnessScreen() {
         digestion: values.digestion ?? undefined,
         bloating: values.bloating ?? undefined,
       })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      haptics.success()
       setSaved(true)
       setShowSuccess(true)
       clearTimeout(successTimer.current)
@@ -171,6 +171,9 @@ export default function WellnessScreen() {
                       key={opt.value}
                       onPress={() => handleSelect(cat.key, opt.value)}
                       disabled={!canWrite}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${cat.label}: ${opt.label}`}
+                      accessibilityState={{ selected, disabled: !canWrite }}
                       style={{
                         flex: 1,
                         alignItems: 'center',
@@ -199,7 +202,7 @@ export default function WellnessScreen() {
           {!showAll && (
             <Animated.View entering={FadeIn.duration(300)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
               <Pressable
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setShowAll(true) }}
+                onPress={() => { haptics.light(); setShowAll(true) }}
                 accessibilityRole="button"
                 accessibilityLabel="Registrar bem-estar completo"
                 style={{
@@ -225,6 +228,9 @@ export default function WellnessScreen() {
             <Pressable
               onPress={handleSave}
               disabled={isPending || filledCount === 0 || !canWrite}
+              accessibilityRole="button"
+              accessibilityLabel="Salvar bem-estar"
+              accessibilityState={{ disabled: isPending || filledCount === 0 || !canWrite, busy: isPending }}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',

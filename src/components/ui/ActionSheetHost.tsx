@@ -1,5 +1,5 @@
 import { View, Text, Pressable } from 'react-native'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../lib/haptics'
 import { useThemeColors } from '../../stores/theme'
 import { typography, radius, space } from '../../theme/tokens'
 import { useActionSheetStore } from '../../stores/actionSheet'
@@ -15,7 +15,7 @@ export function ActionSheetHost() {
   const close = useActionSheetStore((s) => s.close)
 
   const run = (onPress?: () => void) => {
-    Haptics.selectionAsync().catch(() => {})
+    haptics.selection()
     close()
     onPress?.()
   }

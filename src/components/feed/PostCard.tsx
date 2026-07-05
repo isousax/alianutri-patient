@@ -127,7 +127,9 @@ export const PostCard = memo(function PostCard({ post, nutriName, nutriPhoto }: 
             <Text style={[typography.caption, { color: t.textMuted }]}>Análise indisponível no momento.</Text>
           )}
           {post.ai_status === 'skipped' && post.ai_error === 'QUOTA_EXCEEDED' && (
-            <Text style={[typography.caption, { color: t.textMuted }]}>Limite diário de análises por IA atingido.</Text>
+            <Text style={[typography.caption, { color: t.textMuted }]}>
+              Foto salva. O limite de análises por IA de hoje foi atingido — novas análises liberam amanhã.
+            </Text>
           )}
           {notFood && (
             <View>

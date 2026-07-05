@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
-import { View, Text, Pressable, Modal, ScrollView, Dimensions } from 'react-native'
+import { View, Text, Pressable, Modal, ScrollView, Dimensions, Keyboard, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import Animated, {
@@ -34,6 +34,7 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
   const t = useThemeColors()
   const insets = useSafeAreaInsets()
   const ty = useSharedValue(SCREEN_H)
+  const kb = useSharedValue(0)
 
   // Abre deslizando de baixo; reseta a cada (re)abertura.
   useEffect(() => {
@@ -43,7 +44,28 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
     }
   }, [visible, ty])
 
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: ty.value }] }))
+  // Keyboard-aware: eleva a folha exatamente acima do teclado e limita sua
+  // altura para o topo nunca sair da tela. Usa os eventos nativos de teclado
+  // (funciona no Expo Go e independe do resize de Modal no Android).
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
+    const show = Keyboard.addListener(showEvt, (e) => {
+      kb.value = withTiming(e.endCoordinates.height, { duration: Platform.OS === 'ios' ? 250 : 150 })
+    })
+    const hide = Keyboard.addListener(hideEvt, () => {
+      kb.value = withTiming(0, { duration: Platform.OS === 'ios' ? 250 : 150 })
+    })
+    return () => {
+      show.remove()
+      hide.remove()
+    }
+  }, [kb])
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: ty.value - kb.value }],
+    maxHeight: SCREEN_H * 0.9 - kb.value,
+  }))
 
   if (!visible) return null
 
@@ -87,7 +109,6 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
               borderTopLeftRadius: radius['2xl'],
               borderTopRightRadius: radius['2xl'],
               paddingHorizontal: space.lg,
-              maxHeight: SCREEN_H * 0.9,
               shadowColor: '#000',
               shadowOffset: { width: 0, height: -6 },
               shadowOpacity: 0.16,

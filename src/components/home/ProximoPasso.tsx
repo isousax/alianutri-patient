@@ -9,7 +9,7 @@ import {
   ChevronRight,
   type LucideIcon,
 } from 'lucide-react-native'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../lib/haptics'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 import { chooseNextStep, type NextStepKind, type NextStepMeal } from '../../lib/nextStep'
@@ -68,7 +68,7 @@ export function ProximoPasso({
 
   const onPress = () => {
     if (!step.route) return
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+    haptics.light()
     router.push(step.route as never)
   }
 

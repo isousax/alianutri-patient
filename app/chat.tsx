@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Send, MessageCircle, Check, CheckCheck } from 'lucide-react-native'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated'
 import { useQueryClient } from '@tanstack/react-query'
 import { useThemeColors, type ThemeColors } from '../src/stores/theme'
@@ -13,7 +13,7 @@ import { useFeaturesStore } from '../src/stores/features'
 import { useChatMessages, useSendChatMessage, usePortalHome } from '../src/hooks/usePortal'
 import type { ChatMessage } from '../src/types/portal'
 import { SkeletonChatList } from '../src/components/Skeleton'
-import { ScreenHeader, EmptyState } from '../src/components/ui'
+import { ScreenHeader, EmptyState, ErrorState } from '../src/components/ui'
 import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { radius, space, typography, SCREEN_PADDING, shadows } from '../src/theme/tokens'
 
@@ -86,7 +86,7 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null)
 
   const { data: homeData } = usePortalHome()
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useChatMessages()
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } = useChatMessages()
   const send = useSendChatMessage()
 
   // Clear unread badge: GET /chat marks messages as read on the server (awaited).
@@ -120,7 +120,7 @@ export default function ChatScreen() {
     const content = text.trim()
     if (!content || send.isPending) return
     setText('')
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    haptics.light()
     await send.mutateAsync(content)
   }, [text, send, canWrite])
 
@@ -160,6 +160,8 @@ export default function ChatScreen() {
         {/* Messages */}
         {isLoading ? (
           <SkeletonChatList />
+        ) : isError && allMessages.length === 0 ? (
+          <ErrorState onRetry={() => refetch()} />
         ) : (
           <FlatList
             ref={flatListRef}
@@ -172,6 +174,8 @@ export default function ChatScreen() {
                 <Pressable
                   onPress={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
+                  accessibilityRole="button"
+                  accessibilityLabel="Carregar mensagens anteriores"
                   style={{ alignItems: 'center', paddingVertical: space.md }}
                 >
                   {isFetchingNextPage ? (
@@ -208,6 +212,7 @@ export default function ChatScreen() {
             value={text}
             onChangeText={setText}
             editable={canWrite}
+            accessibilityLabel="Campo de mensagem"
             placeholder="Digite sua mensagem..."
             placeholderTextColor={t.textMuted}
             multiline
@@ -231,6 +236,7 @@ export default function ChatScreen() {
             disabled={!text.trim() || send.isPending || !canWrite}
             accessibilityRole="button"
             accessibilityLabel="Enviar mensagem"
+            accessibilityState={{ disabled: !text.trim() || send.isPending || !canWrite }}
             style={{
               padding: space.sm + 2,
               borderRadius: radius.lg,
@@ -272,6 +278,7 @@ function DateSeparator({ label, t }: { label: string; t: ThemeColors }) {
 
 function MessageBubble({ msg, t }: { msg: ChatMessage; t: ThemeColors }) {
   const isPatient = msg.sender_type === 'patient'
+  const a11yLabel = `${isPatient ? 'Você' : 'Nutricionista'}: ${msg.content}. ${fmtTime(msg.created_at)}${isPatient ? (msg.read_at ? '. Lida' : '. Enviada') : ''}`
 
   return (
     <Animated.View
@@ -283,6 +290,8 @@ function MessageBubble({ msg, t }: { msg: ChatMessage; t: ThemeColors }) {
       }}
     >
       <View
+        accessible
+        accessibilityLabel={a11yLabel}
         style={{
           maxWidth: '80%',
           borderRadius: radius.xl,

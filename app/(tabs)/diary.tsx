@@ -8,7 +8,7 @@ import { useThemeColors } from '../../src/stores/theme'
 import { useAuthStore } from '../../src/stores/auth'
 import { useFeaturesStore } from '../../src/stores/features'
 import { useDiaryFeed, usePortalHome } from '../../src/hooks/usePortal'
-import { EmptyState, SkeletonList, ReadOnlyBanner, SegmentedControl } from '../../src/components/ui'
+import { EmptyState, ErrorState, SkeletonList, ReadOnlyBanner, SegmentedControl } from '../../src/components/ui'
 import { PostCard } from '../../src/components/feed/PostCard'
 import { diaryPhotoUrl } from '../../src/lib/diaryPhoto'
 import { useIsOnline } from '../../src/lib/network'
@@ -65,7 +65,7 @@ export default function FeedScreen() {
   const [segment, setSegment] = useState<Segment>('feed')
   const { data: home } = usePortalHome()
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
-  const { data, isLoading, isRefetching, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useDiaryFeed()
+  const { data, isLoading, isError, isRefetching, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useDiaryFeed()
 
   const posts: DiaryPost[] = data?.pages.flatMap((p) => p.posts) ?? []
   const photoPosts = posts.filter((p) => p.has_photo)
@@ -196,6 +196,8 @@ export default function FeedScreen() {
 
       {isLoading ? (
         <SkeletonList />
+      ) : isError && posts.length === 0 ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : posts.length === 0 ? (
         <EmptyState
           alia

@@ -1,23 +1,11 @@
 import type { PortalHabit } from '../types/portal'
+import { todayBRT, shiftDate as addDays, mondayOf } from './date'
 
 // Cálculos de hábito (streak, check-in de hoje) espelhando o backend/dashboard.
-// "Hoje" em BRT (UTC-3) para casar com o que o servidor registra.
+// "Hoje" e a aritmética de datas vêm do util canônico BRT (src/lib/date).
 
 export function todayISO(): string {
-  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10)
-}
-
-function addDays(iso: string, n: number): string {
-  const d = new Date(iso + 'T00:00:00')
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-
-function mondayOf(iso: string): string {
-  const d = new Date(iso + 'T00:00:00')
-  const dow = (d.getDay() + 6) % 7 // Mon=0
-  d.setDate(d.getDate() - dow)
-  return d.toISOString().slice(0, 10)
+  return todayBRT()
 }
 
 export function isCheckedToday(h: PortalHabit, today = todayISO()): boolean {

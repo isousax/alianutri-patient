@@ -6,11 +6,11 @@ import {
   Settings, Calendar, TrendingDown, TrendingUp, ChevronLeft,
   Camera, Image as ImageIcon, Trash2, X,
 } from 'lucide-react-native'
-import Svg, { Polyline, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg'
+import { LineChart, type LineChartPoint } from '../src/components/charts/LineChart'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import * as ImagePicker from 'expo-image-picker'
 import { usePortalProfile, useEvolution, useUploadProfilePhoto, useDeleteProfilePhoto } from '../src/hooks/usePortal'
 import type { PortalEvolution } from '../src/types/portal'
@@ -18,7 +18,7 @@ import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { toast } from '../src/stores/toast'
 import { confirm } from '../src/stores/confirm'
-import { Card, LoadingScreen } from '../src/components/ui'
+import { Card, LoadingScreen, ErrorState, ScreenHeader } from '../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING, fmtDateLabel } from '../src/theme/tokens'
 
 const { width: SCREEN_W } = Dimensions.get('window')
@@ -26,7 +26,7 @@ const AVATAR_SIZE = 88
 
 export default function ProfileScreen() {
   const t = useThemeColors()
-  const { data: profile, isLoading, refetch, isRefetching } = usePortalProfile()
+  const { data: profile, isLoading, isError, refetch, isRefetching } = usePortalProfile()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const { mutateAsync: uploadPhoto, isPending: isUploading } = useUploadProfilePhoto()
   const { mutateAsync: deletePhoto, isPending: isDeleting } = useDeleteProfilePhoto()
@@ -59,9 +59,9 @@ export default function ProfileScreen() {
 
         if (result.canceled || !result.assets?.[0]) return
 
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
+        haptics.medium()
         await uploadPhoto(result.assets[0].uri)
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+        haptics.success()
         toast.success('Foto de perfil atualizada!')
       } catch {
         toast.error('Não foi possível atualizar a foto. Tente novamente.')
@@ -81,7 +81,7 @@ export default function ProfileScreen() {
       onConfirm: async () => {
         try {
           await deletePhoto()
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+          haptics.success()
           toast.success('Foto removida.')
         } catch {
           toast.error('Não foi possível remover a foto.')
@@ -92,11 +92,20 @@ export default function ProfileScreen() {
 
   const openMenu = useCallback(() => {
     if (!canWrite || isBusy) return
-    Haptics.selectionAsync().catch(() => {})
+    haptics.selection()
     setMenuOpen(true)
   }, [canWrite, isBusy])
 
   if (isLoading) return <LoadingScreen />
+
+  if (isError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+        <ScreenHeader title="Perfil" onBack={() => router.back()} />
+        <ErrorState onRetry={() => refetch()} />
+      </SafeAreaView>
+    )
+  }
 
   const infoRows: { icon: React.ReactNode; label: string; value: string }[] = []
   if (profile?.phone) infoRows.push({ icon: <Phone size={15} color={t.primary} />, label: 'Telefone', value: profile.phone })
@@ -126,7 +135,7 @@ export default function ProfileScreen() {
           paddingBottom: space.xs,
         }}>
           <Pressable
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); router.back() }}
+            onPress={() => { haptics.light(); router.back() }}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Voltar"
@@ -377,25 +386,11 @@ function WeightChart() {
   if (points.length < 2) return null
 
   const W = SCREEN_W - SCREEN_PADDING * 2 - space.lg * 2
-  const H = 100
-  const padX = 4
-  const padTop = 10
-  const padBot = 10
-  const chartW = W - padX * 2
-  const chartH = H - padTop - padBot
 
-  const weights = points.map((p) => p.weight_kg)
-  const minW = Math.min(...weights) - 0.5
-  const maxW = Math.max(...weights) + 0.5
-  const rangeW = maxW - minW || 1
-
-  const coords = points.map((p, i) => ({
-    x: padX + (i / (points.length - 1)) * chartW,
-    y: padTop + chartH - ((p.weight_kg - minW) / rangeW) * chartH,
+  const chartData: LineChartPoint[] = points.map((p) => ({
+    label: fmtDateLabel(p.evaluation_date),
+    value: p.weight_kg,
   }))
-
-  const polyPoints = coords.map((c) => `${c.x},${c.y}`).join(' ')
-  const fillPoints = `${padX},${padTop + chartH} ${polyPoints} ${padX + chartW},${padTop + chartH}`
 
   const first = points[0].weight_kg
   const last = points[points.length - 1].weight_kg
@@ -403,6 +398,7 @@ function WeightChart() {
   const diffStr = `${diff > 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} kg`
   const trendColor = diff <= 0 ? t.success : t.warning
   const TrendIcon = diff <= 0 ? TrendingDown : TrendingUp
+  const summary = `Evolução de peso: atual ${last.toFixed(1).replace('.', ',')} kg, ${diff === 0 ? 'sem variação' : `${diff > 0 ? 'aumento' : 'redução'} de ${Math.abs(diff).toFixed(1).replace('.', ',')} kg`} em ${points.length} medições.`
 
   return (
     <Animated.View entering={FadeInDown.duration(350).delay(160)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
@@ -433,31 +429,14 @@ function WeightChart() {
           </Text>
         </View>
 
-        <Svg width={W} height={H}>
-          <Defs>
-            <LinearGradient id="profileFill" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={t.primary} stopOpacity="0.12" />
-              <Stop offset="1" stopColor={t.primary} stopOpacity="0" />
-            </LinearGradient>
-          </Defs>
-          <Polyline points={fillPoints} fill="url(#profileFill)" stroke="none" />
-          <Polyline
-            points={polyPoints}
-            fill="none"
-            stroke={t.primary}
-            strokeWidth={2.5}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          <SvgCircle
-            cx={coords[coords.length - 1].x}
-            cy={coords[coords.length - 1].y}
-            r={4}
-            fill={t.surface}
-            stroke={t.primary}
-            strokeWidth={2.5}
-          />
-        </Svg>
+        <LineChart
+          data={chartData}
+          width={W}
+          height={100}
+          unit="kg"
+          decimals={1}
+          accessibilityLabel={summary}
+        />
       </Card>
     </Animated.View>
   )

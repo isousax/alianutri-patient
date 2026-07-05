@@ -1,6 +1,6 @@
 import { Pressable, Text, ActivityIndicator, type ViewStyle, type TextStyle, type StyleProp } from 'react-native'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../lib/haptics'
 import { useThemeColors } from '../../stores/theme'
 import { radius, space, typography, shadows, motion } from '../../theme/tokens'
 
@@ -62,7 +62,7 @@ export function Button({
 
   return (
     <Pressable
-      onPress={() => { if (isDisabled) return; Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onPress() }}
+      onPress={() => { if (isDisabled) return; haptics.medium(); onPress() }}
       onPressIn={() => { scale.value = withSpring(0.97, motion.spring) }}
       onPressOut={() => { scale.value = withSpring(1, motion.spring) }}
       disabled={isDisabled}

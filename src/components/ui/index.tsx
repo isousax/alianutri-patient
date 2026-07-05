@@ -4,7 +4,7 @@ import {
   type PressableProps, ActivityIndicator, StyleSheet, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { ChevronLeft, ChevronRight } from 'lucide-react-native'
+import { ChevronLeft, ChevronRight, CloudOff, RotateCw } from 'lucide-react-native'
 import Svg, { Circle as SvgCircle } from 'react-native-svg'
 import { AliaAvatar } from './AliaAvatar'
 import Animated, {
@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../lib/haptics'
 import { useThemeColors, type ThemeColors } from '../../stores/theme'
 import { shadows, radius, space, typography, SCREEN_PADDING, motion } from '../../theme/tokens'
 
@@ -30,10 +30,11 @@ interface CardProps {
   style?: ViewStyle
   padded?: boolean    // default true
   onPress?: () => void
+  accessibilityLabel?: string
   entering?: typeof FadeInDown | ReturnType<typeof FadeInDown.duration>
 }
 
-export function Card({ children, style, padded = true, onPress, entering }: CardProps) {
+export function Card({ children, style, padded = true, onPress, accessibilityLabel, entering }: CardProps) {
   const t = useThemeColors()
   const scale = useSharedValue(1)
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
@@ -52,13 +53,15 @@ export function Card({ children, style, padded = true, onPress, entering }: Card
 
   if (onPress) {
     const handlePress = () => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+      haptics.light()
       onPress()
     }
     return (
       <Wrapper {...(entering ? { entering } : {})}>
         <Pressable
           onPress={handlePress}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
           onPressIn={() => { scale.value = withSpring(0.97, motion.spring) }}
           onPressOut={() => { scale.value = withSpring(1, motion.spring) }}
         >
@@ -100,7 +103,7 @@ export function ScreenHeader({ title, subtitle, rightAction, onBack }: ScreenHea
       paddingBottom: space.md,
     }}>
       <Pressable
-        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onBack ? onBack() : router.back() }}
+        onPress={() => { haptics.light(); onBack ? onBack() : router.back() }}
         hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel="Voltar"
@@ -276,7 +279,9 @@ export function EmptyState({ icon, alia, iconBg, title, description, actionLabel
       </Text>
       {actionLabel && onAction && (
         <Pressable
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onAction() }}
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+          onPress={() => { haptics.light(); onAction() }}
           onPressIn={() => { aScale.value = withSpring(0.96, motion.spring) }}
           onPressOut={() => { aScale.value = withSpring(1, motion.spring) }}
         >
@@ -290,6 +295,85 @@ export function EmptyState({ icon, alia, iconBg, title, description, actionLabel
           }, aStyle]}>
             <Text style={[typography.labelMd, { color: t.primaryFg }]}>
               {actionLabel}
+            </Text>
+          </Animated.View>
+        </Pressable>
+      )}
+    </Animated.View>
+  )
+}
+
+// ══════════════════════════════════════════════════════
+//  ERROR STATE — Load failure with retry (distinct from empty)
+// ══════════════════════════════════════════════════════
+
+interface ErrorStateProps {
+  title?: string
+  description?: string
+  onRetry?: () => void
+  retryLabel?: string
+}
+
+export function ErrorState({
+  title = 'Não foi possível carregar',
+  description = 'Verifique sua conexão e tente novamente.',
+  onRetry,
+  retryLabel = 'Tentar novamente',
+}: ErrorStateProps) {
+  const t = useThemeColors()
+  const aScale = useSharedValue(1)
+  const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: aScale.value }] }))
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(400)}
+      accessibilityRole="alert"
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: space['5xl'],
+      }}
+    >
+      <View style={{
+        width: 72,
+        height: 72,
+        borderRadius: radius['2xl'],
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: t.errorLight,
+        marginBottom: space.xl,
+      }}>
+        <CloudOff size={28} color={t.error} />
+      </View>
+      <Text style={[typography.headingMd, { color: t.text, textAlign: 'center', marginBottom: space.sm }]}>
+        {title}
+      </Text>
+      <Text style={[typography.bodyMd, { color: t.textMuted, textAlign: 'center', lineHeight: 22 }]}>
+        {description}
+      </Text>
+      {onRetry && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={retryLabel}
+          onPress={() => { haptics.light(); onRetry() }}
+          onPressIn={() => { aScale.value = withSpring(0.96, motion.spring) }}
+          onPressOut={() => { aScale.value = withSpring(1, motion.spring) }}
+        >
+          <Animated.View style={[{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: space.sm,
+            marginTop: space.xl,
+            paddingHorizontal: space['2xl'],
+            paddingVertical: space.md,
+            borderRadius: radius.lg,
+            backgroundColor: t.primary,
+            ...shadows.glow(t.primary),
+          }, aStyle]}>
+            <RotateCw size={16} color={t.primaryFg} />
+            <Text style={[typography.labelMd, { color: t.primaryFg }]}>
+              {retryLabel}
             </Text>
           </Animated.View>
         </Pressable>
@@ -317,8 +401,10 @@ export function ListRow({ icon, iconBg, title, subtitle, badge, onPress, rightCo
 
   return (
     <Pressable
-      onPress={onPress ? () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onPress() } : undefined}
+      onPress={onPress ? () => { haptics.light(); onPress() } : undefined}
       disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? title : undefined}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -554,5 +640,6 @@ export { Avatar } from './Avatar'
 export { SegmentedControl, type SegmentOption } from './SegmentedControl'
 export { Toast } from './Toast'
 export { ConfirmDialog } from './ConfirmDialog'
+export { CalendarSheet } from './CalendarSheet'
 export { ActionSheetHost } from './ActionSheetHost'
 export { FeedbackOverlays } from './FeedbackOverlays'

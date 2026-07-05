@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
 import { View, Text, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import * as Haptics from 'expo-haptics'
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated'
 import { Sparkles } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, shadows } from '../../theme/tokens'
+import { haptics } from '../../lib/haptics'
 import { AuroraBackground, Button } from '../ui'
 import { ConfettiCelebration } from '../ui/ConfettiCelebration'
 import { RewardLight } from '../ui/RewardLight'
@@ -25,12 +25,7 @@ interface CelebrationModalProps {
 export function CelebrationModal({ icon, hero, eyebrow, title, subtitle, message, onDismiss }: CelebrationModalProps) {
   const t = useThemeColors()
 
-  useEffect(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
-    const a = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 220)
-    const b = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}), 460)
-    return () => { clearTimeout(a); clearTimeout(b) }
-  }, [])
+  useEffect(() => haptics.celebrate(), [])
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onDismiss} statusBarTranslucent>

@@ -5,11 +5,7 @@ import { rescheduleReminders, type MealTime } from '../lib/localNotifications'
 import { useAuthStore } from '../stores/auth'
 import { portalApi } from '../services/api'
 import type { DiaryTodayResponse, WaterIntakeResponse } from '../types/portal'
-
-function todayStr(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+import { todayStr } from '../lib/date'
 
 /**
  * Hydrates the reminders config and (re)schedules local daily reminders using

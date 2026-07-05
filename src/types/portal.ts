@@ -35,6 +35,7 @@ export interface PortalHome {
   pending_questionnaires: number
   features?: {
     can_write: boolean
+    ai_meal_analysis?: { limit: number; used: number; period: 'day' }
   }
 }
 
@@ -371,9 +372,12 @@ export interface ChatMessagesResponse {
 // Water Intake — GET/POST /p/:code/water
 // ==========================================
 
+export type WaterGoalSource = 'nutri' | 'baseline' | 'default'
+
 export interface WaterIntakeResponse {
   date: string
   goal_ml: number
+  goal_source: WaterGoalSource
   total_ml: number
   entries: { id: string; amount_ml: number; created_at: string }[]
 }

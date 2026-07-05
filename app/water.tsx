@@ -9,7 +9,7 @@ import {
   ChevronDown,
   Info,
 } from "lucide-react-native";
-import * as Haptics from "expo-haptics";
+import { haptics } from "../src/lib/haptics";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -31,7 +31,7 @@ import {
   useDeleteWater,
 } from "../src/hooks/usePortal";
 import type { WaterIntakeResponse } from "../src/types/portal";
-import { useSmartWaterGoal, type WaterGoalSource } from "../src/hooks/useSmartWaterGoal";
+import { useSmartWaterGoal } from "../src/hooks/useSmartWaterGoal";
 import { ScreenHeader, Card } from "../src/components/ui";
 import { SuccessBurst } from "../src/components/ui/SuccessBurst";
 import { ReadOnlyBanner } from "../src/components/ui/ReadOnlyBanner";
@@ -42,6 +42,7 @@ import {
   typography,
   SCREEN_PADDING,
   todayStr,
+  shiftDate,
 } from "../src/theme/tokens";
 
 const AnimatedSvgCircle = Animated.createAnimatedComponent(SvgCircle);
@@ -55,10 +56,8 @@ function fmtDate(dateStr: string) {
   });
 }
 
-function shiftDate(dateStr: string, days: number) {
-  const d = new Date(dateStr + "T12:00:00");
-  d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function fmtHM(ts: number) {
+  return new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
 const WATER_OPTIONS = [
@@ -88,14 +87,20 @@ export default function WaterScreen() {
   const { mutateAsync: deleteWater } = useDeleteWater();
 
   const apiGoal = data?.goal_ml ?? 2000;
-  // `goal_source` ainda não está no tipo WaterIntakeResponse (WIP em portal.ts);
-  // lido via cast até o tipo ser atualizado. O servidor é a fonte única do goal.
-  const goalSource = (data as { goal_source?: WaterGoalSource } | undefined)?.goal_source;
+  const goalSource = data?.goal_source;
   const total = data?.total_ml ?? 0;
   const entries: WaterIntakeResponse["entries"] = data?.entries ?? [];
 
-  const { goal, weather, nutriSetCustomGoal, isPersonalized, weatherBonusMl, message } =
-    useSmartWaterGoal(apiGoal, goalSource);
+  const {
+    goal,
+    weather,
+    weatherStatus,
+    weatherUpdatedAt,
+    nutriSetCustomGoal,
+    isPersonalized,
+    weatherBonusMl,
+    message,
+  } = useSmartWaterGoal(apiGoal, goalSource);
 
   // Absorb server delta synchronously during render (no flicker)
   if (total !== prevServerTotal.current) {
@@ -137,18 +142,14 @@ export default function WaterScreen() {
   const handleAdd = useCallback(
     async (amount: number) => {
       if (!canWrite) return;
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      haptics.medium();
       localBoostRef.current += amount;
       rerender((n) => n + 1);
       setLastAdded({ amount, key: Date.now() });
 
       // Celebrate if crossing goal
       if (displayTotal < goal && displayTotal + amount >= goal) {
-        setTimeout(
-          () =>
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
-          600,
-        );
+        setTimeout(() => haptics.success(), 600);
       }
 
       try {
@@ -165,7 +166,7 @@ export default function WaterScreen() {
   const handleDelete = useCallback(
     async (id: string) => {
       if (!canWrite) return;
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      haptics.light();
       confirm({
         title: "Remover",
         message: "Remover este registro?",
@@ -207,7 +208,7 @@ export default function WaterScreen() {
         <Pressable onPress={() => setDate(shiftDate(date, -1))} hitSlop={12} accessibilityRole="button" accessibilityLabel="Dia anterior">
           <ChevronLeft size={16} color={t.textMuted} />
         </Pressable>
-        <Pressable onPress={() => setDate(todayStr())}>
+        <Pressable onPress={() => setDate(todayStr())} accessibilityRole="button" accessibilityLabel="Ir para hoje">
           <Text style={[typography.captionBold, { color: t.textMuted }]}>
             {isToday ? "Hoje" : fmtDate(date)}
           </Text>
@@ -373,7 +374,7 @@ export default function WaterScreen() {
                     gap: space.sm,
                   }}
                 >
-                  {weather && (
+                  {weather ? (
                     <>
                       <Text style={{ fontSize: 18 }}>{weather.icon}</Text>
                       <Text style={[typography.headingSm, { color: t.text }]}>
@@ -381,8 +382,11 @@ export default function WaterScreen() {
                       </Text>
                       <Text
                         style={[typography.caption, { color: t.textMuted }]}
+                        numberOfLines={1}
                       >
-                        {weather.description}
+                        {weatherStatus === "stale" && weatherUpdatedAt
+                          ? `${weather.description} · atualizado ${fmtHM(weatherUpdatedAt)}`
+                          : weather.description}
                       </Text>
                       {weatherBonusMl > 0 && !nutriSetCustomGoal && (
                         <View
@@ -399,10 +403,19 @@ export default function WaterScreen() {
                         </View>
                       )}
                     </>
+                  ) : (
+                    <>
+                      <Text style={{ fontSize: 18 }}>🌡️</Text>
+                      <Text style={[typography.caption, { color: t.textMuted }]}>
+                        {weatherStatus === "loading" ? "Carregando clima…" : "Clima indisponível"}
+                      </Text>
+                    </>
                   )}
                 </View>
                 {isPersonalized && !nutriSetCustomGoal && (
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Saiba mais sobre sua meta de hidratação"
                     onPress={() =>
                       alertInfo(
                         "Sua meta de hidratação",
@@ -479,6 +492,9 @@ export default function WaterScreen() {
                   key={opt.ml}
                   onPress={() => handleAdd(opt.ml)}
                   disabled={isLogging || !canWrite}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Adicionar ${opt.ml} mililitros${opt.label ? `, ${opt.label}` : ''}`}
+                  accessibilityState={{ disabled: isLogging || !canWrite }}
                   style={{
                     width: CARD_WIDTH,
                     alignItems: "center",
@@ -544,6 +560,9 @@ export default function WaterScreen() {
           >
             <Pressable
               onPress={() => setShowHistory(!showHistory)}
+              accessibilityRole="button"
+              accessibilityLabel={`${entries.length} ${entries.length === 1 ? 'registro' : 'registros'} hoje`}
+              accessibilityState={{ expanded: showHistory }}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -621,6 +640,8 @@ export default function WaterScreen() {
                           onPress={() => handleDelete(entry.id)}
                           hitSlop={8}
                           disabled={!canWrite}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remover registro de ${entry.amount_ml} mililitros`}
                         >
                           <Trash2
                             size={14}

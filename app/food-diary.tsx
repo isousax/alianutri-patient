@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useReducer } from 'react'
 import {
   View, Text, ScrollView, Pressable, ActivityIndicator,
-  RefreshControl, TextInput, Modal, KeyboardAvoidingView, Platform,
+  RefreshControl, TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -11,7 +11,7 @@ import {
   ChevronDown, X,
 } from 'lucide-react-native'
 import { Image } from 'expo-image'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
   LinearTransition,
@@ -26,25 +26,16 @@ import { useAuthStore } from '../src/stores/auth'
 import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useFoodDiary } from '../src/hooks/usePortal'
 import type { DiaryTimelineMeal, PortalFoodDiaryEntry } from '../src/types/portal'
 import { ScreenHeader, SkeletonBlock } from '../src/components/ui'
+import { BottomSheet } from '../src/components/ui/BottomSheet'
 import { ConfettiCelebration } from '../src/components/ui/ConfettiCelebration'
 import { RewardTrophy } from '../src/components/ui/RewardTrophy'
 import { AliaAvatar } from '../src/components/ui/AliaAvatar'
 import { typography, space } from '../src/theme/tokens'
+import { todayStr, shiftDate } from '../src/lib/date'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://api.alianutri.com.br'
 
 // ── helpers ──
-
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function shiftDate(dateStr: string, days: number) {
-  const d = new Date(dateStr + 'T12:00:00')
-  d.setDate(d.getDate() + days)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 // Registro retroativo: feito claramente depois do dia referente (gap >= 2 dias).
 // Tolera 1 dia p/ NAO marcar logs perto da meia-noite (created_at e UTC; entry_date e local).
@@ -149,12 +140,8 @@ export default function DiaryScreen() {
     if (totalMeals > 0 && loggedCount === totalMeals && prevLoggedCount.current < totalMeals) {
       setJustCompleted(true)
       setFocusedIndex(null)
-      // Multi-burst haptic sequence (Duolingo-inspired)
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 200)
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 400)
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 600)
-      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 900)
+      // Sequência multi-toque (Duolingo-style) centralizada.
+      haptics.celebrate()
       const timer = setTimeout(() => setJustCompleted(false), 6000)
       return () => clearTimeout(timer)
     }
@@ -171,7 +158,7 @@ export default function DiaryScreen() {
     if (!mealPlan || loggingIndex !== null) return
     setLoggingIndex(meal.meal_index)
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+      haptics.medium()
       // Adesão é sinal LEVE (streak/gamificação/animação) — grava só o mínimo:
       // nome da refeição + slot + status. Sem copiar a lista de alimentos do plano.
       await logEntry({
@@ -195,7 +182,7 @@ export default function DiaryScreen() {
     if (!mealPlan || loggingIndex !== null) return
     setLoggingIndex(meal.meal_index)
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      haptics.light()
       await logEntry({
         meal_type: meal.meal_type,
         entry_date: date,
@@ -217,7 +204,7 @@ export default function DiaryScreen() {
   // ao slot (meal_plan_id/meal_index) — caminho único para fotos (some o upload duplicado).
   const handlePhoto = useCallback((meal: DiaryTimelineMeal) => {
     if (!mealPlan) return
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    haptics.light()
     router.push(
       `/post-compose?type=meal&meal_plan_id=${encodeURIComponent(mealPlan.id)}&meal_index=${meal.meal_index}&meal_name=${encodeURIComponent(meal.meal_name)}` as never,
     )
@@ -225,7 +212,7 @@ export default function DiaryScreen() {
 
   const handleUndo = useCallback(async (meal: DiaryTimelineMeal) => {
     if (!meal.entry) return
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    haptics.light()
     confirm({
       title: 'Desfazer registro',
       message: `Remover o registro de "${meal.meal_name}"?`,
@@ -390,7 +377,7 @@ export default function DiaryScreen() {
                   <CompactPendingRow
                     meal={meal}
                     onFocus={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                      haptics.light()
                       setFocusedIndex(originalIndex)
                     }}
                     onQuickFollow={() => handleMarkFollowed(meal)}
@@ -447,7 +434,7 @@ function FreeDiary({
     }
     setIsSaving(true)
     try {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      haptics.success()
       await logEntry({
         meal_type: mealType,
         entry_date: date,
@@ -531,7 +518,7 @@ function FreeDiary({
                   )}
                 </View>
                 {canWrite && (
-                  <Pressable onPress={() => handleDelete(entry.id)} hitSlop={8} className="ml-2 mt-0.5">
+                  <Pressable onPress={() => handleDelete(entry.id)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Remover este registro" className="ml-2 mt-0.5">
                     <X size={14} color={t.textMuted} />
                   </Pressable>
                 )}
@@ -541,86 +528,80 @@ function FreeDiary({
         </Animated.View>
       )}
 
-      {/* Modal for adding entry */}
-      <Modal visible={showModal} transparent animationType="slide">
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View className="rounded-t-3xl px-5 pt-5 pb-8" style={{ backgroundColor: t.background }}>
-              <View className="flex-row items-center justify-between mb-4">
-                <Text style={{ color: t.text }} className="text-lg font-sans-bold">Nova refeição</Text>
-                <Pressable onPress={() => setShowModal(false)} hitSlop={12}>
-                  <X size={20} color={t.textSecondary} />
-                </Pressable>
-              </View>
-
-              {/* Meal type picker */}
-              <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-2">
-                Tipo de refeição
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-                <View className="flex-row gap-2">
-                  {FREE_MEAL_TYPES.map((mt) => (
-                    <Pressable
-                      key={mt.value}
-                      onPress={() => { setMealType(mt.value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
-                      className="px-3 py-2 rounded-xl items-center"
-                      style={{
-                        backgroundColor: mealType === mt.value ? t.primaryLight : t.surface,
-                        borderWidth: mealType === mt.value ? 1.5 : 1,
-                        borderColor: mealType === mt.value ? t.primary : t.borderLight,
-                      }}
-                    >
-                      <Text className="text-base">{mt.emoji}</Text>
-                      <Text
-                        style={{ color: mealType === mt.value ? t.primary : t.textSecondary }}
-                        className="text-[10px] font-sans-medium mt-0.5"
-                      >
-                        {mt.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </ScrollView>
-
-              {/* Description */}
-              <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-2">
-                O que você comeu?
-              </Text>
-              <TextInput
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Ex: Arroz, feijão, frango grelhado e salada"
-                placeholderTextColor={t.textMuted}
-                multiline
-                numberOfLines={3}
-                className="rounded-xl p-3 text-sm font-sans mb-4"
-                style={{
-                  color: t.text,
-                  backgroundColor: t.surface,
-                  borderWidth: 1,
-                  borderColor: t.borderLight,
-                  minHeight: 80,
-                  textAlignVertical: 'top',
-                }}
-              />
-
+      {/* Nova refeição — bottom sheet keyboard-aware */}
+      <BottomSheet visible={showModal} onClose={() => setShowModal(false)} title="Nova refeição">
+        {/* Meal type picker */}
+        <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-2">
+          Tipo de refeição
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+          <View className="flex-row gap-2">
+            {FREE_MEAL_TYPES.map((mt) => (
               <Pressable
-                onPress={handleSave}
-                disabled={isSaving || !description.trim() || !canWrite}
-                className="py-3.5 rounded-xl items-center"
-                style={{ backgroundColor: description.trim() ? t.primary : t.borderLight }}
+                key={mt.value}
+                onPress={() => { setMealType(mt.value); haptics.light() }}
+                accessibilityRole="button"
+                accessibilityLabel={mt.label}
+                accessibilityState={{ selected: mealType === mt.value }}
+                className="px-3 py-2 rounded-xl items-center"
+                style={{
+                  backgroundColor: mealType === mt.value ? t.primaryLight : t.surface,
+                  borderWidth: mealType === mt.value ? 1.5 : 1,
+                  borderColor: mealType === mt.value ? t.primary : t.borderLight,
+                }}
               >
+                <Text className="text-base">{mt.emoji}</Text>
                 <Text
-                  className="text-sm font-sans-bold"
-                  style={{ color: description.trim() ? t.primaryFg : t.textMuted }}
+                  style={{ color: mealType === mt.value ? t.primary : t.textSecondary }}
+                  className="text-[10px] font-sans-medium mt-0.5"
                 >
-                  {isSaving ? 'Salvando...' : 'Salvar refeição'}
+                  {mt.label}
                 </Text>
               </Pressable>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
+            ))}
+          </View>
+        </ScrollView>
+
+        {/* Description */}
+        <Text style={{ color: t.textMuted }} className="text-xs font-sans-semibold uppercase tracking-wider mb-2">
+          O que você comeu?
+        </Text>
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          accessibilityLabel="Descrição da refeição"
+          placeholder="Ex: Arroz, feijão, frango grelhado e salada"
+          placeholderTextColor={t.textMuted}
+          multiline
+          numberOfLines={3}
+          className="rounded-xl p-3 text-sm font-sans mb-4"
+          style={{
+            color: t.text,
+            backgroundColor: t.surface,
+            borderWidth: 1,
+            borderColor: t.borderLight,
+            minHeight: 80,
+            textAlignVertical: 'top',
+          }}
+        />
+
+        <Pressable
+          onPress={handleSave}
+          disabled={isSaving || !description.trim() || !canWrite}
+          accessibilityRole="button"
+          accessibilityLabel="Salvar refeição"
+          accessibilityState={{ disabled: isSaving || !description.trim() || !canWrite, busy: isSaving }}
+          className="py-3.5 rounded-xl items-center"
+          style={{ backgroundColor: description.trim() ? t.primary : t.borderLight }}
+        >
+          <Text
+            className="text-sm font-sans-bold"
+            style={{ color: description.trim() ? t.primaryFg : t.textMuted }}
+          >
+            {isSaving ? 'Salvando...' : 'Salvar refeição'}
+          </Text>
+        </Pressable>
+      </BottomSheet>
     </ScrollView>
   )
 }
@@ -742,7 +723,7 @@ function HeroMealCard({
           </Text>
         </View>
         {isManualFocus && (
-          <Pressable onPress={onDismissFocus} hitSlop={10}>
+          <Pressable onPress={onDismissFocus} hitSlop={10} accessibilityRole="button" accessibilityLabel="Sair do foco desta refeição">
             <X size={14} color={t.textMuted} />
           </Pressable>
         )}
@@ -778,7 +759,7 @@ function HeroMealCard({
               </View>
             ))}
             {hasManyFoods && !showAllFoods && (
-              <Pressable onPress={() => setShowAllFoods(true)} className="mt-2 flex-row items-center justify-center">
+              <Pressable onPress={() => setShowAllFoods(true)} accessibilityRole="button" accessibilityLabel={`Ver todos os ${meal.foods.length} alimentos`} className="mt-2 flex-row items-center justify-center">
                 <Text style={{ color: t.primary }} className="text-[11px] font-sans-semibold">Ver todos ({meal.foods.length})</Text>
                 <ChevronDown size={12} color={t.primary} className="ml-0.5" />
               </Pressable>
@@ -794,6 +775,8 @@ function HeroMealCard({
             <Pressable
               onPress={onPhoto}
               disabled={isLogging}
+              accessibilityRole="button"
+              accessibilityLabel="Registrar refeição com foto"
               className="flex-row items-center justify-center py-3 rounded-xl flex-1"
               style={{ backgroundColor: t.surfacePressed, borderWidth: 1, borderColor: t.borderLight }}
             >
@@ -803,6 +786,9 @@ function HeroMealCard({
             <Pressable
               onPress={onFollow}
               disabled={isLogging}
+              accessibilityRole="button"
+              accessibilityLabel="Marcar como seguida"
+              accessibilityState={{ disabled: isLogging, busy: isLogging }}
               className="flex-row items-center justify-center py-3 rounded-xl flex-[1.4]"
               style={{ backgroundColor: t.primary }}
             >
@@ -819,6 +805,8 @@ function HeroMealCard({
           <Pressable
             onPress={onPartial}
             disabled={isLogging}
+            accessibilityRole="button"
+            accessibilityLabel="Marcar que segui parcialmente"
             className="mt-2 flex-row items-center justify-center py-2"
           >
             <Text style={{ color: t.textMuted }} className="text-xs font-sans-medium">Segui parcialmente</Text>
@@ -848,6 +836,9 @@ function CompactLoggedRow({
     <View className="mb-1.5">
       <Pressable
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${meal.meal_name}, registrada${meal.meal_time ? `, ${meal.meal_time}` : ''}`}
+        accessibilityState={{ expanded: isExpanded }}
         className="flex-row items-center py-2.5 px-3 rounded-xl"
         style={{ backgroundColor: t.primaryLight }}
       >
@@ -915,6 +906,8 @@ function CompactLoggedRow({
             <Pressable
               onPress={onUndo}
               disabled={isDeleting}
+              accessibilityRole="button"
+              accessibilityLabel="Desfazer este registro"
               className="flex-row items-center py-1.5"
             >
               <Undo2 size={12} color={t.textMuted} />
@@ -944,7 +937,7 @@ function CompactPendingRow({
       className="flex-row items-center py-2.5 px-3 rounded-xl mb-1.5"
       style={{ backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderLight }}
     >
-      <Pressable onPress={onFocus} className="flex-row items-center flex-1" hitSlop={{ top: 8, bottom: 8, left: 8 }}>
+      <Pressable onPress={onFocus} accessibilityRole="button" accessibilityLabel={`${meal.meal_name}${meal.meal_time ? `, ${meal.meal_time}` : ''}, pendente. Toque para focar`} className="flex-row items-center flex-1" hitSlop={{ top: 8, bottom: 8, left: 8 }}>
         <View className="h-6 w-6 rounded-full items-center justify-center mr-3" style={{ borderWidth: 1.5, borderColor: t.border }}>
           <CircleDashed size={12} color={t.textMuted} />
         </View>
@@ -957,6 +950,9 @@ function CompactPendingRow({
         <Pressable
           onPress={onQuickFollow}
           disabled={isLogging}
+          accessibilityRole="button"
+          accessibilityLabel={`Marcar ${meal.meal_name} como seguida`}
+          accessibilityState={{ disabled: isLogging, busy: isLogging }}
           hitSlop={{ top: 8, bottom: 8, right: 8 }}
           className="px-3 py-1.5 rounded-lg"
           style={{ backgroundColor: t.primary + '15' }}

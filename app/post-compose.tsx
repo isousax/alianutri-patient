@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import { Camera, Utensils, BookOpen, Sparkles, X, Images } from 'lucide-react-native'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
@@ -28,6 +28,7 @@ const HEADER_TITLE: Record<DiaryPostType, string> = {
 export default function PostComposeScreen() {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
+  const aiMealAnalysis = useFeaturesStore((s) => s.aiMealAnalysis)
   const { mutateAsync: createPost, isPending } = useCreatePost()
   const scrollRef = useRef<ScrollView>(null)
   const params = useLocalSearchParams<{ type?: string; meal_plan_id?: string; meal_index?: string; meal_name?: string }>()
@@ -63,7 +64,7 @@ export default function PostComposeScreen() {
     const asset = result.canceled ? null : result.assets?.[0]
     if (asset) {
       setPhotoUri(asset.uri)
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+      haptics.light()
     }
   }, [])
 
@@ -90,7 +91,7 @@ export default function PostComposeScreen() {
         mealPlanId: fromSlot ? slotMealPlanId! : undefined,
         mealIndex: fromSlot ? slotMealIndexNum : undefined,
       })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+      haptics.success()
       router.back()
     } catch (err) {
       console.error('[post-compose] Falha ao publicar:', err)
@@ -152,7 +153,7 @@ export default function PostComposeScreen() {
               return (
                 <Pressable
                   key={ty.id}
-                  onPress={() => { setType(ty.id); Haptics.selectionAsync().catch(() => {}) }}
+                  onPress={() => { setType(ty.id); haptics.selection() }}
                   disabled={!canWrite}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
@@ -182,12 +183,16 @@ export default function PostComposeScreen() {
             style={[typography.bodyLg, { color: t.text, backgroundColor: t.surfaceSecondary, borderRadius: radius.lg, padding: space.lg, minHeight: 90, textAlignVertical: 'top', marginBottom: space.lg }]}
           />
 
-          {/* Dica IA */}
+          {/* Dica IA — mostra a cota diária de análise por IA (T-2) */}
           {type === 'meal' && photoUri && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.lg }}>
-              <Sparkles size={14} color={t.primary} />
+              <Sparkles size={14} color={aiMealAnalysis && aiMealAnalysis.used >= aiMealAnalysis.limit ? t.textMuted : t.primary} />
               <Text style={[typography.caption, { color: t.textSecondary, flex: 1 }]}>
-                Vamos analisar os macros automaticamente após publicar.
+                {aiMealAnalysis && aiMealAnalysis.used >= aiMealAnalysis.limit
+                  ? 'Você já usou as análises por IA de hoje. A foto será salva; a análise volta amanhã.'
+                  : aiMealAnalysis
+                    ? `Vamos analisar os macros automaticamente após publicar. (restam ${aiMealAnalysis.limit - aiMealAnalysis.used} de ${aiMealAnalysis.limit} hoje)`
+                    : 'Vamos analisar os macros automaticamente após publicar.'}
               </Text>
             </View>
           )}

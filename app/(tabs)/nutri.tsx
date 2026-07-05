@@ -7,7 +7,7 @@ import { MessageCircle, CalendarDays, ClipboardList, CalendarPlus, Video, MapPin
 import { useThemeColors } from '../../src/stores/theme'
 import { usePortalHome, useChatUnreadCount, useQuestionnaires, useAppointments } from '../../src/hooks/usePortal'
 import type { PortalQuestionnaire, PortalAppointment } from '../../src/types/portal'
-import { Card, EmptyState, ListRow, Button, Avatar, SegmentedControl, SkeletonList } from '../../src/components/ui'
+import { Card, EmptyState, ErrorState, ListRow, Button, Avatar, SegmentedControl, SkeletonList } from '../../src/components/ui'
 import { openMeetingLink, openAddressInMaps, appointmentStatusMeta, isUpcoming } from '../../src/lib/appointment'
 import { space, typography, radius, SCREEN_PADDING } from '../../src/theme/tokens'
 
@@ -16,7 +16,7 @@ type Seg = 'chat' | 'appointments' | 'questionnaires'
 export default function NutriScreen() {
   const t = useThemeColors()
   const [seg, setSeg] = useState<Seg>('chat')
-  const { data: home, isLoading, refetch, isRefetching } = usePortalHome()
+  const { data: home, isLoading, isError, refetch, isRefetching } = usePortalHome()
   const { data: unread } = useChatUnreadCount()
   const { data: questionnaires } = useQuestionnaires()
 
@@ -46,6 +46,8 @@ export default function NutriScreen() {
 
       {isLoading && !home ? (
         <SkeletonList count={3} />
+      ) : isError && !home ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : (
         <ScrollView
           style={{ flex: 1 }}
@@ -109,7 +111,7 @@ function ChatSegment({
 
 function AppointmentsSegment() {
   const t = useThemeColors()
-  const { data: appointments, isLoading } = useAppointments()
+  const { data: appointments, isLoading, isError, refetch } = useAppointments()
 
   const list = appointments ?? []
   const upcoming = list
@@ -121,6 +123,14 @@ function AppointmentsSegment() {
 
   if (isLoading && list.length === 0) {
     return <SkeletonList count={2} />
+  }
+
+  if (isError && list.length === 0) {
+    return (
+      <View style={{ minHeight: 340 }}>
+        <ErrorState onRetry={() => refetch()} />
+      </View>
+    )
   }
 
   if (list.length === 0) {

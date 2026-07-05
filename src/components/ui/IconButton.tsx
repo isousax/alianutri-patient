@@ -1,6 +1,6 @@
 import { Pressable } from 'react-native'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../lib/haptics'
 import { useThemeColors } from '../../stores/theme'
 import { radius, motion } from '../../theme/tokens'
 
@@ -28,7 +28,7 @@ export function IconButton({
 
   return (
     <Pressable
-      onPress={() => { if (disabled) return; Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); onPress() }}
+      onPress={() => { if (disabled) return; haptics.light(); onPress() }}
       onPressIn={() => { scale.value = withSpring(0.9, motion.spring) }}
       onPressOut={() => { scale.value = withSpring(1, motion.spring) }}
       hitSlop={slop}

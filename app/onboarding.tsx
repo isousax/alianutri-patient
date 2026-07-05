@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import { Bell, Camera, ArrowRight } from 'lucide-react-native'
 import { useThemeColors } from '../src/stores/theme'
 import { useAuthStore } from '../src/stores/auth'
@@ -41,7 +41,7 @@ function ReminderRow({ def }: { def: ReminderToggle }) {
       <Text style={[typography.labelLg, { color: t.text, flex: 1 }]}>{def.label}</Text>
       <Switch
         value={enabled}
-        onValueChange={() => { Haptics.selectionAsync().catch(() => {}); toggle(def.id) }}
+        onValueChange={() => { haptics.selection(); toggle(def.id) }}
         trackColor={{ false: t.borderLight, true: t.primary }}
         thumbColor="#fff"
       />
@@ -64,7 +64,7 @@ export default function OnboardingScreen() {
   // Conclui o onboarding: marca como visto, agenda os lembretes habilitados
   // (pede permissão no device; no-op no Expo Go) e entra no app.
   function finish(capture: boolean) {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+    haptics.success()
     setSeen()
     rescheduleReminders(useRemindersStore.getState().enabled).catch(() => {})
     if (!accessCode) { router.replace('/login'); return }
@@ -73,7 +73,7 @@ export default function OnboardingScreen() {
   }
 
   function advance() {
-    Haptics.selectionAsync().catch(() => {})
+    haptics.selection()
     setStep((s) => Math.min(s + 1, STEPS - 1))
   }
 

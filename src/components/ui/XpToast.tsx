@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native'
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, interpolate, Extrapolation, Easing, runOnJS,
 } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../lib/haptics'
 import { Sparkles } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, radius, space, shadows } from '../../theme/tokens'
@@ -22,7 +22,7 @@ export function XpToast() {
 
   useEffect(() => {
     if (amount == null) return
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+    haptics.success()
     p.value = 0
     p.value = withTiming(1, { duration: 1300, easing: Easing.out(Easing.quad) }, (finished) => {
       if (finished) runOnJS(clear)()

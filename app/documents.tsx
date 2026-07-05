@@ -6,7 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../src/stores/theme'
 import { useDocuments, useDocumentDetail } from '../src/hooks/usePortal'
 import type { PortalDocumentSummary } from '../src/types/portal'
-import { Card, ScreenHeader, EmptyState, LoadingScreen, SkeletonList } from '../src/components/ui'
+import { Card, ScreenHeader, EmptyState, ErrorState, LoadingScreen, SkeletonList } from '../src/components/ui'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
 const TYPE_LABELS: Record<string, string> = {
@@ -53,7 +53,7 @@ function fmtDate(iso: string): string {
 
 export default function DocumentsScreen() {
   const t = useThemeColors()
-  const { data: docs, isLoading, refetch, isRefetching } = useDocuments()
+  const { data: docs, isLoading, isError, refetch, isRefetching } = useDocuments()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const { data: detail, isLoading: loadingDetail } = useDocumentDetail(selectedId)
 
@@ -110,6 +110,8 @@ export default function DocumentsScreen() {
       <ScreenHeader title="Documentos" />
       {isLoading ? (
         <SkeletonList />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !docs || docs.length === 0 ? (
         <EmptyState
           icon={<FileText size={28} color={t.primary} />}
@@ -127,7 +129,7 @@ export default function DocumentsScreen() {
         >
           {docs.map((d: PortalDocumentSummary, i: number) => (
             <Animated.View key={d.id} entering={FadeInDown.duration(300).delay(i * 50)}>
-              <Card onPress={() => setSelectedId(d.id)}>
+              <Card onPress={() => setSelectedId(d.id)} accessibilityLabel={`${d.name}, ${TYPE_LABELS[d.type] ?? 'Documento'}`}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{
                     width: 40, height: 42,

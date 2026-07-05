@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { useAuthStore } from "../../src/stores/auth";
+import { ApiError } from "../../src/services/api";
 import {
   Calendar,
   Navigation,
@@ -40,14 +42,8 @@ import {
   FileText,
   X,
 } from "lucide-react-native";
-import Svg, {
-  Rect as SvgRect,
-  Polyline,
-  Circle as SvgCircle,
-  Defs,
-  LinearGradient,
-  Stop,
-} from "react-native-svg";
+import Svg, { Rect as SvgRect } from "react-native-svg";
+import { LineChart, type LineChartPoint } from "../../src/components/charts/LineChart";
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -90,11 +86,12 @@ import { openMeetingLink, openAddressInMaps } from "../../src/lib/appointment";
 import { getTipOfTheDay } from "../../src/data/dailyTips";
 import { useDailyTipStore } from "../../src/stores/dailyTip";
 import { useSmartWaterGoal } from "../../src/hooks/useSmartWaterGoal";
-import * as Haptics from "expo-haptics";
+import { haptics } from "../../src/lib/haptics";
 import {
   ProgressRing,
   Card,
   EmptyState,
+  ErrorState,
   LoadingScreen,
   AuroraBackground,
   Button,
@@ -125,11 +122,11 @@ export default function HomeScreen() {
   const qc = useQueryClient();
   const { data, isLoading, error, refetch, isRefetching } = usePortalHome();
   const canWrite = useFeaturesStore((s) => s.canWrite);
-  const setCanWrite = useFeaturesStore((s) => s.setCanWrite);
+  const setFeatures = useFeaturesStore((s) => s.setFeatures);
 
   useEffect(() => {
-    if (data?.features) setCanWrite(data.features.can_write);
-  }, [data?.features, setCanWrite]);
+    if (data?.features) setFeatures(data.features);
+  }, [data?.features, setFeatures]);
 
   const [, tick] = useReducer((x: number) => x + 1, 0);
   const today = useMemo(todayStr, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -175,13 +172,13 @@ export default function HomeScreen() {
   useEffect(() => {
     const dMeals = diaryToday?.meals ?? [];
     const pct = dMeals.length > 0 ? dMeals.filter((m: DiaryTimelineMeal) => m.entry !== null).length / dMeals.length : 0;
-    if (pct >= 1 && prevDiary.current < 1) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (pct >= 1 && prevDiary.current < 1) haptics.success();
     prevDiary.current = pct;
   }, [diaryToday]);
   useEffect(() => {
     const total = waterData?.total_ml ?? 0;
     const pct = waterGoal > 0 ? Math.min(total / waterGoal, 1) : 0;
-    if (pct >= 1 && prevWater.current < 1) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (pct >= 1 && prevWater.current < 1) haptics.success();
     prevWater.current = pct;
   }, [waterData, waterGoal]);
 
@@ -209,19 +206,28 @@ export default function HomeScreen() {
 
   // ── Error ──
   if (error || !data) {
+    // B-3: paciente arquivado (403 ACCESS_DISABLED) → estado dedicado, não "erro de conexão".
+    const accessDisabled = error instanceof ApiError && error.code === "ACCESS_DISABLED";
     return (
       <SafeAreaView
         style={{ flex: 1, backgroundColor: t.background }}
         edges={["top"]}
       >
-        <EmptyState
-          icon={<AlertCircle size={28} color={t.error} />}
-          iconBg={t.errorLight}
-          title="Não foi possível carregar"
-          description="Verifique sua conexão e tente novamente."
-          actionLabel="Tentar novamente"
-          onAction={() => refetch()}
-        />
+        {accessDisabled ? (
+          <EmptyState
+            icon={<AlertCircle size={28} color={t.error} />}
+            iconBg={t.errorLight}
+            title="Acesso desativado"
+            description="Seu nutricionista desativou seu acesso ao app. Fale com ele para reativá-lo."
+            actionLabel="Voltar ao login"
+            onAction={() => {
+              useAuthStore.getState().logout();
+              router.replace("/login");
+            }}
+          />
+        ) : (
+          <ErrorState onRetry={() => refetch()} />
+        )}
       </SafeAreaView>
     );
   }
@@ -240,12 +246,6 @@ export default function HomeScreen() {
   const waterTotal = waterData?.total_ml ?? 0;
   const waterPct = waterGoal > 0 ? Math.min(waterTotal / waterGoal, 1) : 0;
   const chatUnread = data.chat_unread ?? 0;
-  const hasAnyContent =
-    totalMeals > 0 ||
-    activeGoals.length > 0 ||
-    (evolution ?? []).length >= 2 ||
-    pendingQ > 0 ||
-    waterTotal > 0;
   const apt = data.next_appointment;
 
   return (
@@ -274,7 +274,7 @@ export default function HomeScreen() {
           chatUnread={chatUnread}
           photoUrl={data.patient.photo_url}
           onTipPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            haptics.light();
             setTipManual(true);
           }}
         />
@@ -425,12 +425,12 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
   );
 
   const go = (route: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    haptics.light();
     router.push(route as never);
   };
 
   const openFolder = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    haptics.light();
     setFolderOpen(true);
   };
 
@@ -549,7 +549,7 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
                   >
                     <Pressable
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        haptics.light();
                         setFolderOpen(false);
                         setTimeout(() => router.push(a.route as never), 180);
                       }}
@@ -721,7 +721,7 @@ function DailyTipCard({ onDismiss }: { onDismiss: () => void }) {
   const tip = useMemo(() => getTipOfTheDay(), []);
 
   const dismiss = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    haptics.light();
     onDismiss();
   };
 
@@ -1143,30 +1143,22 @@ function WeightSparkline({ evolution }: { evolution: PortalEvolution[] }) {
   if (points.length < 2) return null;
 
   const W = SCREEN_W - SCREEN_PADDING * 2 - space.lg * 2;
-  const H = 72;
-  const padX = 4;
-  const padY = 10;
-  const chartW = W - padX * 2;
-  const chartH = H - padY * 2;
 
-  const weights = points.map((p) => p.weight_kg);
-  const minW = Math.min(...weights) - 0.5;
-  const maxW = Math.max(...weights) + 0.5;
-  const rangeW = maxW - minW || 1;
-
-  const coords = points.map((p, i) => ({
-    x: padX + (i / (points.length - 1)) * chartW,
-    y: padY + chartH - ((p.weight_kg - minW) / rangeW) * chartH,
+  const fmtDay = (iso: string) => {
+    const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
+    return isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  };
+  const chartData: LineChartPoint[] = points.map((p) => ({
+    label: fmtDay(p.evaluation_date),
+    value: p.weight_kg,
   }));
-
-  const polyPoints = coords.map((c) => `${c.x},${c.y}`).join(" ");
-  const fillPoints = `${padX},${padY + chartH} ${polyPoints} ${padX + chartW},${padY + chartH}`;
   const first = points[0].weight_kg;
   const last = points[points.length - 1].weight_kg;
   const diff = last - first;
   const diffStr = `${diff > 0 ? "+" : ""}${diff.toFixed(1).replace(".", ",")} kg`;
   const trendColor = diff <= 0 ? t.success : t.warning;
   const TrendIcon = diff <= 0 ? TrendingDown : TrendingUp;
+  const summary = `Evolução de peso: atual ${last.toFixed(1).replace(".", ",")} kg, ${diff === 0 ? "sem variação" : `${diff > 0 ? "aumento" : "redução"} de ${Math.abs(diff).toFixed(1).replace(".", ",")} kg`} em ${points.length} medições.`;
 
   return (
     <Animated.View
@@ -1235,31 +1227,14 @@ function WeightSparkline({ evolution }: { evolution: PortalEvolution[] }) {
             {points.length} medições
           </Text>
         </View>
-        <Svg width={W} height={H}>
-          <Defs>
-            <LinearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={t.primary} stopOpacity="0.12" />
-              <Stop offset="1" stopColor={t.primary} stopOpacity="0" />
-            </LinearGradient>
-          </Defs>
-          <Polyline points={fillPoints} fill="url(#fill)" stroke="none" />
-          <Polyline
-            points={polyPoints}
-            fill="none"
-            stroke={t.primary}
-            strokeWidth={2.5}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          <SvgCircle
-            cx={coords[coords.length - 1].x}
-            cy={coords[coords.length - 1].y}
-            r={4}
-            fill={t.surface}
-            stroke={t.primary}
-            strokeWidth={2.5}
-          />
-        </Svg>
+        <LineChart
+          data={chartData}
+          width={W}
+          height={72}
+          unit="kg"
+          decimals={1}
+          accessibilityLabel={summary}
+        />
       </Card>
     </Animated.View>
   );

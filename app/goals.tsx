@@ -3,14 +3,14 @@ import { View, Text, ScrollView, RefreshControl, Pressable, TextInput } from 're
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Target, CheckCircle2, Circle, Flag, Flame, TrendingUp, Trophy } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { useGoals, useToggleGoalCheckin, useReportGoalProgress } from '../src/hooks/usePortal'
 import { habitStreak, isCheckedToday, streakUnit, cadenceLabel } from '../src/lib/habit'
 import { computeWeeklySummary, nextGoalMilestone, nextStreakMilestone, GOAL_MILESTONES } from '../src/lib/goalMilestones'
 import type { PortalGoal } from '../src/types/portal'
-import { ScreenHeader, Card, SectionLabel, EmptyState, SkeletonList } from '../src/components/ui'
+import { ScreenHeader, Card, SectionLabel, EmptyState, ErrorState, SkeletonList, KeyboardAvoidingWrapper } from '../src/components/ui'
 import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
@@ -34,13 +34,22 @@ const TYPE_LABELS: Record<string, string> = {
 export default function GoalsScreen() {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
-  const { data: goals, isLoading, refetch, isRefetching } = useGoals()
+  const { data: goals, isLoading, isError, refetch, isRefetching } = useGoals()
 
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
         <ScreenHeader title="Metas" />
         <SkeletonList />
+      </SafeAreaView>
+    )
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
+        <ScreenHeader title="Metas" />
+        <ErrorState onRetry={() => refetch()} />
       </SafeAreaView>
     )
   }
@@ -65,10 +74,12 @@ export default function GoalsScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top']}>
       <ScreenHeader title="Metas" />
+      <KeyboardAvoidingWrapper>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.primary} />}
       >
         {!canWrite && (
@@ -98,6 +109,7 @@ export default function GoalsScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingWrapper>
     </SafeAreaView>
   )
 }
@@ -145,7 +157,7 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
   const streak = habit ? habitStreak(habit) : 0
   const onToggle = () => {
     if (!canWrite) return
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+    haptics.light()
     toggle.mutate(goal.id)
   }
 
@@ -156,7 +168,7 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
   const onSaveReport = () => {
     const num = parseFloat(reportValue.replace(',', '.'))
     if (!Number.isFinite(num)) return
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+    haptics.light()
     report.mutate({ goalId: goal.id, value: num }, { onSuccess: () => setReporting(false) })
   }
 
@@ -256,6 +268,8 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
           {!reporting ? (
             <Pressable
               onPress={() => { setReportValue(goal.current_value != null ? String(goal.current_value) : ''); setReporting(true) }}
+              accessibilityRole="button"
+              accessibilityLabel="Reportar progresso"
               style={{
                 flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
                 paddingHorizontal: 12, paddingVertical: 7,
@@ -270,6 +284,7 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
               <TextInput
                 value={reportValue}
                 onChangeText={setReportValue}
+                accessibilityLabel="Valor do progresso"
                 keyboardType="numeric"
                 autoFocus
                 placeholder={goal.target_unit ? `Valor (${goal.target_unit})` : 'Valor atual'}
@@ -283,6 +298,9 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
               <Pressable
                 onPress={onSaveReport}
                 disabled={report.isPending}
+                accessibilityRole="button"
+                accessibilityLabel="Salvar progresso"
+                accessibilityState={{ disabled: report.isPending, busy: report.isPending }}
                 style={{
                   paddingHorizontal: 14, paddingVertical: 9,
                   borderRadius: radius.md, backgroundColor: t.primary,
@@ -291,7 +309,7 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
               >
                 <Text style={[typography.captionBold, { color: '#fff' }]}>Salvar</Text>
               </Pressable>
-              <Pressable onPress={() => setReporting(false)} style={{ paddingHorizontal: 8, paddingVertical: 9 }}>
+              <Pressable onPress={() => setReporting(false)} accessibilityRole="button" accessibilityLabel="Cancelar" style={{ paddingHorizontal: 8, paddingVertical: 9 }}>
                 <Text style={[typography.captionBold, { color: t.textMuted }]}>Cancelar</Text>
               </Pressable>
             </View>

@@ -1,6 +1,6 @@
 import { View, Text, Pressable, type ViewStyle } from 'react-native'
 import { Image } from 'expo-image'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../lib/haptics'
 import { useThemeColors } from '../../stores/theme'
 import { shadows } from '../../theme/tokens'
 
@@ -53,7 +53,7 @@ export function Avatar({ name, uri, size = 44, ring = true, onPress, accessibili
     return (
       <Pressable
         onPress={() => {
-          Haptics.selectionAsync().catch(() => {})
+          haptics.selection()
           onPress()
         }}
         hitSlop={8}

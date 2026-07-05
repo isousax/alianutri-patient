@@ -19,8 +19,9 @@ import {
   CheckCircle,
 } from "lucide-react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+import { haptics } from "../src/lib/haptics";
 import { useThemeColors } from "../src/stores/theme";
+import { KeyboardAvoidingWrapper } from "../src/components/ui/KeyboardAvoidingWrapper";
 import { useFeaturesStore } from "../src/stores/features";
 import { toast } from "../src/stores/toast";
 import {
@@ -36,6 +37,7 @@ import {
   ScreenHeader,
   Card,
   EmptyState,
+  ErrorState,
   LoadingScreen,
   SectionLabel,
   SkeletonList,
@@ -54,6 +56,7 @@ export default function QuestionnairesScreen() {
   const {
     data: questionnaires,
     isLoading,
+    isError,
     refetch,
     isRefetching,
   } = useQuestionnaires();
@@ -85,6 +88,8 @@ export default function QuestionnairesScreen() {
 
       {isLoading ? (
         <SkeletonList />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !questionnaires || questionnaires.length === 0 ? (
         <EmptyState
           alia
@@ -117,6 +122,9 @@ export default function QuestionnairesScreen() {
                 >
                   <Pressable
                     onPress={() => (canWrite ? setSelected(q) : null)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${q.title}, pendente. Toque para responder`}
+                    accessibilityState={{ disabled: !canWrite }}
                     style={{
                       marginBottom: space.md,
                       borderRadius: radius.xl,
@@ -178,6 +186,8 @@ export default function QuestionnairesScreen() {
                 >
                   <Pressable
                     onPress={() => setSelected(q)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${q.title}, respondido. Toque para ver`}
                     style={{
                       marginBottom: space.md,
                       borderRadius: radius.xl,
@@ -265,9 +275,7 @@ function AnswerForm({
 
   async function handleSubmit() {
     if (requiredCount > 0 && answeredRequired < requiredCount) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
-        () => {},
-      );
+      haptics.warning();
       toast.error(
         `Responda as ${requiredCount} perguntas obrigatórias antes de enviar.`,
       );
@@ -275,15 +283,11 @@ function AnswerForm({
     }
     try {
       await mutateAsync({ qId: questionnaire.id, responses });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-        () => {},
-      );
+      haptics.success();
       toast.success("Questionário enviado!");
       onBack();
     } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
-        () => {},
-      );
+      haptics.error();
       toast.error("Não foi possível enviar as respostas.");
     }
   }
@@ -304,7 +308,7 @@ function AnswerForm({
           description="Não foi possível carregar as perguntas deste questionário."
         />
       ) : (
-        <>
+        <KeyboardAvoidingWrapper>
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={{
@@ -362,6 +366,7 @@ function AnswerForm({
                     <TextInput
                       value={responses[String(idx)] ?? ""}
                       onChangeText={(txt) => setAnswer(idx, txt)}
+                      accessibilityLabel={q.text}
                       placeholder="Digite sua resposta..."
                       placeholderTextColor={t.textMuted}
                       editable={!readOnly}
@@ -391,6 +396,9 @@ function AnswerForm({
                           <Pressable
                             key={opt}
                             onPress={() => setAnswer(idx, opt)}
+                            accessibilityRole="button"
+                            accessibilityLabel={opt}
+                            accessibilityState={{ selected: sel }}
                             style={{
                               flexDirection: "row",
                               alignItems: "center",
@@ -437,6 +445,9 @@ function AnswerForm({
                           <Pressable
                             key={opt}
                             onPress={() => setAnswer(idx, opt)}
+                            accessibilityRole="button"
+                            accessibilityLabel={opt}
+                            accessibilityState={{ selected: sel }}
                             style={{
                               flex: 1,
                               alignItems: "center",
@@ -481,6 +492,9 @@ function AnswerForm({
                               <Pressable
                                 key={n}
                                 onPress={() => setAnswer(idx, String(n))}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Nota ${n} de 10`}
+                                accessibilityState={{ selected: sel }}
                                 style={{
                                   width: 30,
                                   height: 30,
@@ -548,6 +562,9 @@ function AnswerForm({
             <Pressable
               onPress={handleSubmit}
               disabled={isPending}
+              accessibilityRole="button"
+              accessibilityLabel="Enviar respostas"
+              accessibilityState={{ disabled: isPending, busy: isPending }}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -572,7 +589,7 @@ function AnswerForm({
             </Pressable>
           </View>
           )}
-        </>
+        </KeyboardAvoidingWrapper>
       )}
     </SafeAreaView>
   );

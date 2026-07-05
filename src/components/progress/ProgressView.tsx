@@ -3,10 +3,11 @@ import { View, Text, ScrollView, Pressable, Dimensions } from 'react-native'
 import { TrendingDown, TrendingUp, Minus, LineChart as LineChartIcon } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../../stores/theme'
-import { useWeightHistory, useEvolution, useChartsSummary, usePortalProfile } from '../../hooks/usePortal'
+import { useWeightHistory, useEvolution, useChartsSummary, usePortalProfile, useGoals, usePortalHome, useMealPlanDetail } from '../../hooks/usePortal'
 import { Card, EmptyState, MacrosBar } from '../ui'
 import { LineChart, type LineChartPoint } from '../charts/LineChart'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
+import { todayBRT } from '../../lib/date'
 
 // Conteúdo de "Progresso" (gráficos de evolução), reusado pela rota /evolution
 // e pelo segmento Progresso do Diário (P1). Renderiza só a área rolável — quem
@@ -67,6 +68,18 @@ function distToBand(v: number | null, band: [number, number] | null): number | n
   return 0
 }
 
+const fmtG = (v: number | null | undefined) => (v == null ? '—' : `${Math.round(v)}g`)
+
+function StatTile({ label, value, color }: { label: string; value: string; color: string }) {
+  const t = useThemeColors()
+  return (
+    <View style={{ flex: 1, backgroundColor: t.surfaceSecondary, borderRadius: radius.lg, paddingVertical: space.sm, paddingHorizontal: space.md }}>
+      <Text style={[typography.caption, { color: t.textMuted }]}>{label}</Text>
+      <Text style={[typography.labelMd, { color, marginTop: 2 }]}>{value}</Text>
+    </View>
+  )
+}
+
 export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number }) {
   const t = useThemeColors()
   const [metric, setMetric] = useState<Metric>('weight')
@@ -75,6 +88,14 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
   const { data: evolution } = useEvolution()
   const { data: charts } = useChartsSummary(period === 0 ? 365 : period)
   const { data: profile } = usePortalProfile()
+  const { data: goals } = useGoals()
+  const { data: home } = usePortalHome()
+  // Meta de peso (do nutri) como linha de referência — só no gráfico de peso.
+  const weightTarget = goals?.find((g) => g.type === 'weight' && g.status === 'active' && g.target_value != null)?.target_value ?? null
+  // Plano ativo → meta calórica (linha de referência) e macros-alvo (via detalhe).
+  const activePlan = home?.active_meal_plan ?? null
+  const targetKcal = activePlan?.target_kcal ?? activePlan?.total_kcal ?? null
+  const { data: planDetail } = useMealPlanDetail(metric === 'nutrition' ? activePlan?.id ?? null : null)
   const heightM = profile?.height_cm ? profile.height_cm / 100 : null
   // Faixa saudável (IMC 18,5–25) na unidade da métrica: direto p/ IMC; convertida
   // p/ kg via altura no peso. Alimenta a faixa do gráfico e a cor da tendência.
@@ -155,27 +176,59 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
     return increasing ? t.success : decreasing ? t.warning : t.textMuted
   })()
 
-  const macroTotals = useMemo(() => {
+  const nutritionStats = useMemo(() => {
     if (metric !== 'nutrition' || !charts?.nutrition?.length) return null
-    return charts.nutrition.reduce(
-      (acc, d) => ({ protein: acc.protein + (d.protein_g || 0), carbs: acc.carbs + (d.carbs_g || 0), fat: acc.fat + (d.fat_g || 0) }),
-      { protein: 0, carbs: 0, fat: 0 },
+    const days = charts.nutrition
+    const n = days.length
+    const sum = days.reduce(
+      (acc, d) => ({
+        kcal: acc.kcal + (d.calories || 0),
+        protein: acc.protein + (d.protein_g || 0),
+        carbs: acc.carbs + (d.carbs_g || 0),
+        fat: acc.fat + (d.fat_g || 0),
+      }),
+      { kcal: 0, protein: 0, carbs: 0, fat: 0 },
     )
+    return { days: n, avgKcal: sum.kcal / n, avgProtein: sum.protein / n, avgCarbs: sum.carbs / n, avgFat: sum.fat / n }
   }, [metric, charts])
+
+  // Aderência calórica: média/dia vs meta do plano. Dentro de 90–110% = ok;
+  // abaixo = informativo (possível déficit); acima = atenção.
+  const adherenceRatio = targetKcal != null && nutritionStats ? nutritionStats.avgKcal / targetKcal : null
+  const adherenceColor =
+    adherenceRatio == null
+      ? t.textMuted
+      : adherenceRatio >= 0.9 && adherenceRatio <= 1.1
+      ? t.success
+      : adherenceRatio < 0.9
+      ? t.info
+      : t.warning
 
   // A Nutrição vem só de fotos de refeição analisadas pela IA; os registros de
   // hoje só entram no gráfico depois que a análise conclui. Detecta se hoje já
   // tem ponto para avisar o usuário (evita a impressão de "faltou dado").
-  const todayStr = (() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })()
   const nutritionMissingToday =
-    metric === 'nutrition' && !(charts?.nutrition ?? []).some((d) => d.date === todayStr)
+    metric === 'nutrition' && !(charts?.nutrition ?? []).some((d) => d.date === todayBRT())
 
   const chartWidth = Dimensions.get('window').width - SCREEN_PADDING * 2 - space.lg * 2
   const fmtVal = (v: number) => `${v.toFixed(series.decimals).replace('.', ',')}${series.unit ? ` ${series.unit}` : ''}`
   const currentLabel = metric === 'nutrition' || metric === 'water' ? 'Último dia' : 'Atual'
+  const metricLabel = METRICS.find((m) => m.id === metric)?.label ?? ''
+  const chartSummary =
+    current == null
+      ? undefined
+      : (() => {
+          let s = `${metricLabel}: ${currentLabel.toLowerCase()} ${fmtVal(current)}.`
+          if (delta != null) {
+            s += ` Variação no período: ${delta > 0 ? '+' : ''}${delta.toFixed(series.decimals).replace('.', ',')}${series.unit ? ` ${series.unit}` : ''}.`
+          }
+          if (metric === 'nutrition' && nutritionStats) {
+            s += ` Média ${Math.round(nutritionStats.avgKcal)} kcal por dia`
+            if (adherenceRatio != null) s += `, ${Math.round(adherenceRatio * 100)}% da meta`
+            s += ` em ${nutritionStats.days} ${nutritionStats.days === 1 ? 'dia' : 'dias'}.`
+          }
+          return s
+        })()
   const bmiCat = metric === 'bmi' && current != null ? bmiCategory(current) : null
   const bmiCatColor = !bmiCat ? t.textMuted
     : bmiCat.key === 'ok' ? t.success
@@ -268,13 +321,28 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
               width={chartWidth}
               unit={series.unit}
               decimals={series.decimals}
+              target={metric === 'weight' ? weightTarget : metric === 'nutrition' ? targetKcal : null}
               band={healthyBand ? { from: healthyBand[0], to: healthyBand[1], color: t.success } : null}
+              accessibilityLabel={chartSummary}
             />
 
-            {macroTotals && (
+            {nutritionStats && (
               <View style={{ marginTop: space.lg }}>
-                <Text style={[typography.caption, { color: t.textMuted, marginBottom: space.xs }]}>Macros estimados no período</Text>
-                <MacrosBar protein_g={macroTotals.protein} carbs_g={macroTotals.carbs} fat_g={macroTotals.fat} />
+                <View style={{ flexDirection: 'row', gap: space.sm }}>
+                  <StatTile label="Média/dia" value={`${Math.round(nutritionStats.avgKcal)} kcal`} color={t.text} />
+                  {targetKcal != null ? (
+                    <StatTile label="Da meta" value={`${Math.round((adherenceRatio ?? 0) * 100)}%`} color={adherenceColor} />
+                  ) : null}
+                  <StatTile label="Registrados" value={`${nutritionStats.days} ${nutritionStats.days === 1 ? 'dia' : 'dias'}`} color={t.text} />
+                </View>
+
+                <Text style={[typography.caption, { color: t.textMuted, marginTop: space.lg, marginBottom: space.xs }]}>Média diária de macros</Text>
+                <MacrosBar protein_g={nutritionStats.avgProtein} carbs_g={nutritionStats.avgCarbs} fat_g={nutritionStats.avgFat} />
+                {planDetail && (planDetail.target_protein_g != null || planDetail.target_carbs_g != null || planDetail.target_fat_g != null) ? (
+                  <Text style={[typography.caption, { color: t.textMuted, marginTop: space.xs }]}>
+                    Meta do plano: {fmtG(planDetail.target_protein_g)} P · {fmtG(planDetail.target_carbs_g)} C · {fmtG(planDetail.target_fat_g)} G
+                  </Text>
+                ) : null}
               </View>
             )}
 

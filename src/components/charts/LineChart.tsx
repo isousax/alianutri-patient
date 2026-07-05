@@ -21,8 +21,12 @@ interface LineChartProps {
   target?: number | null
   /** optional shaded healthy range (e.g. IMC 18,5–25) drawn behind the line */
   band?: { from: number; to: number; color?: string } | null
+  /** optional secondary line aligned 1:1 with `data` (e.g. 7-day moving average) */
+  overlay?: { values: number[]; color?: string; dashed?: boolean } | null
   unit?: string
   decimals?: number
+  /** textual summary read by screen readers instead of the opaque SVG (U-5, a11y) */
+  accessibilityLabel?: string
 }
 
 const PAD_X = 14
@@ -30,7 +34,7 @@ const PAD_TOP = 16
 const PAD_BOTTOM = 10
 
 /** Reusable evolution line chart — gradient area, animated draw, highlighted last point. */
-export function LineChart({ data, width, height = 180, color, target, band, unit, decimals = 1 }: LineChartProps) {
+export function LineChart({ data, width, height = 180, color, target, band, overlay, unit, decimals = 1, accessibilityLabel }: LineChartProps) {
   const t = useThemeColors()
   const stroke = color ?? t.primary
 
@@ -38,7 +42,13 @@ export function LineChart({ data, width, height = 180, color, target, band, unit
   const chartH = height - PAD_TOP - PAD_BOTTOM
 
   const values = data.map((d) => d.value)
-  const all = [...values, ...(target != null ? [target] : []), ...(band ? [band.from, band.to] : [])]
+  const hasOverlay = !!overlay && overlay.values.length === data.length && data.length > 1
+  const all = [
+    ...values,
+    ...(target != null ? [target] : []),
+    ...(band ? [band.from, band.to] : []),
+    ...(hasOverlay ? overlay!.values : []),
+  ]
   const minV = all.length ? Math.min(...all) : 0
   const maxV = all.length ? Math.max(...all) : 1
   const span = maxV - minV || 1
@@ -72,8 +82,12 @@ export function LineChart({ data, width, height = 180, color, target, band, unit
   const fmt = (v: number) => `${v.toFixed(decimals).replace('.', ',')}${unit ? ` ${unit}` : ''}`
 
   return (
-    <View>
-      <Svg width={width} height={height}>
+    <View
+      accessible={!!accessibilityLabel}
+      accessibilityRole={accessibilityLabel ? 'image' : undefined}
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Svg width={width} height={height} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <Defs>
           <LinearGradient id="lcArea" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={stroke} stopOpacity="0.18" />
@@ -105,6 +119,19 @@ export function LineChart({ data, width, height = 180, color, target, band, unit
         )}
 
         {data.length > 1 && <Polyline points={areaPts} fill="url(#lcArea)" stroke="none" />}
+
+        {hasOverlay && (
+          <Polyline
+            points={overlay!.values.map((v, i) => `${xAt(i)},${yAt(v)}`).join(' ')}
+            fill="none"
+            stroke={overlay!.color ?? t.textMuted}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            strokeDasharray={overlay!.dashed ? '5 4' : undefined}
+            opacity={0.9}
+          />
+        )}
 
         {data.length > 1 && (
           <AnimatedPolyline

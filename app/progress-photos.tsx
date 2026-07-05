@@ -7,7 +7,7 @@ import {
   Camera, Image as ImageIcon, Sparkles, Trash2, X,
 } from 'lucide-react-native'
 import * as ImagePicker from 'expo-image-picker'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../src/lib/haptics'
 import { Image } from 'expo-image'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient'
@@ -18,7 +18,7 @@ import type { ProgressPhoto } from '../src/types/portal'
 import { useAuthStore } from '../src/stores/auth'
 import { toast } from '../src/stores/toast'
 import { confirm } from '../src/stores/confirm'
-import { ScreenHeader, EmptyState, SectionLabel, SkeletonBlock } from '../src/components/ui'
+import { ScreenHeader, EmptyState, ErrorState, SectionLabel, SkeletonBlock } from '../src/components/ui'
 import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
 
@@ -37,7 +37,7 @@ export default function ProgressPhotosScreen() {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const accessCode = useAuthStore((s) => s.accessCode)
-  const { data, isLoading } = useProgressPhotos()
+  const { data, isLoading, isError, refetch } = useProgressPhotos()
   const { mutateAsync: upload, isPending: isUploading } = useUploadProgressPhoto()
   const { mutateAsync: deletePhoto } = useDeleteProgressPhoto()
   const [selectedCategory, setSelectedCategory] = useState('front')
@@ -51,7 +51,7 @@ export default function ProgressPhotosScreen() {
   // Comparar evolução: escolhe 2 fotos e vê lado a lado (antes/depois por data).
   const exitCompare = () => { setCompareMode(false); setCompareIds([]); setCompareOpen(false) }
   const toggleCompare = (photo: ProgressPhoto) => {
-    Haptics.selectionAsync().catch(() => {})
+    haptics.selection()
     setCompareIds((prev) =>
       prev.includes(photo.id)
         ? prev.filter((id) => id !== photo.id)
@@ -84,7 +84,7 @@ export default function ProgressPhotosScreen() {
     if (result.canceled || !result.assets?.[0]) return
 
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+      haptics.medium()
       await upload({
         uri: result.assets[0].uri,
         category: selectedCategory,
@@ -112,7 +112,7 @@ export default function ProgressPhotosScreen() {
     if (result.canceled || !result.assets?.[0]) return
 
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+      haptics.medium()
       await upload({
         uri: result.assets[0].uri,
         category: selectedCategory,
@@ -175,6 +175,9 @@ export default function ProgressPhotosScreen() {
               <Pressable
                 key={cat.value}
                 onPress={() => setSelectedCategory(cat.value)}
+                accessibilityRole="button"
+                accessibilityLabel={cat.label}
+                accessibilityState={{ selected: selectedCategory === cat.value }}
                 style={{
                   flex: 1,
                   paddingVertical: space.sm + 2,
@@ -199,6 +202,9 @@ export default function ProgressPhotosScreen() {
             <Pressable
               onPress={handleTakePhoto}
               disabled={isUploading || !canWrite}
+              accessibilityRole="button"
+              accessibilityLabel="Tirar foto com a câmera"
+              accessibilityState={{ disabled: isUploading || !canWrite, busy: isUploading }}
               style={{
                 flex: 1,
                 flexDirection: 'row',
@@ -222,6 +228,9 @@ export default function ProgressPhotosScreen() {
             <Pressable
               onPress={handlePickPhoto}
               disabled={isUploading || !canWrite}
+              accessibilityRole="button"
+              accessibilityLabel="Escolher foto da galeria"
+              accessibilityState={{ disabled: isUploading || !canWrite, busy: isUploading }}
               style={{
                 flex: 1,
                 flexDirection: 'row',
@@ -250,6 +259,10 @@ export default function ProgressPhotosScreen() {
                 <SkeletonBlock width="48%" height={180} borderRadius={radius.lg} />
               </View>
             ))}
+          </View>
+        ) : isError ? (
+          <View style={{ marginTop: space['4xl'] }}>
+            <ErrorState onRetry={() => refetch()} />
           </View>
         ) : photos.length === 0 ? (
           <EmptyState
@@ -353,7 +366,7 @@ export default function ProgressPhotosScreen() {
                     onConfirm: async () => {
                       try {
                         await deletePhoto(viewerPhoto.id)
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                        haptics.success()
                         setViewerPhoto(null)
                       } catch {
                         toast.error('Não foi possível excluir a foto.')

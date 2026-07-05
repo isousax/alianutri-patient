@@ -252,26 +252,9 @@ export const glass = {
 
 // ── Date helpers (centralized, no more duplication) ──
 
-export function todayStr(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-export function shiftDate(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T12:00:00')
-  d.setDate(d.getDate() + days)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-export function fmtDateShort(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
-}
-
-export function fmtDateLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-}
+// Helpers de data centralizados em `src/lib/date` (U-6, fonte única BRT).
+// Reexportados aqui para não quebrar os imports existentes `from '../theme/tokens'`.
+export { todayStr, shiftDate, fmtDateShort, fmtDateLabel } from '../lib/date'
 
 export function fmtWater(ml: number): string {
   return ml >= 1000 ? `${(ml / 1000).toFixed(1).replace('.', ',')}L` : `${ml}ml`

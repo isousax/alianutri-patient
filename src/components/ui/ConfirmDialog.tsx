@@ -1,6 +1,6 @@
 import { View, Text, Pressable, Modal } from 'react-native'
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
+import { haptics } from '../../lib/haptics'
 import { useThemeColors } from '../../stores/theme'
 import { typography, radius, space, shadows, glass } from '../../theme/tokens'
 import { useConfirmStore } from '../../stores/confirm'
@@ -22,7 +22,7 @@ export function ConfirmDialog() {
   const confirmFg = current.destructive ? '#fff' : t.primaryFg
 
   const handleConfirm = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
+    haptics.medium()
     close()
     current.onConfirm?.()
   }
