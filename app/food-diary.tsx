@@ -10,7 +10,6 @@ import {
   Camera, Clock, Utensils, Undo2, Plus,
   ChevronDown, X,
 } from 'lucide-react-native'
-import { Image } from 'expo-image'
 import { haptics } from '../src/lib/haptics'
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
@@ -25,7 +24,7 @@ import { useFeaturesStore } from '../src/stores/features'
 import { useAuthStore } from '../src/stores/auth'
 import { useDiaryToday, useDiaryStreak, useLogFoodDiary, useDeleteFoodDiary, useFoodDiary } from '../src/hooks/usePortal'
 import type { DiaryTimelineMeal, PortalFoodDiaryEntry } from '../src/types/portal'
-import { ScreenHeader, SkeletonBlock } from '../src/components/ui'
+import { ScreenHeader, SkeletonBlock, ShimmerImage } from '../src/components/ui'
 import { BottomSheet } from '../src/components/ui/BottomSheet'
 import { ConfettiCelebration } from '../src/components/ui/ConfettiCelebration'
 import { RewardTrophy } from '../src/components/ui/RewardTrophy'
@@ -874,11 +873,11 @@ function CompactLoggedRow({
         <Animated.View entering={FadeIn.duration(200)} className="ml-9 mt-1 mb-1">
           {meal.entry?.photo_url && (
             <View className="rounded-xl overflow-hidden mb-2">
-              <Image
+              <ShimmerImage
                 source={portalImageSource(accessCode, sessionToken, `/diary/photo/${meal.entry.id}`)}
                 style={{ width: '100%', height: 140 }}
                 contentFit="cover"
-                className="rounded-xl"
+                recyclingKey={meal.entry.id}
               />
             </View>
           )}

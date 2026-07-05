@@ -1,5 +1,5 @@
 import { View, Text, Pressable } from 'react-native'
-import { Image } from 'expo-image'
+import { ShimmerImage } from '../ui'
 import { Utensils, BookOpen } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
@@ -32,10 +32,11 @@ export function MiniPostCard({ post, onPress }: { post: DiaryPost; onPress: () =
       style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm }}
     >
       {post.has_photo ? (
-        <Image
+        <ShimmerImage
           source={post._local && post._localPhotoUri ? { uri: post._localPhotoUri } : diaryPhotoSource(accessCode, sessionToken, post.id, 'thumb')}
           style={{ width: 56, height: 56, borderRadius: radius.md }}
           contentFit="cover"
+          recyclingKey={post.id}
         />
       ) : (
         <View style={{ width: 56, height: 56, borderRadius: radius.md, backgroundColor: t.surfaceSecondary, alignItems: 'center', justifyContent: 'center' }}>

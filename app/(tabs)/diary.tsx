@@ -8,7 +8,7 @@ import { useThemeColors } from '../../src/stores/theme'
 import { useAuthStore } from '../../src/stores/auth'
 import { useFeaturesStore } from '../../src/stores/features'
 import { useDiaryFeed, usePortalHome, useDiaryToday, useDiaryStreak } from '../../src/hooks/usePortal'
-import { EmptyState, ErrorState, SkeletonList, ReadOnlyBanner, SegmentedControl } from '../../src/components/ui'
+import { EmptyState, ErrorState, SkeletonList, ReadOnlyBanner, SegmentedControl, ShimmerImage } from '../../src/components/ui'
 import { PostCard } from '../../src/components/feed/PostCard'
 import { diaryPhotoSource } from '../../src/lib/diaryPhoto'
 import { useIsOnline } from '../../src/lib/network'
@@ -46,7 +46,7 @@ const GridTile = memo(function GridTile({
   const Icon = isMeal ? Utensils : BookOpen
   return (
     <Pressable onPress={onPress} style={{ width, height, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: t.surfaceSecondary }}>
-      <Image source={source} style={{ width, height }} contentFit="cover" cachePolicy="memory-disk" recyclingKey={post.id} transition={0} />
+      <ShimmerImage source={source} style={{ width, height }} contentFit="cover" cachePolicy="memory-disk" recyclingKey={post.id} />
       <View style={{ position: 'absolute', left: 6, bottom: 6, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: radius.full, backgroundColor: 'rgba(0,0,0,0.55)' }}>
         <Icon size={11} color="#fff" />
         {big ? <Text style={[typography.caption, { color: '#fff', fontSize: 10, fontWeight: '600' }]}>{isMeal ? 'Refeição' : 'Diário'}</Text> : null}

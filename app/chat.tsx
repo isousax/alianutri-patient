@@ -13,7 +13,7 @@ import { useFeaturesStore } from '../src/stores/features'
 import { useChatMessages, useSendChatMessage, usePortalHome } from '../src/hooks/usePortal'
 import type { ChatMessage } from '../src/types/portal'
 import { SkeletonChatList } from '../src/components/Skeleton'
-import { ScreenHeader, EmptyState, ErrorState, KeyboardAvoidingWrapper } from '../src/components/ui'
+import { ScreenHeader, EmptyState, ErrorState, KeyboardAvoidingWrapper, Avatar } from '../src/components/ui'
 import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { radius, space, typography, SCREEN_PADDING, shadows } from '../src/theme/tokens'
 
@@ -139,16 +139,12 @@ export default function ChatScreen() {
           title="Chat"
           subtitle={`com ${nutriName}`}
           rightAction={
-            <View style={{
-              width: 36, height: 36,
-              borderRadius: 18,
-              alignItems: 'center', justifyContent: 'center',
-              backgroundColor: t.primaryLight,
-            }}>
-              <Text style={[typography.captionBold, { color: t.primary }]}>
-                {nutriName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            <Avatar
+              name={nutriName}
+              uri={homeData?.nutritionist?.photo_url ?? null}
+              size={36}
+              ring={false}
+            />
           }
         />
 

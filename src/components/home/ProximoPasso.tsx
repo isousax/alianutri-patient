@@ -65,8 +65,10 @@ export function ProximoPasso({
 
   const Icon = ICONS[step.kind]
   const done = step.kind === 'allDone'
-  const accent = done ? t.success : t.primary
-  const accentLight = done ? t.successLight : t.primaryLight
+  // Conclusão veste a MARCA (não o verde de success) — em Natureza/Noturno primary já
+  // é esverdeado, então só o Rosé muda de fato (deixa de "parecer de outro tema").
+  const accent = t.primary
+  const accentLight = t.primaryLight
   const interactive = !!step.route
 
   const onPress = () => {

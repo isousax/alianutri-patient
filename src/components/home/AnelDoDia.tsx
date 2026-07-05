@@ -115,10 +115,10 @@ export function AnelDoDia({
                     borderRadius: radius.sm,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: t.infoLight,
+                    backgroundColor: t.primaryLight,
                   }}
                 >
-                  <Droplets size={16} color={waterPct >= 1 ? t.success : t.info} />
+                  <Droplets size={16} color={t.primary} />
                 </View>
                 <View style={{ marginLeft: space.sm, flex: 1 }}>
                   <Text style={[typography.labelMd, { color: t.text }]} numberOfLines={1}>
@@ -130,7 +130,7 @@ export function AnelDoDia({
               <ProgressBar
                 progress={waterPct}
                 height={5}
-                color={waterPct >= 1 ? t.success : t.info}
+                color={t.primary}
                 trackColor={t.borderLight}
               />
             </Pressable>

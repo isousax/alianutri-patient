@@ -150,12 +150,12 @@ export function RefeicoesDeHoje({ meals }: RefeicoesDeHojeProps) {
                   borderRadius: radius.md,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: logged ? t.successLight : t.surfaceSecondary,
+                  backgroundColor: logged ? t.primaryLight : t.surfaceSecondary,
                   marginRight: space.md,
                 }}
               >
                 {logged ? (
-                  <Check size={20} color={t.success} />
+                  <Check size={20} color={t.primary} />
                 ) : (
                   <Utensils size={18} color={t.textMuted} />
                 )}

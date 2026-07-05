@@ -1,13 +1,13 @@
 import { memo } from 'react'
 import { View, Text, Pressable } from 'react-native'
-import { Image, type ImageSource } from 'expo-image'
+import { type ImageSource } from 'expo-image'
 import { Utensils, BookOpen, CloudOff } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
 import { useUpdatePostType } from '../../hooks/usePortal'
 import { confirm } from '../../stores/confirm'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
-import { Card, MacrosBar, AuroraBackground, Avatar } from '../ui'
+import { Card, MacrosBar, AuroraBackground, Avatar, ShimmerImage } from '../ui'
 import { AILoader } from '../ui/AILoader'
 import { AliaAvatar } from '../ui/AliaAvatar'
 import { diaryPhotoSource } from '../../lib/diaryPhoto'
@@ -88,13 +88,12 @@ export const PostCard = memo(function PostCard({ post, nutriName, nutriPhoto }: 
 
       {/* Foto */}
       {photoSource && (
-        <Image
+        <ShimmerImage
           source={photoSource}
-          style={{ width: '100%', height: 300, backgroundColor: t.surfaceSecondary }}
+          style={{ width: '100%', height: 300 }}
           contentFit="cover"
           cachePolicy="memory-disk"
           recyclingKey={post.id}
-          transition={0}
         />
       )}
 

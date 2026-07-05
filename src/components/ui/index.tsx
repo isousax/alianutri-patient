@@ -20,6 +20,8 @@ import { shadows, radius, space, typography, SCREEN_PADDING, motion } from '../.
 
 import { AuroraBackground } from './AuroraBackground'
 
+export { ShimmerImage } from './ShimmerImage'
+
 // ══════════════════════════════════════════════════════
 //  CARD — The fundamental surface container
 //  Borderless on light themes, subtle border on dark

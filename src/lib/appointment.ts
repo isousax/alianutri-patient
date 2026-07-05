@@ -47,7 +47,9 @@ export function appointmentStatusMeta(status: AppointmentStatus): AppointmentSta
     case 'rescheduled':
       return { label: 'Reagendada', tone: 'warning' }
     case 'completed':
-      return { label: 'Realizada', tone: 'success' }
+      // "Realizada" veste a MARCA (tone primary), não o verde de `success` — uma
+      // conclusão positiva deve parecer do tema atual (ex.: rosa no Rosé), nunca de outro.
+      return { label: 'Realizada', tone: 'primary' }
     case 'no_show':
       return { label: 'Não compareceu', tone: 'error' }
     case 'canceled':

@@ -95,16 +95,16 @@ export function Conquistas({ bottomPadding = 100 }: { bottomPadding?: number }) 
           const p = ch.target > 0 ? Math.max(0, Math.min(1, ch.current / ch.target)) : 0
           return (
             <View key={ch.id} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: i > 0 ? space.md : 0 }}>
-              <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: ch.done ? t.successLight : t.surfaceSecondary }}>
-                <Icon size={18} color={ch.done ? t.success : t.textSecondary} strokeWidth={2} />
+              <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: ch.done ? t.primaryLight : t.surfaceSecondary }}>
+                <Icon size={18} color={ch.done ? t.primary : t.textSecondary} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={[typography.labelSm, { color: t.text }]} numberOfLines={1}>{ch.label}</Text>
-                  <Text style={[typography.caption, { color: ch.done ? t.success : t.textMuted }]}>{ch.done ? 'Concluído' : `${ch.current}/${ch.target}`}</Text>
+                  <Text style={[typography.caption, { color: ch.done ? t.primary : t.textMuted }]}>{ch.done ? 'Concluído' : `${ch.current}/${ch.target}`}</Text>
                 </View>
                 <Text style={[typography.caption, { color: t.textMuted }]} numberOfLines={1}>{ch.hint}</Text>
-                <ProgressBar progress={p} color={ch.done ? t.success : t.primary} style={{ marginTop: 6 }} />
+                <ProgressBar progress={p} color={t.primary} style={{ marginTop: 6 }} />
               </View>
             </View>
           )

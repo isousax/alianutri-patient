@@ -24,8 +24,8 @@ export function GoalsPreview({ goals }: GoalsPreviewProps) {
       <Card onPress={() => router.push('/goals')}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ width: 28, height: 28, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: t.successLight }}>
-              <Target size={14} color={t.success} />
+            <View style={{ width: 28, height: 28, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primaryLight }}>
+              <Target size={14} color={t.primary} />
             </View>
             <Text style={[typography.headingSm, { color: t.text, marginLeft: space.sm }]}>Metas</Text>
           </View>
@@ -35,7 +35,7 @@ export function GoalsPreview({ goals }: GoalsPreviewProps) {
           // P0-1: progresso vem pronto do servidor (fonte única). Sem cálculo local.
           const pct = goal.progress?.pct ?? null
           const reached = goal.progress?.reached ?? false
-          const accent = reached ? t.success : t.primary
+          const accent = t.primary
           return (
             <View key={goal.id} style={i > 0 ? { marginTop: space.md } : undefined}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>

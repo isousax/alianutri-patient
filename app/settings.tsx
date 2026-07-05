@@ -8,7 +8,7 @@ import { haptics } from '../src/lib/haptics'
 import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { useAuthStore } from '../src/stores/auth'
-import { useThemeColors, useThemeStore, type AppearanceMode, type LightThemeId } from '../src/stores/theme'
+import { useThemeColors, useTheme, useThemeStore, type AppearanceMode, type LightThemeId } from '../src/stores/theme'
 import { THEMES, type ThemeColors } from '../src/theme/themes'
 import { ScreenHeader, Card, SectionLabel, Divider, SegmentedControl } from '../src/components/ui'
 import { radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
@@ -21,6 +21,7 @@ const LIGHT_THEMES = [THEMES.default, THEMES.rose]
 
 export default function SettingsScreen() {
   const t = useThemeColors()
+  const theme = useTheme()
   const mode = useThemeStore((s) => s.mode)
   const lightTheme = useThemeStore((s) => s.lightTheme)
   const setMode = useThemeStore((s) => s.setMode)
@@ -130,7 +131,8 @@ export default function SettingsScreen() {
                       toggleReminder(r.id)
                     }}
                     trackColor={{ false: t.surfacePressed, true: t.primary }}
-                    thumbColor={t.surface}
+                    thumbColor={theme.dark ? '#F8FAFC' : t.surface}
+                    ios_backgroundColor={t.surfacePressed}
                   />
                 </View>
               </View>

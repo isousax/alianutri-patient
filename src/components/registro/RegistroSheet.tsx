@@ -86,7 +86,7 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
   // Cor do ícone + fundo do chip (token *Light) por ação — sem hex-alpha frágil.
   const ACTION_STYLE: Record<CreateActionId, { color: string; light: string }> = {
     publish: { color: t.primary, light: t.primaryLight },
-    progress: { color: t.success, light: t.successLight },
+    progress: { color: t.primary, light: t.primaryLight },
     wellness: { color: t.error, light: t.errorLight },
   }
 
@@ -142,11 +142,11 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
                       alignItems: 'center',
                       paddingVertical: space.md,
                       borderRadius: radius.lg,
-                      backgroundColor: added ? t.successLight : t.infoLight,
+                      backgroundColor: added ? t.primaryLight : t.infoLight,
                     }}
                   >
                     {added ? (
-                      <Check size={18} color={t.success} />
+                      <Check size={18} color={t.primary} />
                     ) : (
                       <Text style={[typography.labelMd, { color: t.info }]}>{fmtWater(ml)}</Text>
                     )}
@@ -160,7 +160,7 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
           <View style={{ marginBottom: space.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Scale size={16} color={t.accent} />
+                <Scale size={16} color={t.primary} />
                 <Text accessibilityRole="header" style={[typography.labelMd, { color: t.text, marginLeft: space.xs }]}>Peso de hoje</Text>
               </View>
               <Pressable onPress={() => go('/weight')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Abrir página de peso (histórico e gráfico)" style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
@@ -173,9 +173,9 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
                 onPress={() => stepWeight(-0.1)}
                 accessibilityRole="button"
                 accessibilityLabel="Diminuir 0,1 kg"
-                style={{ width: 44, height: 44, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: t.accentLight }}
+                style={{ width: 44, height: 44, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primaryLight }}
               >
-                <Minus size={18} color={t.accent} />
+                <Minus size={18} color={t.primary} />
               </Pressable>
               <View accessible accessibilityLabel={`Peso atual: ${shownWeight.toFixed(1).replace('.', ',')} quilos`} style={{ flex: 1, alignItems: 'center', paddingVertical: space.sm, borderRadius: radius.lg, backgroundColor: t.surfaceSecondary }}>
                 <Text style={[typography.headingSm, { color: t.text }]}>{shownWeight.toFixed(1).replace('.', ',')} kg</Text>
@@ -184,9 +184,9 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
                 onPress={() => stepWeight(0.1)}
                 accessibilityRole="button"
                 accessibilityLabel="Aumentar 0,1 kg"
-                style={{ width: 44, height: 44, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: t.accentLight }}
+                style={{ width: 44, height: 44, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primaryLight }}
               >
-                <Plus size={18} color={t.accent} />
+                <Plus size={18} color={t.primary} />
               </Pressable>
               <Pressable
                 onPress={saveWeight}
@@ -194,7 +194,7 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
                 accessibilityRole="button"
                 accessibilityLabel={`Salvar peso ${shownWeight.toFixed(1).replace('.', ',')} kg`}
                 accessibilityState={{ disabled: isSavingWeight, busy: isSavingWeight }}
-                style={{ minWidth: 76, height: 44, paddingHorizontal: space.md, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: savedWeight ? t.success : t.accent }}
+                style={{ minWidth: 76, height: 44, paddingHorizontal: space.md, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary }}
               >
                 {savedWeight ? <Check size={18} color="#fff" /> : <Text style={[typography.labelMd, { color: '#fff' }]}>Salvar</Text>}
               </Pressable>

@@ -42,8 +42,9 @@ function ReminderRow({ def }: { def: ReminderToggle }) {
       <Switch
         value={enabled}
         onValueChange={() => { haptics.selection(); toggle(def.id) }}
-        trackColor={{ false: t.borderLight, true: t.primary }}
+        trackColor={{ false: t.surfacePressed, true: t.primary }}
         thumbColor="#fff"
+        ios_backgroundColor={t.surfacePressed}
       />
     </View>
   )

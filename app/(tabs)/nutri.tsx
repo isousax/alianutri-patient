@@ -292,8 +292,8 @@ function QuestionnairesSegment({ items }: { items: PortalQuestionnaire[] }) {
               <View key={q.id}>
                 {i > 0 && <View style={{ height: 1, backgroundColor: t.borderLight, marginLeft: 68 }} />}
                 <ListRow
-                  icon={<CheckCircle2 size={18} color={t.success} />}
-                  iconBg={t.successLight}
+                  icon={<CheckCircle2 size={18} color={t.primary} />}
+                  iconBg={t.primaryLight}
                   title={q.title}
                   subtitle="Ver suas respostas"
                   onPress={() => router.push('/questionnaires')}

@@ -186,7 +186,9 @@ export default function WaterScreen() {
     [deleteWater, refetch, canWrite],
   );
 
-  const ringColor = displayProgress >= 1 ? t.success : t.info;
+  // Hidratação veste a MARCA (identidade por tema); atingir a meta é sinalizado
+  // pelo anel 100% + burst de confete — nunca trocando para cor "de outro tema".
+  const ringColor = t.primary;
 
   return (
     <SafeAreaView
@@ -394,10 +396,10 @@ export default function WaterScreen() {
                             paddingHorizontal: space.sm,
                             paddingVertical: 2,
                             borderRadius: radius.sm,
-                            backgroundColor: t.info + "15",
+                            backgroundColor: t.primary + "15",
                           }}
                         >
-                          <Text style={[typography.captionBold, { color: t.info }]}>
+                          <Text style={[typography.captionBold, { color: t.primary }]}>
                             +{weatherBonusMl}ml hoje
                           </Text>
                         </View>
@@ -514,7 +516,7 @@ export default function WaterScreen() {
                       alignItems: "center",
                       justifyContent: "center",
                       marginBottom: space.xs,
-                      //backgroundColor: t.infoLight,
+                      //backgroundColor: t.primaryLight,
                     }}
                   >
                     <Text style={{ fontSize: 22 }}>{opt.emoji}</Text>
@@ -581,7 +583,7 @@ export default function WaterScreen() {
                   gap: space.sm,
                 }}
               >
-                <Droplets size={14} color={t.info} />
+                <Droplets size={14} color={t.primary} />
                 <Text style={[typography.headingSm, { color: t.text }]}>
                   {entries.length}{" "}
                   {entries.length === 1 ? "registro" : "registros"} hoje
@@ -618,7 +620,7 @@ export default function WaterScreen() {
                         ...shadows.sm,
                       }}
                     >
-                      <Droplets size={14} color={t.info} />
+                      <Droplets size={14} color={t.primary} />
                       <Text
                         style={[
                           typography.labelMd,
