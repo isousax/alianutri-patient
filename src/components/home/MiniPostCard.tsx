@@ -5,7 +5,7 @@ import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
 import { typography, space, radius } from '../../theme/tokens'
 import { AILoader } from '../ui/AILoader'
-import { diaryPhotoUrl } from '../../lib/diaryPhoto'
+import { diaryPhotoSource } from '../../lib/diaryPhoto'
 import type { DiaryPost, DiaryPostType } from '../../types/portal'
 
 const ICON: Record<DiaryPostType, typeof Utensils> = {
@@ -21,6 +21,7 @@ const FALLBACK: Record<DiaryPostType, string> = {
 export function MiniPostCard({ post, onPress }: { post: DiaryPost; onPress: () => void }) {
   const t = useThemeColors()
   const accessCode = useAuthStore((s) => s.accessCode)
+  const sessionToken = useAuthStore((s) => s.sessionToken)
   const Icon = ICON[post.type]
   const ai = post.ai_analysis
   return (
@@ -32,7 +33,7 @@ export function MiniPostCard({ post, onPress }: { post: DiaryPost; onPress: () =
     >
       {post.has_photo ? (
         <Image
-          source={{ uri: post._local && post._localPhotoUri ? post._localPhotoUri : diaryPhotoUrl(accessCode, post.id, 'thumb') }}
+          source={post._local && post._localPhotoUri ? { uri: post._localPhotoUri } : diaryPhotoSource(accessCode, sessionToken, post.id, 'thumb')}
           style={{ width: 56, height: 56, borderRadius: radius.md }}
           contentFit="cover"
         />

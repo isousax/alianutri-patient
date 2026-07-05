@@ -21,10 +21,10 @@ import { confirm } from '../src/stores/confirm'
 import { ScreenHeader, EmptyState, ErrorState, SectionLabel, SkeletonBlock } from '../src/components/ui'
 import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { shadows, radius, space, typography, SCREEN_PADDING } from '../src/theme/tokens'
+import { portalImageSource } from '../src/lib/diaryPhoto'
 
 const SCREEN_W = Dimensions.get('window').width
 const PHOTO_SIZE = (SCREEN_W - SCREEN_PADDING * 2 - space.sm) / 2
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://api.alianutri.com.br'
 
 const CATEGORIES = [
   { value: 'front', label: 'Frente' },
@@ -37,6 +37,7 @@ export default function ProgressPhotosScreen() {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const accessCode = useAuthStore((s) => s.accessCode)
+  const sessionToken = useAuthStore((s) => s.sessionToken)
   const { data, isLoading, isError, refetch } = useProgressPhotos()
   const { mutateAsync: upload, isPending: isUploading } = useUploadProgressPhoto()
   const { mutateAsync: deletePhoto } = useDeleteProgressPhoto()
@@ -301,7 +302,7 @@ export default function ProgressPhotosScreen() {
                       }}
                     >
                       <Image
-                        source={{ uri: `${API_BASE}/p/${accessCode}/progress-photos/${photo.id}` }}
+                        source={portalImageSource(accessCode, sessionToken, `/progress-photos/${photo.id}`)}
                         style={{ width: '100%', height: '100%' }}
                         contentFit="cover"
                       />
@@ -389,7 +390,7 @@ export default function ProgressPhotosScreen() {
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             {viewerPhoto && (
               <Image
-                source={{ uri: `${API_BASE}/p/${accessCode}/progress-photos/${viewerPhoto.id}` }}
+                source={portalImageSource(accessCode, sessionToken, `/progress-photos/${viewerPhoto.id}`)}
                 style={{ width: SCREEN_W, height: SCREEN_W * 1.33 }}
                 contentFit="contain"
               />
@@ -420,7 +421,7 @@ export default function ProgressPhotosScreen() {
                     {new Date(photo.photo_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' })}
                   </Text>
                 </View>
-                <Image source={{ uri: `${API_BASE}/p/${accessCode}/progress-photos/${photo.id}` }} style={{ flex: 1, width: '100%' }} contentFit="contain" />
+                <Image source={portalImageSource(accessCode, sessionToken, `/progress-photos/${photo.id}`)} style={{ flex: 1, width: '100%' }} contentFit="contain" />
               </View>
             ))}
           </View>

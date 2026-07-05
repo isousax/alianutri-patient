@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Platform, StyleSheet, View, Pressable } from 'react-native'
 import { Tabs } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import { haptics } from '../../src/lib/haptics'
 import { Home, Utensils, BookOpen, Plus, HeartHandshake, type LucideIcon } from 'lucide-react-native'
@@ -13,13 +12,14 @@ import { useRecentPosts } from '../../src/hooks/usePortal'
 import { useDiarySeenStore } from '../../src/stores/diarySeen'
 import { hasUnseenNutriActivity } from '../../src/lib/diaryUnseen'
 
-const ICON_SIZE = 22
-const PILL_W = 56
-const PILL_H = 34
+const ICON_SIZE = 24
+const SLOT_W = 56
+const SLOT_H = 34
 
-// Active indicator: gradient pill + colored glow halo, with the icon
-// cross-fading between the inactive tint and the on-primary color so it
-// never flashes (e.g. a white glyph on a white bar) mid-transition.
+// Destaque do item ativo SEM fundo pesado: o ícone faz cross-fade da cor inativa
+// para a `primary` (evita flash de glifo branco no meio da transição), cresce de
+// leve (escala) e um ponto discreto "você está aqui" aparece acima. Junto com o
+// label que já fica primary, o realce vem de cor + peso + escala + micro-animação.
 function TabIcon({ Icon, focused, badge }: { Icon: LucideIcon; focused: boolean; badge?: boolean }) {
   const t = useThemeColors()
   const p = useSharedValue(focused ? 1 : 0)
@@ -28,39 +28,27 @@ function TabIcon({ Icon, focused, badge }: { Icon: LucideIcon; focused: boolean;
     p.value = withSpring(focused ? 1 : 0, motion.spring)
   }, [focused])
 
-  const pillStyle = useAnimatedStyle(() => ({
-    opacity: p.value,
-    transform: [{ scale: 0.7 + p.value * 0.3 }],
-  }))
-  const activeStyle = useAnimatedStyle(() => ({
-    opacity: p.value,
-    transform: [{ scale: 0.9 + p.value * 0.1 }],
-  }))
+  const iconScale = useAnimatedStyle(() => ({ transform: [{ scale: 0.94 + p.value * 0.12 }] }))
   const inactiveStyle = useAnimatedStyle(() => ({ opacity: 1 - p.value }))
+  const activeStyle = useAnimatedStyle(() => ({ opacity: p.value }))
+  const dotStyle = useAnimatedStyle(() => ({ opacity: p.value, transform: [{ scale: 0.3 + p.value * 0.7 }] }))
 
   return (
-    <View style={{ width: PILL_W, height: PILL_H, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFillObject,
-          pillStyle,
-          { borderRadius: radius.full, backgroundColor: t.primary, ...shadows.glow(t.primary) },
-        ]}
-      >
-        <LinearGradient
-          colors={[t.primary, t.primaryMuted]}
-          start={{ x: 0.1, y: 0 }}
-          end={{ x: 0.9, y: 1 }}
-          style={{ flex: 1, borderRadius: radius.full }}
-        />
+    <View style={{ width: SLOT_W, height: SLOT_H, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Indicador discreto — um ponto, sem pill/halo atrás do ícone. */}
+      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' }, dotStyle]}>
+        <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: t.primary }} />
       </Animated.View>
 
-      <Animated.View style={[styles.iconWrap, inactiveStyle]}>
-        <Icon size={ICON_SIZE} color={t.tabBarInactive} strokeWidth={1.9} />
+      <Animated.View style={[{ width: ICON_SIZE, height: ICON_SIZE }, iconScale]}>
+        <Animated.View style={[StyleSheet.absoluteFillObject, styles.center, inactiveStyle]}>
+          <Icon size={ICON_SIZE} color={t.tabBarInactive} strokeWidth={1.9} />
+        </Animated.View>
+        <Animated.View style={[StyleSheet.absoluteFillObject, styles.center, activeStyle]}>
+          <Icon size={ICON_SIZE} color={t.primary} strokeWidth={2.4} />
+        </Animated.View>
       </Animated.View>
-      <Animated.View style={[styles.iconWrap, activeStyle]}>
-        <Icon size={ICON_SIZE} color={t.primaryFg} strokeWidth={2.4} />
-      </Animated.View>
+
       {badge ? (
         <View
           style={{
@@ -205,8 +193,7 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  iconWrap: {
-    position: 'absolute',
+  center: {
     alignItems: 'center',
     justifyContent: 'center',
   },

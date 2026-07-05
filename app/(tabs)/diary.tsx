@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import { View, Text, FlatList, Pressable, RefreshControl, ActivityIndicator, Dimensions, Modal, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Image } from 'expo-image'
+import { Image, type ImageSource } from 'expo-image'
 import { router, useFocusEffect } from 'expo-router'
 import { List, LayoutGrid, Plus, Camera, X, WifiOff, Utensils, BookOpen } from 'lucide-react-native'
 import { useThemeColors } from '../../src/stores/theme'
@@ -10,7 +10,7 @@ import { useFeaturesStore } from '../../src/stores/features'
 import { useDiaryFeed, usePortalHome } from '../../src/hooks/usePortal'
 import { EmptyState, ErrorState, SkeletonList, ReadOnlyBanner, SegmentedControl } from '../../src/components/ui'
 import { PostCard } from '../../src/components/feed/PostCard'
-import { diaryPhotoUrl } from '../../src/lib/diaryPhoto'
+import { diaryPhotoSource } from '../../src/lib/diaryPhoto'
 import { useIsOnline } from '../../src/lib/network'
 import { typography, space, radius, SCREEN_PADDING, shadows } from '../../src/theme/tokens'
 import type { DiaryPost } from '../../src/types/portal'
@@ -32,19 +32,19 @@ type MosaicRowData = { items: DiaryPost[]; base: number; bigLeft: boolean }
 
 // Tile do mosaico: foto + overlay (ícone da categoria + rótulo + kcal quando refeição).
 const GridTile = memo(function GridTile({
-  post, width, height, big, accessCode, onPress,
-}: { post: DiaryPost; width: number; height: number; big: boolean; accessCode: string | null; onPress: () => void }) {
+  post, width, height, big, accessCode, sessionToken, onPress,
+}: { post: DiaryPost; width: number; height: number; big: boolean; accessCode: string | null; sessionToken: string | null; onPress: () => void }) {
   const t = useThemeColors()
-  const uri = post._local && post._localPhotoUri
-    ? post._localPhotoUri
-    : diaryPhotoUrl(accessCode, post.id, big ? 'medium' : 'thumb')
+  const source: ImageSource = post._local && post._localPhotoUri
+    ? { uri: post._localPhotoUri }
+    : diaryPhotoSource(accessCode, sessionToken, post.id, big ? 'medium' : 'thumb')
   const isMeal = post.type === 'meal'
   const ai = post.ai_analysis
   const kcal = isMeal && post.ai_status === 'completed' && ai ? Math.round(ai.calories ?? 0) : null
   const Icon = isMeal ? Utensils : BookOpen
   return (
     <Pressable onPress={onPress} style={{ width, height, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: t.surfaceSecondary }}>
-      <Image source={{ uri }} style={{ width, height }} contentFit="cover" cachePolicy="memory-disk" recyclingKey={post.id} transition={0} />
+      <Image source={source} style={{ width, height }} contentFit="cover" cachePolicy="memory-disk" recyclingKey={post.id} transition={0} />
       <View style={{ position: 'absolute', left: 6, bottom: 6, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: radius.full, backgroundColor: 'rgba(0,0,0,0.55)' }}>
         <Icon size={11} color="#fff" />
         {big ? <Text style={[typography.caption, { color: '#fff', fontSize: 10, fontWeight: '600' }]}>{isMeal ? 'Refeição' : 'Diário'}</Text> : null}
@@ -58,6 +58,7 @@ export default function FeedScreen() {
   const t = useThemeColors()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const accessCode = useAuthStore((s) => s.accessCode)
+  const sessionToken = useAuthStore((s) => s.sessionToken)
   const markDiarySeen = useDiarySeenStore((s) => s.markSeen)
   // Ao abrir o feed, marca como visto (zera o badge de novos comentarios do nutri).
   useFocusEffect(useCallback(() => { markDiarySeen() }, [markDiarySeen]))
@@ -70,8 +71,8 @@ export default function FeedScreen() {
   const posts: DiaryPost[] = data?.pages.flatMap((p) => p.posts) ?? []
   const photoPosts = posts.filter((p) => p.has_photo)
   const isOnline = useIsOnline()
-  const fullUri = (p: DiaryPost) =>
-    p._local && p._localPhotoUri ? p._localPhotoUri : diaryPhotoUrl(accessCode, p.id, 'original')
+  const fullSource = (p: DiaryPost): ImageSource =>
+    p._local && p._localPhotoUri ? { uri: p._localPhotoUri } : diaryPhotoSource(accessCode, sessionToken, p.id, 'original')
 
   // Agrupa as fotos em blocos de 3 (1 grande + 2 pequenas), alternando o lado do grande.
   const photoRows = useMemo<MosaicRowData[]>(() => {
@@ -161,7 +162,7 @@ export default function FeedScreen() {
                 const ai = item.ai_analysis
                 return (
                   <ScrollView style={{ width: SCREEN_W }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} showsVerticalScrollIndicator={false}>
-                    <Image source={{ uri: fullUri(item) }} style={{ width: SCREEN_W, height: SCREEN_W }} contentFit="contain" />
+                    <Image source={fullSource(item)} style={{ width: SCREEN_W, height: SCREEN_W }} contentFit="contain" />
                     <View style={{ padding: SCREEN_PADDING, gap: space.sm }}>
                       {item.caption ? (
                         <Text style={[typography.bodyMd, { color: '#fff' }]}>
@@ -249,19 +250,19 @@ export default function FeedScreen() {
               return (
                 <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
                   {row.items.map((p, k) => (
-                    <GridTile key={p.id} post={p} width={COL_W} height={SMALL_H} big={false} accessCode={accessCode} onPress={() => setViewerIndex(row.base + k)} />
+                    <GridTile key={p.id} post={p} width={COL_W} height={SMALL_H} big={false} accessCode={accessCode} sessionToken={sessionToken} onPress={() => setViewerIndex(row.base + k)} />
                   ))}
                 </View>
               )
             }
             const [a, b, c] = row.items
             const bigTile = (
-              <GridTile post={a} width={COL_W} height={BIG_H} big accessCode={accessCode} onPress={() => setViewerIndex(row.base)} />
+              <GridTile post={a} width={COL_W} height={BIG_H} big accessCode={accessCode} sessionToken={sessionToken} onPress={() => setViewerIndex(row.base)} />
             )
             const smallCol = (
               <View style={{ gap: GRID_GAP }}>
-                <GridTile post={b} width={COL_W} height={SMALL_H} big={false} accessCode={accessCode} onPress={() => setViewerIndex(row.base + 1)} />
-                <GridTile post={c} width={COL_W} height={SMALL_H} big={false} accessCode={accessCode} onPress={() => setViewerIndex(row.base + 2)} />
+                <GridTile post={b} width={COL_W} height={SMALL_H} big={false} accessCode={accessCode} sessionToken={sessionToken} onPress={() => setViewerIndex(row.base + 1)} />
+                <GridTile post={c} width={COL_W} height={SMALL_H} big={false} accessCode={accessCode} sessionToken={sessionToken} onPress={() => setViewerIndex(row.base + 2)} />
               </View>
             )
             return (

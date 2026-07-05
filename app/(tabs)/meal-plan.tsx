@@ -9,7 +9,7 @@ import { haptics } from '../../src/lib/haptics'
 import { useMealPlans, useMealPlanDetail, useDiaryToday, useLogFoodDiary, useDeleteFoodDiary } from '../../src/hooks/usePortal'
 import { useFeaturesStore } from '../../src/stores/features'
 import { toast } from '../../src/stores/toast'
-import { Card, ScreenHeader, EmptyState, ErrorState, SkeletonList } from '../../src/components/ui'
+import { Card, ScreenHeader, EmptyState, ErrorState, SkeletonList, MacrosBar } from '../../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../../src/theme/tokens'
 import type { PortalMealPlanSummary, PortalMeal, QuantMeal, QuantFood, QuantFoodSubstitute, EquivMeal, EquivGroup, EquivGroupFood, QualMeal } from '../../src/types/portal'
 
@@ -179,25 +179,13 @@ export default function MealPlanScreen() {
               ) : null}
 
               {(detail.total_protein_g || detail.total_carbs_g || detail.total_fat_g) ? (
-                <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
-                  {detail.total_protein_g ? (
-                    <View style={{ flex: 1, alignItems: 'center', paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: t.surface }}>
-                      <Text style={[typography.captionBold, { color: t.text }]}>{detail.total_protein_g}g</Text>
-                      <Text style={[typography.overline, { color: t.textMuted, marginTop: 2 }]}>PROTEÍNA</Text>
-                    </View>
-                  ) : null}
-                  {detail.total_carbs_g ? (
-                    <View style={{ flex: 1, alignItems: 'center', paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: t.surface }}>
-                      <Text style={[typography.captionBold, { color: t.text }]}>{detail.total_carbs_g}g</Text>
-                      <Text style={[typography.overline, { color: t.textMuted, marginTop: 2 }]}>CARBO</Text>
-                    </View>
-                  ) : null}
-                  {detail.total_fat_g ? (
-                    <View style={{ flex: 1, alignItems: 'center', paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: t.surface }}>
-                      <Text style={[typography.captionBold, { color: t.text }]}>{detail.total_fat_g}g</Text>
-                      <Text style={[typography.overline, { color: t.textMuted, marginTop: 2 }]}>GORDURA</Text>
-                    </View>
-                  ) : null}
+                <View style={{ marginTop: space.md }}>
+                  <MacrosBar
+                    protein_g={detail.total_protein_g ?? 0}
+                    carbs_g={detail.total_carbs_g ?? 0}
+                    fat_g={detail.total_fat_g ?? 0}
+                    animated={false}
+                  />
                 </View>
               ) : null}
             </View>

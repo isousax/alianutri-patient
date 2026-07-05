@@ -7,6 +7,7 @@ import { haptics } from '../src/lib/haptics'
 import { ShieldCheck, ArrowRight, Smartphone, Lock } from 'lucide-react-native'
 import { useAuthStore } from '../src/stores/auth'
 import { startPairing, verifyPairing, validateAccessCode, type PairingMethod } from '../src/services/api'
+import { maskBirthDate, maskCpf, maskPhone, brDateToISO, digitsOnly } from '../src/lib/mask'
 import { useThemeColors, useTheme } from '../src/stores/theme'
 import { shadows, radius, space, typography, gradients } from '../src/theme/tokens'
 import { AliaWordmark, GlowBlob } from '../src/components/Brand'
@@ -16,31 +17,42 @@ const { width: SCREEN_W } = Dimensions.get('window')
 
 type Phase = 'loading' | 'question' | 'conflict' | 'error'
 
-const FIELDS: Record<PairingMethod, { title: string; subtitle: string; placeholder: string; keyboard: KeyboardTypeOptions }> = {
+const FIELDS: Record<PairingMethod, { title: string; subtitle: string; placeholder: string; keyboard: KeyboardTypeOptions; maxLength: number }> = {
   birth_date: {
     title: 'Confirme sua identidade',
     subtitle: 'Para vincular este aparelho com segurança, informe sua data de nascimento.',
-    placeholder: 'AAAA-MM-DD',
-    keyboard: 'numbers-and-punctuation',
+    placeholder: 'DD/MM/AAAA',
+    keyboard: 'number-pad',
+    maxLength: 10,
   },
   cpf: {
     title: 'Confirme sua identidade',
     subtitle: 'Para vincular este aparelho com segurança, informe seu CPF.',
     placeholder: '000.000.000-00',
-    keyboard: 'numeric',
+    keyboard: 'number-pad',
+    maxLength: 14,
   },
   phone: {
     title: 'Confirme sua identidade',
     subtitle: 'Para vincular este aparelho com segurança, informe seu telefone.',
     placeholder: '(00) 00000-0000',
     keyboard: 'phone-pad',
+    maxLength: 15,
   },
   collect: {
     title: 'Proteja seu acesso',
     subtitle: 'Para vincular este aparelho com segurança, informe sua data de nascimento.',
-    placeholder: 'AAAA-MM-DD',
-    keyboard: 'numbers-and-punctuation',
+    placeholder: 'DD/MM/AAAA',
+    keyboard: 'number-pad',
+    maxLength: 10,
   },
+}
+
+/** Aplica a máscara BR conforme o fator de identidade em foco. */
+function maskFor(method: PairingMethod, v: string): string {
+  if (method === 'cpf') return maskCpf(v)
+  if (method === 'phone') return maskPhone(v)
+  return maskBirthDate(v) // birth_date | collect
 }
 
 function HelpLink({ color }: { color: string }) {
@@ -104,16 +116,37 @@ export default function PairScreen() {
 
   async function handleVerify() {
     if (!code || !method) return
-    const trimmed = answer.trim()
-    if (!trimmed) {
+    const raw = answer.trim()
+    if (!raw) {
       setError('Informe o dado solicitado.')
       return
+    }
+    // Converte a máscara BR para o formato que o backend espera antes de enviar.
+    let toSend = raw
+    if (method === 'birth_date' || method === 'collect') {
+      const iso = brDateToISO(raw)
+      if (!iso) {
+        setError('Informe uma data válida no formato DD/MM/AAAA.')
+        haptics.error()
+        return
+      }
+      toSend = iso
+    } else if (method === 'cpf') {
+      const d = digitsOnly(raw)
+      if (d.length !== 11) {
+        setError('Informe os 11 dígitos do CPF.')
+        haptics.error()
+        return
+      }
+      toSend = d
+    } else if (method === 'phone') {
+      toSend = digitsOnly(raw)
     }
     setSubmitting(true)
     setError('')
     try {
       const dev = await getOrCreateDeviceId()
-      const r = await verifyPairing(code, dev, trimmed)
+      const r = await verifyPairing(code, dev, toSend)
       if (r.status === 'conflict') return setPhase('conflict')
       if (r.status === 'bad_request') {
         setError(r.message || 'Dados inválidos.')
@@ -235,12 +268,13 @@ export default function PairScreen() {
                         <ShieldCheck size={18} color={error ? t.error : focused ? t.primary : t.textMuted} />
                         <TextInput
                           value={answer}
-                          onChangeText={(v) => { setAnswer(v); if (error) setError('') }}
+                          onChangeText={(v) => { setAnswer(maskFor(method!, v)); if (error) setError('') }}
                           placeholder={field.placeholder}
                           placeholderTextColor={t.textMuted}
                           autoCapitalize="none"
                           autoCorrect={false}
                           keyboardType={field.keyboard}
+                          maxLength={field.maxLength}
                           accessibilityLabel="Dado de identidade"
                           onFocus={() => setFocused(true)}
                           onBlur={() => setFocused(false)}

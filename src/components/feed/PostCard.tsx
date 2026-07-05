@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { View, Text, Pressable } from 'react-native'
-import { Image } from 'expo-image'
+import { Image, type ImageSource } from 'expo-image'
 import { Utensils, BookOpen, CloudOff } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
@@ -10,7 +10,7 @@ import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 import { Card, MacrosBar, AuroraBackground, Avatar } from '../ui'
 import { AILoader } from '../ui/AILoader'
 import { AliaAvatar } from '../ui/AliaAvatar'
-import { diaryPhotoUrl } from '../../lib/diaryPhoto'
+import { diaryPhotoSource } from '../../lib/diaryPhoto'
 import type { DiaryPost, DiaryPostType } from '../../types/portal'
 
 const TYPE_META: Record<DiaryPostType, { Icon: typeof Utensils; label: string }> = {
@@ -44,15 +44,16 @@ function ConfidenceDots({ level }: { level: 'high' | 'medium' | 'low' }) {
 export const PostCard = memo(function PostCard({ post, nutriName, nutriPhoto }: { post: DiaryPost; nutriName: string; nutriPhoto: string | null }) {
   const t = useThemeColors()
   const accessCode = useAuthStore((s) => s.accessCode)
+  const sessionToken = useAuthStore((s) => s.sessionToken)
   const updateType = useUpdatePostType()
   const meta = TYPE_META[post.type]
   const TypeIcon = meta.Icon
   const ai = post.ai_analysis
   const isLocal = !!post._local
-  const photoUri = post.has_photo
+  const photoSource: ImageSource | null = post.has_photo
     ? isLocal && post._localPhotoUri
-      ? post._localPhotoUri
-      : diaryPhotoUrl(accessCode, post.id, 'medium')
+      ? { uri: post._localPhotoUri }
+      : diaryPhotoSource(accessCode, sessionToken, post.id, 'medium')
     : null
   const notFood = post.ai_status === 'not_food'
 
@@ -86,9 +87,9 @@ export const PostCard = memo(function PostCard({ post, nutriName, nutriPhoto }: 
       )}
 
       {/* Foto */}
-      {photoUri && (
+      {photoSource && (
         <Image
-          source={{ uri: photoUri }}
+          source={photoSource}
           style={{ width: '100%', height: 300, backgroundColor: t.surfaceSecondary }}
           contentFit="cover"
           cachePolicy="memory-disk"

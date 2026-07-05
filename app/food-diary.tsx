@@ -32,8 +32,7 @@ import { RewardTrophy } from '../src/components/ui/RewardTrophy'
 import { AliaAvatar } from '../src/components/ui/AliaAvatar'
 import { typography, space } from '../src/theme/tokens'
 import { todayStr, shiftDate } from '../src/lib/date'
-
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://api.alianutri.com.br'
+import { portalImageSource } from '../src/lib/diaryPhoto'
 
 // ── helpers ──
 
@@ -831,6 +830,7 @@ function CompactLoggedRow({
   t: ThemeColors
 }) {
   const accessCode = useAuthStore((s) => s.accessCode)
+  const sessionToken = useAuthStore((s) => s.sessionToken)
   const status = meal.entry?.compliance_status
   return (
     <View className="mb-1.5">
@@ -874,7 +874,7 @@ function CompactLoggedRow({
           {meal.entry?.photo_url && (
             <View className="rounded-xl overflow-hidden mb-2">
               <Image
-                source={{ uri: `${API_BASE}/p/${accessCode}/diary/photo/${meal.entry.id}` }}
+                source={portalImageSource(accessCode, sessionToken, `/diary/photo/${meal.entry.id}`)}
                 style={{ width: '100%', height: 140 }}
                 contentFit="cover"
                 className="rounded-xl"

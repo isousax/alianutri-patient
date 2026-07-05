@@ -92,10 +92,16 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
   const { data: home } = usePortalHome()
   // Meta de peso (do nutri) como linha de referência — só no gráfico de peso.
   const weightTarget = goals?.find((g) => g.type === 'weight' && g.status === 'active' && g.target_value != null)?.target_value ?? null
-  // Plano ativo → meta calórica (linha de referência) e macros-alvo (via detalhe).
+  // Referência calórica/macros do PACIENTE = TOTAL do plano (o que foi de fato
+  // prescrito nas refeições). O `target_kcal`/`target_*_g` (meta cadastrada pelo
+  // nutri) só entra como fallback quando o plano não tem total calculado —
+  // eventual divergência entre meta e total é responsabilidade do nutricionista.
   const activePlan = home?.active_meal_plan ?? null
-  const targetKcal = activePlan?.target_kcal ?? activePlan?.total_kcal ?? null
+  const targetKcal = activePlan?.total_kcal ?? activePlan?.target_kcal ?? null
   const { data: planDetail } = useMealPlanDetail(metric === 'nutrition' ? activePlan?.id ?? null : null)
+  const planProteinRef = planDetail?.total_protein_g ?? planDetail?.target_protein_g ?? null
+  const planCarbsRef = planDetail?.total_carbs_g ?? planDetail?.target_carbs_g ?? null
+  const planFatRef = planDetail?.total_fat_g ?? planDetail?.target_fat_g ?? null
   const heightM = profile?.height_cm ? profile.height_cm / 100 : null
   // Faixa saudável (IMC 18,5–25) na unidade da métrica: direto p/ IMC; convertida
   // p/ kg via altura no peso. Alimenta a faixa do gráfico e a cor da tendência.
@@ -338,9 +344,9 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
 
                 <Text style={[typography.caption, { color: t.textMuted, marginTop: space.lg, marginBottom: space.xs }]}>Média diária de macros</Text>
                 <MacrosBar protein_g={nutritionStats.avgProtein} carbs_g={nutritionStats.avgCarbs} fat_g={nutritionStats.avgFat} />
-                {planDetail && (planDetail.target_protein_g != null || planDetail.target_carbs_g != null || planDetail.target_fat_g != null) ? (
+                {planProteinRef != null || planCarbsRef != null || planFatRef != null ? (
                   <Text style={[typography.caption, { color: t.textMuted, marginTop: space.xs }]}>
-                    Meta do plano: {fmtG(planDetail.target_protein_g)} P · {fmtG(planDetail.target_carbs_g)} C · {fmtG(planDetail.target_fat_g)} G
+                    Meta do plano: {fmtG(planProteinRef)} P · {fmtG(planCarbsRef)} C · {fmtG(planFatRef)} G
                   </Text>
                 ) : null}
               </View>
