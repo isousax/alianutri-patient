@@ -35,6 +35,7 @@ import type {
   ChatMessagesResponse,
   WaterIntakeResponse,
   WeightHistoryResponse,
+  WeightLogEntry,
   SymptomLog,
   SymptomLogInput,
   ProgressPhotosResponse,
@@ -310,7 +311,32 @@ export function useDeleteFoodDiary() {
   return useMutation({
     mutationFn: (entryId: string) =>
       portalApi.delete<{ message: string }>(`/food-diary/${entryId}`),
-    onSuccess: () => {
+    // Otimista: remove o registro (por id) de TODOS os caches diary-today/food-diary
+    // na hora — "Desfazer" no plano e no diário reflete instantâneo. Rollback no erro.
+    onMutate: async (entryId) => {
+      await qc.cancelQueries({ queryKey: ['portal', 'diary-today'] })
+      await qc.cancelQueries({ queryKey: ['portal', 'food-diary'] })
+      const prevToday = qc.getQueriesData<DiaryTodayResponse>({ queryKey: ['portal', 'diary-today'] })
+      const prevList = qc.getQueriesData<PortalFoodDiaryEntry[]>({ queryKey: ['portal', 'food-diary'] })
+      qc.setQueriesData<DiaryTodayResponse>({ queryKey: ['portal', 'diary-today'] }, (old) =>
+        old
+          ? {
+              ...old,
+              entries: old.entries.filter((e) => e.id !== entryId),
+              meals: old.meals.map((m) => (m.entry?.id === entryId ? { ...m, entry: null } : m)),
+            }
+          : old,
+      )
+      qc.setQueriesData<PortalFoodDiaryEntry[]>({ queryKey: ['portal', 'food-diary'] }, (old) =>
+        old ? old.filter((e) => e.id !== entryId) : old,
+      )
+      return { prevToday, prevList }
+    },
+    onError: (_err, _id, ctx) => {
+      ctx?.prevToday?.forEach(([key, data]) => qc.setQueryData(key, data))
+      ctx?.prevList?.forEach(([key, data]) => qc.setQueryData(key, data))
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'food-diary'] })
       qc.invalidateQueries({ queryKey: ['portal', 'diary-today'] })
       qc.invalidateQueries({ queryKey: ['portal', 'diary-streak'] })
@@ -631,7 +657,31 @@ export function useSendChatMessage() {
   return useMutation({
     mutationFn: (content: string) =>
       portalApi.post<ChatMessage>('/chat', { content }),
-    onSuccess: () => {
+    // Otimista: a mensagem aparece na hora (bolha do paciente), com rollback no erro.
+    onMutate: async (content: string) => {
+      await qc.cancelQueries({ queryKey: ['portal', 'chat'] })
+      const previous = qc.getQueryData<InfiniteData<ChatMessagesResponse>>(['portal', 'chat'])
+      const optimistic: ChatMessage = {
+        id: `__opt_${Date.now()}`,
+        sender_type: 'patient',
+        content,
+        read_at: null,
+        created_at: new Date().toISOString(),
+      }
+      // A 1ª página é a mais recente (o app faz reverse()); a nova mensagem entra no topo dela.
+      qc.setQueryData<InfiniteData<ChatMessagesResponse>>(['portal', 'chat'], (old) => {
+        if (!old?.pages?.length) {
+          return { pages: [{ messages: [optimistic], has_more: false }], pageParams: [undefined] }
+        }
+        const [first, ...rest] = old.pages
+        return { ...old, pages: [{ ...first, messages: [optimistic, ...first.messages] }, ...rest] }
+      })
+      return { previous }
+    },
+    onError: (_err, _content, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['portal', 'chat'], ctx.previous)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'chat'] })
     },
   })
@@ -659,8 +709,7 @@ export function useWaterIntake(date: string) {
 export function useLogWater() {
   const qc = useQueryClient()
   return useMutation({
-    // offlineFirst + fila cifrada. Sem update otimista de cache aqui: a tela de
-    // água já reconcilia o total via localBoost (app/water.tsx).
+    // offlineFirst + fila cifrada.
     networkMode: 'offlineFirst',
     mutationFn: (input: { id?: string; date: string; amount_ml: number }) =>
       sendOrQueue({
@@ -668,7 +717,28 @@ export function useLogWater() {
         path: '/water',
         payload: { ...input, id: input.id ?? generateClientId() },
       }),
-    onSuccess: (_, vars) => {
+    // Otimista: soma o volume ao total em cache na hora — o anel da Home e a folha
+    // "+" refletem imediatamente. A tela de água concilia seu localBoost com este
+    // total (subtrai o delta do servidor), então não há dupla contagem.
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: ['portal', 'water', input.date] })
+      const previous = qc.getQueryData<WaterIntakeResponse>(['portal', 'water', input.date])
+      if (previous) {
+        qc.setQueryData<WaterIntakeResponse>(['portal', 'water', input.date], {
+          ...previous,
+          total_ml: previous.total_ml + input.amount_ml,
+          entries: [
+            ...previous.entries,
+            { id: input.id ?? `__opt_${Date.now()}`, amount_ml: input.amount_ml, created_at: new Date().toISOString() },
+          ],
+        })
+      }
+      return { previous, date: input.date }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous !== undefined) qc.setQueryData(['portal', 'water', ctx.date], ctx.previous)
+    },
+    onSettled: (_d, _e, vars) => {
       qc.invalidateQueries({ queryKey: ['portal', 'water', vars.date] })
       qc.invalidateQueries({ queryKey: ['portal', 'home'] })
     },
@@ -695,12 +765,30 @@ export function useLogWeight() {
   return useMutation({
     mutationFn: (input: { id?: string; date: string; weight_kg: number }) =>
       portalApi.post<{ id: string; entry_date: string; weight_kg: number; source: string; created_at: string }>('/weight', input),
+    // Otimista: upsert do peso do dia no histórico (a tela de peso lê esse cache
+    // direto, sem boost local — sem dupla contagem). Rollback no erro.
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: ['portal', 'weight-history'] })
+      const previous = qc.getQueryData<WeightHistoryResponse>(['portal', 'weight-history'])
+      if (previous) {
+        const others = previous.entries.filter((e) => e.entry_date !== input.date)
+        const optimistic: WeightLogEntry = { entry_date: input.date, weight_kg: input.weight_kg, source: 'patient' }
+        const entries = [...others, optimistic].sort((a, b) => b.entry_date.localeCompare(a.entry_date))
+        qc.setQueryData<WeightHistoryResponse>(['portal', 'weight-history'], { ...previous, entries })
+      }
+      return { previous }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous !== undefined) qc.setQueryData(['portal', 'weight-history'], ctx.previous)
+    },
     onSuccess: () => {
+      useXpToast.getState().show(10)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'weight-history'] })
       qc.invalidateQueries({ queryKey: ['portal', 'evolution'] })
       qc.invalidateQueries({ queryKey: ['portal', 'home'] })
       qc.invalidateQueries({ queryKey: ['portal', 'profile'] })
-      useXpToast.getState().show(10)
     },
   })
 }

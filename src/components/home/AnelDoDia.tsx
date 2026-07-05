@@ -4,7 +4,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Droplets, Flame } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, SCREEN_PADDING, fmtWater } from '../../theme/tokens'
-import { Card, ProgressRing } from '../ui'
+import { Card, ProgressRing, ProgressBar } from '../ui'
 
 interface AnelDoDiaProps {
   loggedCount: number
@@ -126,23 +126,12 @@ export function AnelDoDia({
                   <Text style={[typography.caption, { color: t.textMuted }]}>Hidratação</Text>
                 </View>
               </View>
-              <View
-                style={{
-                  height: 5,
-                  borderRadius: 3,
-                  backgroundColor: t.borderLight,
-                  overflow: 'hidden',
-                }}
-              >
-                <View
-                  style={{
-                    height: 5,
-                    borderRadius: 3,
-                    width: `${Math.min(waterPct * 100, 100)}%`,
-                    backgroundColor: waterPct >= 1 ? t.success : t.info,
-                  }}
-                />
-              </View>
+              <ProgressBar
+                progress={waterPct}
+                height={5}
+                color={waterPct >= 1 ? t.success : t.info}
+                trackColor={t.borderLight}
+              />
             </Pressable>
           </View>
         </View>

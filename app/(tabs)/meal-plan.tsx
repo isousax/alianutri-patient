@@ -9,7 +9,7 @@ import { haptics } from '../../src/lib/haptics'
 import { useMealPlans, useMealPlanDetail, useDiaryToday, useLogFoodDiary, useDeleteFoodDiary } from '../../src/hooks/usePortal'
 import { useFeaturesStore } from '../../src/stores/features'
 import { toast } from '../../src/stores/toast'
-import { Card, ScreenHeader, EmptyState, ErrorState, SkeletonList, MacrosBar } from '../../src/components/ui'
+import { Card, ScreenHeader, EmptyState, ErrorState, SkeletonList, MacrosBar, ProgressBar } from '../../src/components/ui'
 import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../../src/theme/tokens'
 import type { PortalMealPlanSummary, PortalMeal, QuantMeal, QuantFood, QuantFoodSubstitute, EquivMeal, EquivGroup, EquivGroupFood, QualMeal } from '../../src/types/portal'
 
@@ -197,10 +197,7 @@ export default function MealPlanScreen() {
                 <Text style={[typography.captionBold, { color: t.text }]}>Adesão de hoje</Text>
                 <Text style={[typography.caption, { color: t.textMuted }]}>{loggedToday}/{todayMeals.length} registradas</Text>
               </View>
-              <View style={{ flexDirection: 'row', height: 6, borderRadius: 3, backgroundColor: t.surfaceSecondary, overflow: 'hidden' }}>
-                <View style={{ flex: Math.max(progress, 0.0001), backgroundColor: dm.color }} />
-                <View style={{ flex: Math.max(1 - progress, 0) }} />
-              </View>
+              <ProgressBar progress={progress} color={dm.color} />
             </View>
           )}
 
@@ -293,7 +290,7 @@ export default function MealPlanScreen() {
                       </View>
                       {canWrite && (
                         <Pressable onPress={() => handleUndo(idx)} disabled={busy} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: space.sm }}>
-                          {busy ? <ActivityIndicator size="small" color={t.textMuted} /> : <Undo2 size={12} color={t.textMuted} />}
+                          <Undo2 size={12} color={t.textMuted} />
                           <Text style={[typography.caption, { color: t.textMuted }]}>Desfazer</Text>
                         </Pressable>
                       )}
@@ -301,7 +298,7 @@ export default function MealPlanScreen() {
                   ) : canWrite ? (
                     <View style={{ marginLeft: 28 + space.sm, marginTop: space.md, flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
                       <Pressable onPress={() => handleFollow(idx, meal.name || `Refeição ${idx + 1}`)} disabled={busy} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: space.sm + 1, paddingHorizontal: space.lg, borderRadius: radius.lg, backgroundColor: dm.color }}>
-                        {busy ? <ActivityIndicator size="small" color="#fff" /> : <Check size={15} color="#fff" />}
+                        <Check size={15} color="#fff" />
                         <Text style={[typography.labelMd, { color: '#fff' }]}>Segui</Text>
                       </Pressable>
                       <Pressable onPress={() => handlePartial(idx, meal.name || `Refeição ${idx + 1}`)} disabled={busy} style={{ paddingVertical: space.sm + 1, paddingHorizontal: space.md, borderRadius: radius.lg, backgroundColor: t.surfaceSecondary }}>

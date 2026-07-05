@@ -4,7 +4,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useThemeColors } from '../../stores/theme'
 import { useDiaryStreak, useGoals, useChartsSummary, useWeeklyAdherence } from '../../hooks/usePortal'
 import { computeGamification, computeWeeklyChallenges, levelTitle, MAX_LEVEL, type BadgeIconKey } from '../../lib/gamification'
-import { Card } from '../ui'
+import { Card, ProgressBar } from '../ui'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 
 // Segmento "Conquistas" do Diário (P1). XP/nível/streak/badges são DERIVADOS no
@@ -76,10 +76,7 @@ export function Conquistas({ bottomPadding = 100 }: { bottomPadding?: number }) 
           </View>
 
           {/* Barra de XP (flex em vez de width %, p/ tipagem segura de DimensionValue) */}
-          <View style={{ flexDirection: 'row', height: 8, borderRadius: 4, backgroundColor: t.surfaceSecondary, marginTop: space.lg, overflow: 'hidden' }}>
-            <View style={{ flex: Math.max(pct, 0.0001), backgroundColor: t.primary }} />
-            <View style={{ flex: Math.max(1 - pct, 0) }} />
-          </View>
+          <ProgressBar progress={pct} height={8} style={{ marginTop: space.lg }} />
           <Text style={[typography.caption, { color: t.textMuted, marginTop: space.xs }]}>
             {maxed
               ? `Nível máximo · ${gam.xp} XP`
@@ -107,10 +104,7 @@ export function Conquistas({ bottomPadding = 100 }: { bottomPadding?: number }) 
                   <Text style={[typography.caption, { color: ch.done ? t.success : t.textMuted }]}>{ch.done ? 'Concluído' : `${ch.current}/${ch.target}`}</Text>
                 </View>
                 <Text style={[typography.caption, { color: t.textMuted }]} numberOfLines={1}>{ch.hint}</Text>
-                <View style={{ flexDirection: 'row', height: 6, borderRadius: 3, backgroundColor: t.surfaceSecondary, marginTop: 6, overflow: 'hidden' }}>
-                  <View style={{ flex: Math.max(p, 0.0001), backgroundColor: ch.done ? t.success : t.primary }} />
-                  <View style={{ flex: Math.max(1 - p, 0) }} />
-                </View>
+                <ProgressBar progress={p} color={ch.done ? t.success : t.primary} style={{ marginTop: 6 }} />
               </View>
             </View>
           )

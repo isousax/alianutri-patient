@@ -74,8 +74,8 @@ function StatTile({ label, value, color }: { label: string; value: string; color
   const t = useThemeColors()
   return (
     <View style={{ flex: 1, backgroundColor: t.surfaceSecondary, borderRadius: radius.lg, paddingVertical: space.sm, paddingHorizontal: space.md }}>
-      <Text style={[typography.caption, { color: t.textMuted }]}>{label}</Text>
-      <Text style={[typography.labelMd, { color, marginTop: 2 }]}>{value}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={[typography.caption, { color: t.textMuted }]}>{label}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={[typography.labelMd, { color, marginTop: 2 }]}>{value}</Text>
     </View>
   )
 }
@@ -355,13 +355,6 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
             <Text style={[typography.caption, { color: t.textMuted, marginTop: space.sm }]}>
               {points.length} {points.length === 1 ? 'registro' : 'registros'} no período
             </Text>
-
-            {metric === 'nutrition' && (
-              <Text style={[typography.caption, { color: t.textMuted, marginTop: space.xs }]}>
-                Calorias estimadas pela IA a partir das fotos de refeição.
-                {nutritionMissingToday ? ' Os registros de hoje aparecem aqui assim que a análise das fotos concluir.' : ''}
-              </Text>
-            )}
           </Card>
         </Animated.View>
       )}

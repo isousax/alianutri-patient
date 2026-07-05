@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useReducer } from 'react'
 import {
-  View, Text, ScrollView, Pressable, ActivityIndicator,
+  View, Text, ScrollView, Pressable,
   RefreshControl, TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -38,8 +38,15 @@ import { portalImageSource } from '../src/lib/diaryPhoto'
 
 // Registro retroativo: feito claramente depois do dia referente (gap >= 2 dias).
 // Tolera 1 dia p/ NAO marcar logs perto da meia-noite (created_at e UTC; entry_date e local).
-function isRetroactive(entry: { created_at: string; entry_date: string }): boolean {
-  return shiftDate(entry.entry_date, 1) < entry.created_at.slice(0, 10)
+// Robusto a data ausente/malformada: /diary/today nem sempre traz entry_date no
+// entry — sem este guard, shiftDate(undefined) -> new Date inválido -> toISOString
+// lançava "RangeError: Date value out of bounds" ao renderizar a tela.
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
+function isRetroactive(entry: { created_at?: string | null; entry_date?: string | null }): boolean {
+  const entryDay = (entry.entry_date ?? '').slice(0, 10)
+  const createdDay = (entry.created_at ?? '').slice(0, 10)
+  if (!YMD_RE.test(entryDay) || !YMD_RE.test(createdDay)) return false
+  return shiftDate(entryDay, 1) < createdDay
 }
 
 function fmtDate(dateStr: string) {
@@ -791,14 +798,8 @@ function HeroMealCard({
               className="flex-row items-center justify-center py-3 rounded-xl flex-[1.4]"
               style={{ backgroundColor: t.primary }}
             >
-              {isLogging ? (
-                <ActivityIndicator color={t.primaryFg} size="small" />
-              ) : (
-                <>
-                  <Check size={16} color={t.primaryFg} />
-                  <Text style={{ color: t.primaryFg }} className="text-sm font-sans-bold ml-2">Segui</Text>
-                </>
-              )}
+              <Check size={16} color={t.primaryFg} />
+              <Text style={{ color: t.primaryFg }} className="text-sm font-sans-bold ml-2">Segui</Text>
             </Pressable>
           </View>
           <Pressable
@@ -957,11 +958,7 @@ function CompactPendingRow({
           className="px-3 py-1.5 rounded-lg"
           style={{ backgroundColor: t.primary + '15' }}
         >
-          {isLogging ? (
-            <ActivityIndicator color={t.primary} size="small" />
-          ) : (
-            <Text style={{ color: t.primary }} className="text-[11px] font-sans-bold">Segui</Text>
-          )}
+          <Text style={{ color: t.primary }} className="text-[11px] font-sans-bold">Segui</Text>
         </Pressable>
       )}
     </View>

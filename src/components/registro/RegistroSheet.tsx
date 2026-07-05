@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { router } from 'expo-router'
 import { haptics } from '../../lib/haptics'
-import { Droplets, Check, Utensils, Scale, Smile, Camera, BookOpen, HeartPulse, LayoutGrid, Minus, Plus, type LucideIcon } from 'lucide-react-native'
+import { Droplets, Check, Scale, Camera, HeartPulse, ImagePlus, LayoutGrid, Minus, Plus, ChevronRight, type LucideIcon } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { toast } from '../../stores/toast'
 import { typography, space, radius, fmtWater, todayStr } from '../../theme/tokens'
@@ -21,20 +21,14 @@ const clampWeight = (v: number) => Math.min(WEIGHT_MAX, Math.max(WEIGHT_MIN, Mat
 
 // Ícone lucide por ação (robusto a encoding — substitui os emojis).
 const ACTION_ICONS: Record<CreateActionId, LucideIcon> = {
-  meal: Utensils,
-  diary: BookOpen,
-  weight: Scale,
-  mood: Smile,
+  publish: ImagePlus,
   progress: Camera,
   wellness: HeartPulse,
 }
 
 // Rótulos curtos para os tiles do grid (o label completo vai na acessibilidade).
 const SHORT_LABEL: Record<CreateActionId, string> = {
-  meal: 'Refeição',
-  diary: 'Diário',
-  weight: 'Peso',
-  mood: 'Humor',
+  publish: 'Publicar',
   progress: 'Progresso',
   wellness: 'Bem-estar',
 }
@@ -51,7 +45,7 @@ interface RegistroSheetProps {
  */
 export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps) {
   const t = useThemeColors()
-  const { mutateAsync: logWater, isPending } = useLogWater()
+  const { mutateAsync: logWater } = useLogWater()
   const { mutateAsync: logWeight, isPending: isSavingWeight } = useLogWeight()
   const { data: weightHistory } = useWeightHistory()
   const { data: profile } = usePortalProfile()
@@ -77,25 +71,21 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
     setWeightVal(clampWeight(shownWeight + delta))
     setSavedWeight(false)
   }
-  const saveWeight = async () => {
+  const saveWeight = () => {
     if (isSavingWeight) return
-    haptics.light()
-    try {
-      await logWeight({ date: todayStr(), weight_kg: shownWeight })
-      setSavedWeight(true)
-      haptics.success()
-      setTimeout(() => setSavedWeight(false), 1400)
-    } catch {
+    // Check instantâneo; o upsert no histórico é otimista. Erro reverte + avisa.
+    haptics.success()
+    setSavedWeight(true)
+    setTimeout(() => setSavedWeight(false), 1400)
+    logWeight({ date: todayStr(), weight_kg: shownWeight }).catch(() => {
+      setSavedWeight(false)
       toast.error('Não foi possível salvar o peso.')
-    }
+    })
   }
 
   // Cor do ícone + fundo do chip (token *Light) por ação — sem hex-alpha frágil.
   const ACTION_STYLE: Record<CreateActionId, { color: string; light: string }> = {
-    meal: { color: t.primary, light: t.primaryLight },
-    diary: { color: t.warning, light: t.warningLight },
-    weight: { color: t.accent, light: t.accentLight },
-    mood: { color: t.info, light: t.infoLight },
+    publish: { color: t.primary, light: t.primaryLight },
     progress: { color: t.success, light: t.successLight },
     wellness: { color: t.error, light: t.errorLight },
   }
@@ -106,17 +96,16 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
     setTimeout(() => router.push(route as never), 180)
   }
 
-  const addWater = async (ml: number) => {
-    if (isPending) return
-    haptics.light()
-    try {
-      await logWater({ date: todayStr(), amount_ml: ml })
-      setJustAdded(ml)
-      haptics.success()
-      setTimeout(() => setJustAdded(null), 1200)
-    } catch {
-      // Offline/erro: tratado pela fila de mutações (próxima etapa do P0.3).
-    }
+  const addWater = (ml: number) => {
+    // Feedback instantâneo: check + haptic na hora; o cache é otimista (o anel da
+    // Home reflete já). O POST corre em 2º plano; erro reverte o check e avisa.
+    haptics.success()
+    setJustAdded(ml)
+    setTimeout(() => setJustAdded(null), 1200)
+    logWater({ date: todayStr(), amount_ml: ml }).catch(() => {
+      setJustAdded((cur) => (cur === ml ? null : cur))
+      toast.error('Não foi possível registrar a água.')
+    })
   }
 
   return (
@@ -129,9 +118,15 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
         <>
           {/* Água — quick add inline */}
           <View style={{ marginBottom: space.lg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.sm }}>
-              <Droplets size={16} color={t.info} />
-              <Text accessibilityRole="header" style={[typography.labelMd, { color: t.text, marginLeft: space.xs }]}>Água rápida</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Droplets size={16} color={t.info} />
+                <Text accessibilityRole="header" style={[typography.labelMd, { color: t.text, marginLeft: space.xs }]}>Água rápida</Text>
+              </View>
+              <Pressable onPress={() => go('/water')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Abrir página de água (histórico)" style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Text style={[typography.caption, { color: t.primary }]}>Histórico</Text>
+                <ChevronRight size={13} color={t.primary} />
+              </Pressable>
             </View>
             <View style={{ flexDirection: 'row', gap: space.sm }}>
               {WATER_QUICK.map((ml) => {
@@ -140,10 +135,8 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
                   <Pressable
                     key={ml}
                     onPress={() => addWater(ml)}
-                    disabled={isPending}
                     accessibilityRole="button"
                     accessibilityLabel={`Adicionar ${fmtWater(ml)} de água`}
-                    accessibilityState={{ disabled: isPending }}
                     style={{
                       flex: 1,
                       alignItems: 'center',
@@ -165,9 +158,15 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
 
           {/* Peso de hoje — stepper inline (1 toque para ajustar + salvar) */}
           <View style={{ marginBottom: space.lg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.sm }}>
-              <Scale size={16} color={t.accent} />
-              <Text accessibilityRole="header" style={[typography.labelMd, { color: t.text, marginLeft: space.xs }]}>Peso de hoje</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Scale size={16} color={t.accent} />
+                <Text accessibilityRole="header" style={[typography.labelMd, { color: t.text, marginLeft: space.xs }]}>Peso de hoje</Text>
+              </View>
+              <Pressable onPress={() => go('/weight')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Abrir página de peso (histórico e gráfico)" style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Text style={[typography.caption, { color: t.primary }]}>Histórico</Text>
+                <ChevronRight size={13} color={t.primary} />
+              </Pressable>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
               <Pressable
@@ -195,7 +194,7 @@ export function RegistroSheet({ visible, onClose, canWrite }: RegistroSheetProps
                 accessibilityRole="button"
                 accessibilityLabel={`Salvar peso ${shownWeight.toFixed(1).replace('.', ',')} kg`}
                 accessibilityState={{ disabled: isSavingWeight, busy: isSavingWeight }}
-                style={{ minWidth: 76, height: 44, paddingHorizontal: space.md, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: savedWeight ? t.success : t.accent, opacity: isSavingWeight ? 0.6 : 1 }}
+                style={{ minWidth: 76, height: 44, paddingHorizontal: space.md, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: savedWeight ? t.success : t.accent }}
               >
                 {savedWeight ? <Check size={18} color="#fff" /> : <Text style={[typography.labelMd, { color: '#fff' }]}>Salvar</Text>}
               </Pressable>

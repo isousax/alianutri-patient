@@ -4,10 +4,7 @@
 // ══════════════════════════════════════════════════════
 
 export type CreateActionId =
-  | 'meal'
-  | 'diary'
-  | 'weight'
-  | 'mood'
+  | 'publish'
   | 'progress'
   | 'wellness'
 
@@ -20,37 +17,17 @@ export interface CreateAction {
 }
 
 /**
- * Ações do RegistroSheet, na ordem de exibição.
- * Água é registrada inline na própria folha (1 toque), por isso não está aqui.
+ * Ações de NAVEGAÇÃO do grid "Outros registros" do RegistroSheet, na ordem de
+ * exibição. Água e Peso são registrados INLINE na própria folha (1 toque) — não
+ * duplicamos aqui. 'publish' abre o compositor, onde se escolhe Refeição/Diário.
  */
 export const CREATE_ACTIONS: readonly CreateAction[] = [
   {
-    id: 'meal',
-    label: 'Refeição',
-    description: 'Foto do prato + análise por IA',
-    emoji: '🍽️',
-    route: '/post-compose?type=meal',
-  },
-  {
-    id: 'diary',
-    label: 'Diário',
-    description: 'Foto de um momento do seu dia',
+    id: 'publish',
+    label: 'Publicar',
+    description: 'Refeição (com IA) ou um momento do dia',
     emoji: '�',
-    route: '/post-compose?type=diary',
-  },
-  {
-    id: 'weight',
-    label: 'Peso',
-    description: 'Atualize seu peso de hoje',
-    emoji: '⚖️',
-    route: '/weight',
-  },
-  {
-    id: 'mood',
-    label: 'Como me sinto',
-    description: 'Como você está hoje? Em 1 toque',
-    emoji: '🙂',
-    route: '/wellness?focus=mood',
+    route: '/post-compose',
   },
   {
     id: 'progress',
@@ -62,7 +39,7 @@ export const CREATE_ACTIONS: readonly CreateAction[] = [
   {
     id: 'wellness',
     label: 'Bem-estar',
-    description: 'Check-in completo: sono, energia e mais',
+    description: 'Humor, sono, energia e mais em 1 check-in',
     emoji: '🧘',
     route: '/wellness',
   },

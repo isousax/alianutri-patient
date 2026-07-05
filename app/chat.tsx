@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   View, Text, FlatList, TextInput, Pressable,
-  ActivityIndicator, KeyboardAvoidingView, Platform,
+  ActivityIndicator,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Send, MessageCircle, Check, CheckCheck } from 'lucide-react-native'
 import { haptics } from '../src/lib/haptics'
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated'
@@ -13,7 +13,7 @@ import { useFeaturesStore } from '../src/stores/features'
 import { useChatMessages, useSendChatMessage, usePortalHome } from '../src/hooks/usePortal'
 import type { ChatMessage } from '../src/types/portal'
 import { SkeletonChatList } from '../src/components/Skeleton'
-import { ScreenHeader, EmptyState, ErrorState } from '../src/components/ui'
+import { ScreenHeader, EmptyState, ErrorState, KeyboardAvoidingWrapper } from '../src/components/ui'
 import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { radius, space, typography, SCREEN_PADDING, shadows } from '../src/theme/tokens'
 
@@ -80,6 +80,7 @@ function chatItemKey(item: ChatListItem): string {
 
 export default function ChatScreen() {
   const t = useThemeColors()
+  const insets = useSafeAreaInsets()
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const qc = useQueryClient()
   const [text, setText] = useState('')
@@ -133,11 +134,7 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.background }} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-      >
+      <KeyboardAvoidingWrapper offset={insets.bottom}>
         <ScreenHeader
           title="Chat"
           subtitle={`com ${nutriName}`}
@@ -165,6 +162,7 @@ export default function ChatScreen() {
         ) : (
           <FlatList
             ref={flatListRef}
+            style={{ flex: 1 }}
             data={chatList}
             keyExtractor={chatItemKey}
             renderItem={renderItem}
@@ -250,7 +248,7 @@ export default function ChatScreen() {
             )}
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingWrapper>
     </SafeAreaView>
   )
 }

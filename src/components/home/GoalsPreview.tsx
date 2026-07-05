@@ -5,7 +5,7 @@ import { Target, ChevronRight } from 'lucide-react-native'
 import type { PortalGoal } from '../../types/portal'
 import { useThemeColors } from '../../stores/theme'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
-import { Card } from '../ui'
+import { Card, ProgressBar } from '../ui'
 
 interface GoalsPreviewProps {
   goals: PortalGoal[]
@@ -46,9 +46,7 @@ export function GoalsPreview({ goals }: GoalsPreviewProps) {
                   {reached ? '100%' : pct != null ? `${Math.round(pct)}%` : '—'}
                 </Text>
               </View>
-              <View style={{ height: 6, borderRadius: 3, backgroundColor: t.borderLight, overflow: 'hidden' }}>
-                <View style={{ height: 6, borderRadius: 3, width: `${pct ?? 0}%`, backgroundColor: accent }} />
-              </View>
+              <ProgressBar progress={(pct ?? 0) / 100} color={accent} trackColor={t.borderLight} />
             </View>
           )
         })}

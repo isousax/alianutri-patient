@@ -342,7 +342,7 @@ function GoalCard({ goal }: { goal: PortalGoal }) {
                   paddingHorizontal: 12, paddingVertical: 7,
                   borderRadius: radius.md,
                   backgroundColor: checkedToday ? t.successLight : t.primaryLight,
-                  opacity: toggle.isPending || !canWrite ? 0.6 : 1,
+                  opacity: !canWrite ? 0.6 : 1,
                 }}
               >
                 {checkedToday ? <CheckCircle2 size={15} color={t.success} /> : <Circle size={15} color={t.primary} />}
