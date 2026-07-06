@@ -1,13 +1,13 @@
-import { useState } from 'react'
-import { View, Text, Pressable } from 'react-native'
-import { Lock } from 'lucide-react-native'
-import { useThemeColors } from '../../stores/theme'
-import { typography, space, radius } from '../../theme/tokens'
-import { haptics } from '../../lib/haptics'
-import { MedalhasIcon } from '../ui/Medalhas'
-import type { Badge } from '../../lib/gamification'
-import { AchievementDetailModal } from '../home/AchievementDetailModal'
-import { LockedMedalSheet } from './LockedMedalSheet'
+import { useState } from "react";
+import { View, Text, Pressable } from "react-native";
+import { Lock } from "lucide-react-native";
+import { useThemeColors } from "../../stores/theme";
+import { typography, space, radius } from "../../theme/tokens";
+import { haptics } from "../../lib/haptics";
+import { MedalhasIcon } from "../ui/Medalhas";
+import type { Badge } from "../../lib/gamification";
+import { AchievementDetailModal } from "../home/AchievementDetailModal";
+import { LockedMedalSheet } from "./LockedMedalSheet";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grade DETERMINÍSTICA de medalhas — COLUMNS colunas de largura IDÊNTICA.
@@ -21,49 +21,55 @@ import { LockedMedalSheet } from './LockedMedalSheet'
 // (ambos são flex-items sob o mesmo min-width automático) — por isso as tentativas
 // com %, Dimensions, onLayout+largura fixa etc. não resolveram.
 //
-// CORREÇÃO: `minWidth: 0` em cada célula (mesmo padrão da grade de Ações Rápidas da
-// Home, que já funciona). Com min-width 0 a célula pode ficar em EXATAMENTE 1/3 e o
-// rótulo elide (numberOfLines=1) dentro dela. `flex: 1` divide a largura por igual;
-// sem wrap, sem %, sem Dimensions, sem margem negativa. As 3 colunas somam a
-// largura toda → grade simétrica e centrada. Mesmo componente na Home e Conquistas.
+// CORREÇÃO (2 partes): (a) `minWidth: 0` em cada célula — sem ele o min-width
+// automático do flex-item vale a largura do rótulo e quebra a divisão em 1/3. (b) o
+// `flex: 1` fica numa View SIMPLES (estilo objeto), NÃO no style-FUNÇÃO do Pressable:
+// sob o NativeWind (css-interop) o flex vindo de uma função de style do Pressable não
+// chega ao nó de layout → a célula não cresce e a linha encosta à esquerda (era o
+// resto do defeito no print2). A View envolvente usa alignItems:center → o conteúdo
+// (Pressable de largura natural) fica centrado em cada 1/3. Sem wrap, %, Dimensions
+// ou margem negativa. As 3 colunas somam a largura toda. Mesmo componente Home/Conquistas.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const COLUMNS = 3
-const SLOT = 72 // moldura quadrada FIXA da medalha (px)
-const MEDAL = 52 // arte da medalha dentro do slot (px)
-const COL_GAP = space.sm // espaçamento horizontal entre colunas
-const ROW_GAP = space.lg // espaçamento vertical entre linhas
+const COLUMNS = 3;
+const SLOT = 72; // moldura quadrada FIXA da medalha (px)
+const MEDAL = 52; // arte da medalha dentro do slot (px)
+const COL_GAP = space.sm; // espaçamento horizontal entre colunas
+const ROW_GAP = space.lg; // espaçamento vertical entre linhas
 
 function chunk<T>(items: T[], size: number): T[][] {
-  const rows: T[][] = []
-  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size))
-  return rows
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size)
+    rows.push(items.slice(i, i + size));
+  return rows;
 }
 
-// Célula: `flex: 1` divide a largura igualmente + `minWidth: 0` deixa o rótulo
-// elidir SEM forçar a célula a crescer (ver CAUSA RAIZ acima). O slot é de tamanho
+// MedalCell: só o CONTEÚDO (slot fixo + rótulo), de largura natural. O `flex: 1` que
+// divide a linha fica na View que a envolve (ver MedalGallery). O slot é de tamanho
 // fixo e centralizado → a medalha cai sempre no mesmo ponto. Estado "bloqueada"
 // (esmaecida + selo de cadeado) é idêntico em qualquer tela.
 function MedalCell({ badge, onPress }: { badge: Badge; onPress: () => void }) {
-  const t = useThemeColors()
-  const unlocked = badge.unlocked
+  const t = useThemeColors();
+  const unlocked = badge.unlocked;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${badge.label}. ${unlocked ? 'Conquistada' : 'Bloqueada'}. Toque para ver.`}
-      style={({ pressed }) => ({ flex: 1, minWidth: 0, alignItems: 'center', opacity: pressed ? 0.6 : 1 })}
+      accessibilityLabel={`${badge.label}. ${unlocked ? "Conquistada" : "Bloqueada"}. Toque para ver.`}
+      style={({ pressed }) => ({
+        alignItems: "center",
+        opacity: pressed ? 0.6 : 1,
+      })}
     >
       <View
         style={{
           width: SLOT,
           height: SLOT,
-          borderRadius: radius.lg,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: unlocked ? t.primaryLight : t.surfaceSecondary,
-          borderWidth: 1,
-          borderColor: unlocked ? 'transparent' : t.borderLight,
+          //borderRadius: radius.lg,
+          //backgroundColor: unlocked ? t.primaryLight : t.surfaceSecondary,
+          alignItems: "center",
+          justifyContent: "center",
+          borderColor: unlocked ? "transparent" : t.borderLight,
         }}
       >
         <View style={{ opacity: unlocked ? 1 : 0.35 }}>
@@ -72,7 +78,7 @@ function MedalCell({ badge, onPress }: { badge: Badge; onPress: () => void }) {
         {!unlocked ? (
           <View
             style={{
-              position: 'absolute',
+              position: "absolute",
               right: 4,
               bottom: 4,
               width: 20,
@@ -81,26 +87,32 @@ function MedalCell({ badge, onPress }: { badge: Badge; onPress: () => void }) {
               backgroundColor: t.surface,
               borderWidth: 1,
               borderColor: t.borderLight,
-              alignItems: 'center',
-              justifyContent: 'center',
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <Lock size={11} color={t.textMuted} />
           </View>
         ) : null}
       </View>
-      {/* alignSelf:stretch → o rótulo ocupa a largura da célula e centraliza igual. */}
+      {/* Rótulo de 1 linha, largura natural e centralizado. NÃO usa alignSelf:stretch
+          (forçaria a célula a crescer com o texto → foi parte do desalinhamento). */}
       <Text
         numberOfLines={1}
+        adjustsFontSizeToFit
         style={[
           typography.labelSm,
-          { alignSelf: 'stretch', textAlign: 'center', marginTop: space.xs, color: unlocked ? t.text : t.textMuted },
+          {
+            textAlign: "center",
+            marginTop: space.xs,
+            color: unlocked ? t.text : t.textMuted,
+          },
         ]}
       >
         {badge.label}
       </Text>
     </Pressable>
-  )
+  );
 }
 
 /**
@@ -112,42 +124,64 @@ function MedalCell({ badge, onPress }: { badge: Badge; onPress: () => void }) {
  *                  antecipar a recompensa visual do momento real.
  */
 export function MedalGallery({ badges }: { badges: Badge[] }) {
-  const [detail, setDetail] = useState<Badge | null>(null)
-  const [locked, setLocked] = useState<Badge | null>(null)
+  const [detail, setDetail] = useState<Badge | null>(null);
+  const [locked, setLocked] = useState<Badge | null>(null);
 
   const open = (badge: Badge) => {
-    haptics.light()
-    if (badge.unlocked) setDetail(badge)
-    else setLocked(badge)
-  }
+    haptics.light();
+    if (badge.unlocked) setDetail(badge);
+    else setLocked(badge);
+  };
 
-  const rows = chunk(badges, COLUMNS)
+  const rows = chunk(badges, COLUMNS);
 
   return (
     <>
-      {/* Linhas explícitas de COLUMNS. Cada célula é flex:1 + minWidth:0, então as
-          três dividem a largura por igual e ficam idênticas em toda linha. Linhas
-          incompletas recebem espaçadores flex:1 para as colunas nunca esticarem. */}
+      {/* Linhas explícitas de COLUMNS. Cada célula é uma View flex:1 + minWidth:0, então
+          as três dividem a largura por igual. Linhas incompletas recebem espaçadores
+          flex:1 para as colunas nunca esticarem. */}
       <View style={{ rowGap: ROW_GAP }}>
         {rows.map((row, rowIndex) => {
-          const fillers = COLUMNS - row.length
+          const fillers = COLUMNS - row.length;
           return (
-            <View key={rowIndex} style={{ flexDirection: 'row', columnGap: COL_GAP }}>
+            <View
+              key={rowIndex}
+              style={{ flexDirection: "row", columnGap: COL_GAP }}
+            >
               {row.map((badge) => (
-                <MedalCell key={badge.id} badge={badge} onPress={() => open(badge)} />
+                // flex:1 + minWidth:0 em View SIMPLES (estilo objeto), não no
+                // Pressable: sob o NativeWind, flex vindo de style-função do
+                // Pressable não chega ao nó de layout. alignItems:center centra a
+                // célula sem depender de stretch. As 3 células somam a largura toda.
+                <View
+                  key={badge.id}
+                  style={{ flex: 1, minWidth: 0, alignItems: "center" }}
+                >
+                  <MedalCell badge={badge} onPress={() => open(badge)} />
+                </View>
               ))}
               {fillers > 0
                 ? Array.from({ length: fillers }).map((_, i) => (
-                    <View key={`filler-${i}`} style={{ flex: 1, minWidth: 0 }} />
+                    <View
+                      key={`filler-${i}`}
+                      style={{ flex: 1, minWidth: 0 }}
+                    />
                   ))
                 : null}
             </View>
-          )
+          );
         })}
       </View>
 
-      {detail ? <AchievementDetailModal badge={detail} onDismiss={() => setDetail(null)} /> : null}
-      {locked ? <LockedMedalSheet badge={locked} onDismiss={() => setLocked(null)} /> : null}
+      {detail ? (
+        <AchievementDetailModal
+          badge={detail}
+          onDismiss={() => setDetail(null)}
+        />
+      ) : null}
+      {locked ? (
+        <LockedMedalSheet badge={locked} onDismiss={() => setLocked(null)} />
+      ) : null}
     </>
-  )
+  );
 }

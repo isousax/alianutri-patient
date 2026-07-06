@@ -188,10 +188,10 @@ export function Conquistas({
                 style={{
                   width: 38,
                   height: 38,
-                  borderRadius: 19,
+                  //borderRadius: 19,
+                  //backgroundColor: ch.done ? t.primaryLight : t.surfaceSecondary,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: ch.done ? t.primaryLight : t.surfaceSecondary,
                 }}
               >
                 <ChallengeIcon
