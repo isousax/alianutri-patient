@@ -41,3 +41,10 @@ export function useLevelUp(currentLevel: number | null) {
 
   return { celebrateLevel, dismiss }
 }
+
+/** DEV: limpa o baseline de nível celebrado (permite recelebrar). */
+export async function resetSeenLevel() {
+  try {
+    await AsyncStorage.removeItem(KEY)
+  } catch {}
+}

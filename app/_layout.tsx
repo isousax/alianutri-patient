@@ -14,6 +14,7 @@ import { useNotifications } from '../src/hooks/useNotifications'
 import { useReminders } from '../src/hooks/useReminders'
 import { useThemeStore, useTheme } from '../src/stores/theme'
 import { useOnboardingStore } from '../src/stores/onboarding'
+import { useDevGamStore } from '../src/stores/devGamification'
 import { SplashGate } from '../src/components/SplashGate'
 import { XpToast, FeedbackOverlays } from '../src/components/ui'
 import { setupNetworkMonitoring } from '../src/lib/network'
@@ -97,6 +98,7 @@ export default function RootLayout() {
     hydrate()
     hydrateTheme()
     hydrateOnboarding()
+    if (__DEV__) useDevGamStore.getState().hydrate()
   }, [hydrate, hydrateTheme, hydrateOnboarding])
 
   useNotifications()

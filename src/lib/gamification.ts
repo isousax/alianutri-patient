@@ -37,7 +37,7 @@ export interface GamificationState {
 }
 
 // Curva de níveis — XP acumulado para alcançar cada nível (1..8).
-const LEVEL_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2500, 4000];
+export const LEVEL_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2500, 4000];
 
 // Título humano de cada nível (1..8).
 export const LEVEL_TITLES = [
@@ -188,6 +188,35 @@ export function computeGamification(params: {
     badges,
     unlockedCount: badges.filter((b) => b.unlocked).length,
   };
+}
+
+// DEV-ONLY: aplica overrides locais (medalhas desbloqueadas + XP/nível) sobre um
+// GamificationState já calculado. Função PURA — a persistência vive no store dev.
+export function applyDevOverrides(
+  state: GamificationState,
+  overrides: { unlockedIds?: string[]; xpOverride?: number | null },
+): GamificationState {
+  let next = state;
+  const { unlockedIds, xpOverride } = overrides;
+
+  if (xpOverride != null) {
+    const { level, xpInLevel, xpPerLevel } = levelFromXp(xpOverride);
+    next = { ...next, xp: xpOverride, level, xpInLevel, xpPerLevel };
+  }
+
+  if (unlockedIds && unlockedIds.length > 0) {
+    const set = new Set(unlockedIds);
+    const badges = next.badges.map((b) =>
+      set.has(b.id) ? { ...b, unlocked: true } : b,
+    );
+    next = {
+      ...next,
+      badges,
+      unlockedCount: badges.filter((b) => b.unlocked).length,
+    };
+  }
+
+  return next;
 }
 
 export type ChallengeIconKey = "utensils" | "droplet" | "flame" | "star";

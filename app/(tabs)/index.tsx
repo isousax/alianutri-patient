@@ -75,7 +75,9 @@ import type {
   DiaryTimelineMeal,
   PortalHome,
 } from "../../src/types/portal";
-import { computeGamification } from "../../src/lib/gamification";
+import { computeGamification, type Badge } from "../../src/lib/gamification";
+import { useDevGamification } from "../../src/hooks/useGamification";
+import { AchievementDetailModal } from "../../src/components/home/AchievementDetailModal";
 import { openMeetingLink, openAddressInMaps } from "../../src/lib/appointment";
 import { getTipOfTheDay } from "../../src/data/dailyTips";
 import { useDailyTipStore } from "../../src/stores/dailyTip";
@@ -99,6 +101,7 @@ import { GoalsPreview } from "../../src/components/home/GoalsPreview";
 import { LevelUpCelebration, CelebrationModal } from "../../src/components/home/LevelUpCelebration";
 import { AliaAvatar } from "../../src/components/ui/AliaAvatar";
 import { MedalhasIcon } from "../../src/components/ui/Medalhas";
+import { PhysicalMedal } from "../../src/components/ui/PhysicalMedal";
 import { QuickActionTile } from "../../src/components/ui/QuickActionTile";
 import {
   space,
@@ -176,7 +179,7 @@ export default function HomeScreen() {
   }, [waterData, waterGoal]);
 
   // Celebrações de gamificação — level-up e conquistas desbloqueadas
-  const gam = useMemo(
+  const gamRaw = useMemo(
     () =>
       data
         ? computeGamification({
@@ -191,6 +194,7 @@ export default function HomeScreen() {
         : null,
     [data, goals, chartsToday, streakData],
   );
+  const gam = useDevGamification(gamRaw);
   const { celebrateLevel, dismiss: dismissLevelUp } = useLevelUp(gam?.level ?? null);
   const { newBadge, dismiss: dismissBadge } = useAchievementUnlock(gam?.badges ?? []);
 
@@ -357,7 +361,8 @@ export default function HomeScreen() {
         <LevelUpCelebration level={celebrateLevel} onDismiss={dismissLevelUp} />
       ) : newBadge != null ? (
         <CelebrationModal
-          hero={<MedalhasIcon medalha={newBadge.medalha} size={150} />}
+          soundKey="medalUnlock"
+          hero={<PhysicalMedal medalha={newBadge.medalha} size={132} />}
           eyebrow="Conquista desbloqueada"
           title={newBadge.label}
           subtitle={newBadge.hint}
@@ -904,7 +909,7 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
   const t = useThemeColors();
   const { data: goals } = useGoals();
   const { data: charts } = useChartsSummary(1);
-  const gam = computeGamification({
+  const gamRaw = computeGamification({
     streak: home.diary_streak ?? 0,
     loggedDays: home.logged_dates?.length ?? 0,
     goals: goals ?? [],
@@ -913,6 +918,8 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
     nutriLikeCount: charts?.counts?.nutri_reactions,
     nutriCommentCount: charts?.counts?.nutri_comments,
   });
+  const gam = useDevGamification(gamRaw);
+  const [detailBadge, setDetailBadge] = useState<Badge | null>(null);
   const pct = Math.round((gam.xpInLevel / gam.xpPerLevel) * 100);
 
   return (
@@ -993,14 +1000,19 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4 }}>
           {gam.badges.map((badge) => {
             return (
-              <View
+              <Pressable
                 key={badge.id}
-                style={{
+                onPress={() => {
+                  haptics.light();
+                  setDetailBadge(badge);
+                }}
+                style={({ pressed }) => ({
                   width: "33.33%",
                   paddingHorizontal: 4,
                   marginBottom: space.sm,
                   alignItems: "center",
-                }}
+                  opacity: pressed ? 0.6 : 1,
+                })}
               >
                 <View
                   style={{
@@ -1030,12 +1042,19 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
                 >
                   {badge.label}
                 </Text>
-              </View>
+              </Pressable>
             );
           })}
         </View>
         </AuroraBackground>
       </Card>
+
+      {detailBadge && (
+        <AchievementDetailModal
+          badge={detailBadge}
+          onDismiss={() => setDetailBadge(null)}
+        />
+      )}
     </Animated.View>
   );
 }

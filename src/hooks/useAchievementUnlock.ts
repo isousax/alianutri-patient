@@ -53,3 +53,24 @@ export function useAchievementUnlock(badges: Badge[]) {
 
   return { newBadge, dismiss }
 }
+
+/** DEV: marca ids como "vistos" para a Home não re-disparar a celebração real. */
+export async function markBadgesSeen(ids: string[]) {
+  try {
+    const raw = await AsyncStorage.getItem(KEY)
+    let seen: string[] = []
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw)
+      if (Array.isArray(parsed)) seen = parsed.filter((x): x is string => typeof x === 'string')
+    }
+    const merged = Array.from(new Set([...seen, ...ids]))
+    await AsyncStorage.setItem(KEY, JSON.stringify(merged))
+  } catch {}
+}
+
+/** DEV: limpa o baseline de conquistas vistas (permite recelebrar). */
+export async function resetSeenBadges() {
+  try {
+    await AsyncStorage.removeItem(KEY)
+  } catch {}
+}
