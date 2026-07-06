@@ -23,11 +23,8 @@ import {
   MapPin,
   Video,
   Flame,
-  Droplets,
   TrendingDown,
   TrendingUp,
-  Sparkles,
-  Utensils,
   Sun,
   Moon,
   CloudSun,
@@ -35,9 +32,6 @@ import {
   Camera,
   CalendarPlus,
   Trophy,
-  Award,
-  Star,
-  Lock,
   Pill,
   FileText,
   X,
@@ -81,7 +75,7 @@ import type {
   DiaryTimelineMeal,
   PortalHome,
 } from "../../src/types/portal";
-import { computeGamification, type BadgeIconKey } from "../../src/lib/gamification";
+import { computeGamification } from "../../src/lib/gamification";
 import { openMeetingLink, openAddressInMaps } from "../../src/lib/appointment";
 import { getTipOfTheDay } from "../../src/data/dailyTips";
 import { useDailyTipStore } from "../../src/stores/dailyTip";
@@ -104,6 +98,7 @@ import { MiniPostCard } from "../../src/components/home/MiniPostCard";
 import { GoalsPreview } from "../../src/components/home/GoalsPreview";
 import { LevelUpCelebration, CelebrationModal } from "../../src/components/home/LevelUpCelebration";
 import { AliaAvatar } from "../../src/components/ui/AliaAvatar";
+import { MedalhasIcon } from "../../src/components/ui/Medalhas";
 import { QuickActionTile } from "../../src/components/ui/QuickActionTile";
 import {
   space,
@@ -362,10 +357,7 @@ export default function HomeScreen() {
         <LevelUpCelebration level={celebrateLevel} onDismiss={dismissLevelUp} />
       ) : newBadge != null ? (
         <CelebrationModal
-          icon={(() => {
-            const BadgeIcon = BADGE_ICON[newBadge.icon];
-            return <BadgeIcon size={52} color={t.primaryFg} />;
-          })()}
+          hero={<MedalhasIcon medalha={newBadge.medalha} size={150} />}
           eyebrow="Conquista desbloqueada"
           title={newBadge.label}
           subtitle={newBadge.hint}
@@ -908,17 +900,6 @@ function WeeklyAdherenceChart({ days }: { days: WeeklyAdherenceDay[] }) {
 
 // ── Gamification: hub de progresso (módulo gamification, gated por gamification_enabled) ──
 
-const BADGE_ICON: Record<BadgeIconKey, typeof Flame> = {
-  flame: Flame,
-  award: Award,
-  star: Star,
-  target: Target,
-  trophy: Trophy,
-  utensils: Utensils,
-  sparkles: Sparkles,
-  droplet: Droplets,
-};
-
 function ProgressHubCard({ home }: { home: PortalHome }) {
   const t = useThemeColors();
   const { data: goals } = useGoals();
@@ -1011,7 +992,6 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
         </Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4 }}>
           {gam.badges.map((badge) => {
-            const Icon = BADGE_ICON[badge.icon];
             return (
               <View
                 key={badge.id}
@@ -1029,15 +1009,13 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
                     borderRadius: radius.sm,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: badge.unlocked ? t.primaryLight : t.borderLight,
-                    opacity: badge.unlocked ? 1 : 0.6,
+                    backgroundColor: badge.unlocked
+                      ? t.primaryLight
+                      : t.surfaceSecondary,
+                    opacity: badge.unlocked ? 1 : 0.45,
                   }}
                 >
-                  {badge.unlocked ? (
-                    <Icon size={20} color={t.primary} />
-                  ) : (
-                    <Lock size={16} color={t.textMuted} />
-                  )}
+                  <MedalhasIcon medalha={badge.medalha} size={34} />
                 </View>
                 <Text
                   numberOfLines={1}

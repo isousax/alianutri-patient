@@ -1,14 +1,5 @@
-import { View, Text, ScrollView, Dimensions } from "react-native";
-import {
-  Flame,
-  Award,
-  Star,
-  Target,
-  Trophy,
-  Utensils,
-  Sparkles,
-  Droplets,
-} from "lucide-react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, Dimensions, Pressable } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useThemeColors } from "../../stores/theme";
 import {
@@ -22,27 +13,26 @@ import {
   computeWeeklyChallenges,
   levelTitle,
   MAX_LEVEL,
-  type BadgeIconKey,
+  type Badge,
 } from "../../lib/gamification";
 import { Card, ProgressBar } from "../ui";
 import { typography, space, SCREEN_PADDING } from "../../theme/tokens";
 import { FireAnimation } from "../ui/FireAnimation";
 import { MedalhasIcon } from "../ui/Medalhas";
+import { Utensils, Droplets, Flame, Star } from "lucide-react-native";
+import { CelebrationModal } from "../home/LevelUpCelebration";
+import { haptics } from "../../lib/haptics";
+
+const CHALLENGE_ICON = {
+  utensils: Utensils,
+  droplet: Droplets,
+  flame: Flame,
+  star: Star,
+} as const;
 
 // Segmento "Conquistas" do Diário (P1). XP/nível/streak/badges são DERIVADOS no
 // cliente (lib/gamification.ts) a partir de sinais que o paciente já gera —
 // sem motor de pontos no back. Gated por gamification_enabled no chamador.
-
-const BADGE_ICON: Record<BadgeIconKey, typeof Flame> = {
-  flame: Flame,
-  award: Award,
-  star: Star,
-  target: Target,
-  trophy: Trophy,
-  utensils: Utensils,
-  sparkles: Sparkles,
-  droplet: Droplets,
-};
 
 export function Conquistas({
   bottomPadding = 100,
@@ -50,6 +40,7 @@ export function Conquistas({
   bottomPadding?: number;
 }) {
   const t = useThemeColors();
+  const [devBadge, setDevBadge] = useState<Badge | null>(null);
   const { data: streakData } = useDiaryStreak();
   const { data: goals } = useGoals();
   const { data: charts } = useChartsSummary(365);
@@ -88,6 +79,7 @@ export function Conquistas({
     (Dimensions.get("window").width - SCREEN_PADDING * 2 - space.sm * 2) / 3;
 
   return (
+    <>
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={{
@@ -182,7 +174,7 @@ export function Conquistas({
       </Text>
       <Card>
         {challenges.map((ch, i) => {
-          const Icon = BADGE_ICON[ch.icon];
+          const ChallengeIcon = CHALLENGE_ICON[ch.icon];
           const p =
             ch.target > 0
               ? Math.max(0, Math.min(1, ch.current / ch.target))
@@ -201,14 +193,14 @@ export function Conquistas({
                 style={{
                   width: 38,
                   height: 38,
-                  //borderRadius: 19,
+                  borderRadius: 19,
                   alignItems: "center",
                   justifyContent: "center",
-                  //backgroundColor: ch.done ? t.primaryLight : t.surfaceSecondary,
+                  backgroundColor: ch.done ? t.primaryLight : t.surfaceSecondary,
                 }}
               >
-                <Icon
-                  size={20}
+                <ChallengeIcon
+                  size={18}
                   color={ch.done ? t.primary : t.textSecondary}
                   strokeWidth={2}
                 />
@@ -268,7 +260,6 @@ export function Conquistas({
       </Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
         {gam.badges.map((badge) => {
-          const Icon = BADGE_ICON[badge.icon];
           return (
             <View
               key={badge.id}
@@ -293,7 +284,7 @@ export function Conquistas({
                   marginBottom: space.xs,
                 }}
               >
-                <MedalhasIcon medalha={badge.id} size={40} />
+                <MedalhasIcon medalha={badge.medalha} size={40} />
               </View>
               <Text
                 style={[
@@ -317,6 +308,66 @@ export function Conquistas({
           );
         })}
       </View>
+
+      {__DEV__ && (
+        <View style={{ marginTop: space.xl }}>
+          <Text
+            style={[
+              typography.labelMd,
+              { color: t.textSecondary, marginBottom: space.md },
+            ]}
+          >
+            Modo dev · Simular desbloqueio
+          </Text>
+          <Card>
+            <Text
+              style={[
+                typography.caption,
+                { color: t.textMuted, marginBottom: space.md },
+              ]}
+            >
+              Toque numa medalha para pré-visualizar a celebração de conquista.
+            </Text>
+            <View
+              style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}
+            >
+              {gam.badges.map((badge) => (
+                <Pressable
+                  key={badge.id}
+                  onPress={() => {
+                    haptics.light();
+                    setDevBadge(badge);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Simular conquista ${badge.label}`}
+                  style={({ pressed }) => ({
+                    width: 52,
+                    height: 52,
+                    borderRadius: 26,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: t.primaryLight,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <MedalhasIcon medalha={badge.medalha} size={40} />
+                </Pressable>
+              ))}
+            </View>
+          </Card>
+        </View>
+      )}
     </ScrollView>
+
+    {__DEV__ && devBadge && (
+      <CelebrationModal
+        hero={<MedalhasIcon medalha={devBadge.medalha} size={150} />}
+        eyebrow="Conquista desbloqueada"
+        title={devBadge.label}
+        subtitle={devBadge.hint}
+        onDismiss={() => setDevBadge(null)}
+      />
+    )}
+    </>
   );
 }

@@ -12,7 +12,7 @@ const MEDALHAS = {
   constancia: require('../../../assets/images/medalhas/constancia.png'),
   fotografo: require('../../../assets/images/medalhas/fotografo.png'),
   diarista: require('../../../assets/images/medalhas/diarista.png'),
-  favorito_da_nutri: require('../../../assets/images/medalhas/favorito_da_nutri.png'),
+  favorito_da_nutri: require('../../../assets/images/medalhas/favorito_do_nutri.png'),
 } as const
 
 export function MedalhasIcon({

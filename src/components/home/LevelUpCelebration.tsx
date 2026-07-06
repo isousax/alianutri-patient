@@ -65,7 +65,7 @@ export function CelebrationModal({ icon, hero, eyebrow, title, subtitle, message
           </Animated.View>
 
           <Animated.View entering={FadeIn.delay(420)} style={{ marginTop: space['4xl'], alignSelf: 'stretch' }}>
-            <Button label="Continuar" onPress={onDismiss} fullWidth leftIcon={<Sparkles size={16} color={t.primaryFg} />} />
+            <Button label="Continuar" onPress={onDismiss} fullWidth  />
           </Animated.View>
         </SafeAreaView>
       </AuroraBackground>

@@ -190,11 +190,13 @@ export function computeGamification(params: {
   };
 }
 
+export type ChallengeIconKey = "utensils" | "droplet" | "flame" | "star";
+
 export interface WeeklyChallenge {
   id: string;
   label: string;
   hint: string;
-  medalha: MedalhaKey;
+  icon: ChallengeIconKey;
   current: number;
   target: number;
   done: boolean;
@@ -222,14 +224,14 @@ export function computeWeeklyChallenges(params: {
     id: string,
     label: string,
     hint: string,
-    medalha: MedalhaKey,
+    icon: ChallengeIconKey,
     current: number,
     target: number,
   ): WeeklyChallenge => ({
     id,
     label,
     hint,
-    medalha,
+    icon,
     current: Math.max(0, Math.min(current, target)),
     target,
     done: current >= target,
@@ -240,7 +242,7 @@ export function computeWeeklyChallenges(params: {
       "log5",
       "Diário em dia",
       "Registre em 5 dias nesta semana",
-      "diario_fiel",
+      "utensils",
       loggedDaysThisWeek,
       5,
     ),
@@ -248,7 +250,7 @@ export function computeWeeklyChallenges(params: {
       "water7",
       "Hidratação diária",
       "Beba água em 7 dias",
-      "constancia",
+      "droplet",
       waterDaysThisWeek,
       7,
     ),
@@ -256,7 +258,7 @@ export function computeWeeklyChallenges(params: {
       "streak",
       "Mantenha a sequência",
       `Chegue a ${nextStreakMilestone(streak)} dias seguidos`,
-      "em_chamas",
+      "flame",
       streak,
       nextStreakMilestone(streak),
     ),
@@ -264,7 +266,7 @@ export function computeWeeklyChallenges(params: {
       "share3",
       "Compartilhe momentos",
       "Poste 3 vezes no diário",
-      "diarista",
+      "star",
       postsThisWeek,
       3,
     ),
