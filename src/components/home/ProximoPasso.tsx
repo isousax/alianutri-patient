@@ -100,14 +100,14 @@ export function ProximoPasso({
           style={{
             width: 44,
             height: 44,
-            borderRadius: radius.md,
+            //borderRadius: radius.md,
+            //backgroundColor: accent + '22',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: accent + '22',
             marginRight: space.md,
           }}
         >
-          <Icon size={20} color={accent} />
+          <Icon size={28} color={accent} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[typography.overline, { color: accent, marginBottom: 2 }]}>

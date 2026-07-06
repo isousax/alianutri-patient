@@ -114,7 +114,7 @@ export default function DocumentsScreen() {
         <ErrorState onRetry={() => refetch()} />
       ) : !docs || docs.length === 0 ? (
         <EmptyState
-          icon={<FileText size={28} color={t.primary} />}
+          alia
           title="Sem documentos"
           description="Atestados, declarações e laudos compartilhados pelo seu nutricionista aparecerão aqui."
           actionLabel="Atualizar"

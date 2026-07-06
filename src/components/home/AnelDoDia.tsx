@@ -79,15 +79,15 @@ export function AnelDoDia({
             >
               <View
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: radius.sm,
+                  width: 25,
+                  height: 25,
+                  //borderRadius: radius.sm,
+                  //backgroundColor: t.primaryLight,
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: t.primaryLight,
+                  justifyContent: 'center',                  
                 }}
               >
-                <Flame size={16} color={t.primary} />
+                <Flame size={20} color={t.primary} />
               </View>
               <View style={{ marginLeft: space.sm, flex: 1 }}>
                 <Text style={[typography.labelMd, { color: t.text }]} numberOfLines={1}>
@@ -110,15 +110,15 @@ export function AnelDoDia({
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.xs }}>
                 <View
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: radius.sm,
+                    width: 25,
+                    height: 25,
+                    //borderRadius: radius.sm,
+                    //backgroundColor: t.primaryLight,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: t.primaryLight,
                   }}
                 >
-                  <Droplets size={16} color={t.primary} />
+                  <Droplets size={20} color={t.primary} />
                 </View>
                 <View style={{ marginLeft: space.sm, flex: 1 }}>
                   <Text style={[typography.labelMd, { color: t.text }]} numberOfLines={1}>

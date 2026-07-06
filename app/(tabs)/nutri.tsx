@@ -192,15 +192,15 @@ function AppointmentRow({ apt, highlight = false }: { apt: PortalAppointment; hi
   const onlineLinkPending = highlight && isOnline && !apt.meeting_url
 
   return (
-    <Card>
+    <Card style={{ marginTop: 2}}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-          <View style={{ width: 34, height: 34, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primaryLight }}>
-            {isOnline ? <Video size={16} color={t.primary} /> : <MapPin size={16} color={t.primary} />}
+          <View style={{ width: 25, height: 34, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', /*backgroundColor: t.primaryLight*/ }}>
+            {isOnline ? <Video size={18} color={t.primary} /> : <MapPin size={18} color={t.primary} />}
           </View>
           <Text style={[typography.labelMd, { color: t.primary }]}>{isOnline ? 'Online' : 'Presencial'}</Text>
         </View>
-        <View style={{ paddingHorizontal: space.sm, paddingVertical: 3, borderRadius: radius.full, backgroundColor: tone.bg }}>
+        <View style={{ paddingHorizontal: space.sm, paddingVertical: 3, borderRadius: radius.full, /*backgroundColor: tone.bg*/ }}>
           <Text style={[typography.captionBold, { color: tone.fg }]}>{meta.label}</Text>
         </View>
       </View>

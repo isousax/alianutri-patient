@@ -106,13 +106,11 @@ import { LevelUpCelebration, CelebrationModal } from "../../src/components/home/
 import { AliaAvatar } from "../../src/components/ui/AliaAvatar";
 import { QuickActionTile } from "../../src/components/ui/QuickActionTile";
 import {
-  radius,
-  shadows,
   space,
   typography,
   SCREEN_PADDING,
   todayStr,
-  fmtWater,
+  radius,
 } from "../../src/theme/tokens";
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -342,9 +340,6 @@ export default function HomeScreen() {
         {/* ═══════ ACTIVE GOALS ═══════ */}
         <GoalsPreview goals={activeGoals} />
 
-        {/* ═══════ GAMIFICATION HUB (módulo gamification) ═══════ */}
-        {data.gamification_enabled && <ProgressHubCard home={data} />}
-
         {/* ═══════ SUPLEMENTOS (módulo supplementation) ═══════ */}
         {data.supplementation_enabled && data.supplements && data.supplements.items.length > 0 && (
           <SupplementsCard supplements={data.supplements} />
@@ -357,6 +352,9 @@ export default function HomeScreen() {
         {(adherenceData?.days?.length ?? 0) > 0 && (
           <WeeklyAdherenceChart days={adherenceData?.days ?? []} />
         )}
+        
+        {/* ═══════ GAMIFICATION HUB (módulo gamification) ═══════ */}
+        {data.gamification_enabled && <ProgressHubCard home={data} />}
 
       </ScrollView>
 
@@ -628,13 +626,13 @@ function AppointmentCard({
             style={{
               width: 28,
               height: 28,
-              borderRadius: radius.sm,
+              //borderRadius: radius.sm,
+              //backgroundColor: t.primaryLight,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: t.primaryLight,
             }}
           >
-            <Calendar size={14} color={t.primary} />
+            <Calendar size={18} color={t.primary} />
           </View>
           <Text
             style={[
@@ -661,15 +659,15 @@ function AppointmentCard({
             marginTop: space.md,
             paddingHorizontal: space.sm + 2,
             paddingVertical: space.xs + 1,
-            borderRadius: radius.sm,
-            backgroundColor: t.primaryLight,
+            //borderRadius: radius.sm,
+            //backgroundColor: t.primaryLight,
             alignSelf: "flex-start",
           }}
         >
           {isOnline ? (
-            <Video size={12} color={t.primary} />
+            <Video size={14} color={t.primary} />
           ) : (
-            <MapPin size={12} color={t.primary} />
+            <MapPin size={14} color={t.primary} />
           )}
           <Text
             style={[
@@ -802,13 +800,13 @@ function WeeklyAdherenceChart({ days }: { days: WeeklyAdherenceDay[] }) {
               style={{
                 width: 28,
                 height: 28,
-                borderRadius: radius.sm,
+                //borderRadius: radius.sm,
+                //backgroundColor: t.primaryLight,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: t.primaryLight,
               }}
             >
-              <BarChart3 size={14} color={t.primary} />
+              <BarChart3 size={18} color={t.primary} />
             </View>
             <Text
               style={[
@@ -956,20 +954,20 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
               style={{
                 width: 28,
                 height: 28,
-                borderRadius: radius.sm,
+                //borderRadius: radius.sm,
+                //backgroundColor: t.primaryLight,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: t.primaryLight,
               }}
             >
-              <Trophy size={15} color={t.primary} />
+              <Trophy size={18} color={t.primary} />
             </View>
             <Text style={[typography.headingSm, { color: t.text, marginLeft: space.sm }]}>
               Seu progresso
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Flame size={14} color={t.warning} />
+            <Flame size={16} color={t.warning} />
             <Text style={[typography.captionBold, { color: t.warning, marginLeft: 3 }]}>
               {gam.streak} {gam.streak === 1 ? "dia" : "dias"}
             </Text>

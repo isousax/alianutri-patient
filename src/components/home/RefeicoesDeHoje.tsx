@@ -147,10 +147,10 @@ export function RefeicoesDeHoje({ meals }: RefeicoesDeHojeProps) {
                 style={{
                   width: 40,
                   height: 40,
-                  borderRadius: radius.md,
+                  //borderRadius: radius.md,
+                  //backgroundColor: logged ? t.primaryLight : t.surfaceSecondary,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: logged ? t.primaryLight : t.surfaceSecondary,
                   marginRight: space.md,
                 }}
               >
