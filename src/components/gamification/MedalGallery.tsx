@@ -61,10 +61,17 @@ function MedalCell({ badge, onPress }: { badge: Badge; onPress: () => void }) {
         opacity: pressed ? 0.6 : 1,
       })}
     >
+      {/* alignSelf:'center' é o que REALMENTE centraliza a medalha. O alignItems:'center'
+          do Pressable está num style-FUNÇÃO e, sob o NativeWind (css-interop), não chega ao
+          nó de layout → o Pressable cai em alignItems:'stretch' e esta caixa de LARGURA FIXA
+          encosta à ESQUERDA. Só se nota quando o rótulo é MAIS LARGO que a caixa (ex.: "Missão
+          cumprida"); com título curto a própria caixa define a largura e "parece" centralizada.
+          alignSelf (estilo objeto numa View) chega ao layout e resolve, independente do Pressable. */}
       <View
         style={{
           width: SLOT,
           height: SLOT,
+          alignSelf: "center",
           //borderRadius: radius.lg,
           //backgroundColor: unlocked ? t.primaryLight : t.surfaceSecondary,
           alignItems: "center",
