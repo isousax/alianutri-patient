@@ -2,20 +2,25 @@ import { useEffect } from 'react'
 import { View, Text, Modal, Pressable, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated'
-import { X, Lock } from 'lucide-react-native'
+import { X } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
-import { typography, space, radius, shadows } from '../../theme/tokens'
+import { typography, space, radius } from '../../theme/tokens'
 import { haptics } from '../../lib/haptics'
 import { AuroraBackground, Button } from '../ui'
-import { PhysicalMedal } from '../ui/PhysicalMedal'
-import { getMedalContent } from '../../data/medalContent'
+import { MedalShowcase } from '../gamification/MedalShowcase'
+import { getMedalMeta } from '../../data/medalContent'
+import { useBadgeDates, fmtAchievementDate } from '../../lib/badgeDates'
 import type { Badge } from '../../lib/gamification'
 
 /**
- * Contemplação de uma conquista — variação CALMA da celebração (mesma linguagem
- * visual: Aurora hero), porém SEM confete e com entrada mais suave. Foca em
- * apreciar a medalha: destaque, nome, descrição rica e uma mensagem exclusiva
- * daquela conquista. Medalhas bloqueadas mostram o requisito de desbloqueio.
+ * Contemplação de uma medalha JÁ CONQUISTADA — uma galeria pessoal, calma e
+ * atemporal. NÃO reproduz a celebração do desbloqueio (o ápice fica reservado ao
+ * momento real). Aqui o foco é orgulho tranquilo: a medalha em destaque (via
+ * MedalShowcase — 2D hoje, pronta para 3D), nome, data e categoria.
+ *
+ * O espaço da futura NARRATIVA exclusiva de cada conquista já existe (meta.story)
+ * e é renderizado assim que o texto chegar — sem redesenho. Deve ser aberto
+ * apenas para badges unlocked; medalhas bloqueadas usam o LockedMedalSheet.
  */
 export function AchievementDetailModal({
   badge,
@@ -25,8 +30,9 @@ export function AchievementDetailModal({
   onDismiss: () => void
 }) {
   const t = useThemeColors()
-  const content = getMedalContent(badge.id)
-  const unlocked = badge.unlocked
+  const meta = getMedalMeta(badge.id)
+  const dates = useBadgeDates()
+  const dateStr = dates[badge.id]
 
   useEffect(() => {
     haptics.light()
@@ -34,10 +40,7 @@ export function AchievementDetailModal({
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onDismiss} statusBarTranslucent>
-      <AuroraBackground
-        variant={unlocked ? 'hero' : 'subtle'}
-        style={{ flex: 1, backgroundColor: t.background }}
-      >
+      <AuroraBackground variant="hero" style={{ flex: 1, backgroundColor: t.background }}>
         <SafeAreaView style={{ flex: 1 }}>
           {/* Fechar (canto superior) */}
           <View style={{ alignItems: 'flex-end', paddingHorizontal: space.lg, paddingTop: space.sm }}>
@@ -70,23 +73,17 @@ export function AchievementDetailModal({
             }}
             showsVerticalScrollIndicator={false}
           >
-            {/* Medalha como objeto físico — arraste para inclinar */}
+            {/* Medalha em destaque — arraste para inclinar (2D agora, 3D depois) */}
             <Animated.View entering={ZoomIn.springify().damping(14)} style={{ alignItems: 'center' }}>
-              <PhysicalMedal medalha={badge.medalha} size={132} locked={!unlocked} />
+              <MedalShowcase badge={badge} size={168} />
             </Animated.View>
 
+            {/* Categoria · Nome · Data */}
             <Animated.View
               entering={FadeInDown.delay(120).duration(360)}
-              style={{ alignItems: 'center' }}
+              style={{ alignItems: 'center', marginTop: space['2xl'] }}
             >
-              <Text
-                style={[
-                  typography.overline,
-                  { color: unlocked ? t.primary : t.textMuted, marginTop: space.xl },
-                ]}
-              >
-                {unlocked ? 'Conquista desbloqueada' : 'Conquista bloqueada'}
-              </Text>
+              <Text style={[typography.overline, { color: t.primary }]}>{meta.category}</Text>
               <Text
                 style={[
                   typography.displaySm,
@@ -95,55 +92,38 @@ export function AchievementDetailModal({
               >
                 {badge.label}
               </Text>
-              <Text
-                style={[
-                  typography.bodyMd,
-                  { color: t.textSecondary, textAlign: 'center', marginTop: space.md },
-                ]}
-              >
-                {content.description}
-              </Text>
+              {dateStr ? (
+                <Text style={[typography.caption, { color: t.textMuted, marginTop: space.sm }]}>
+                  Conquistada em {fmtAchievementDate(dateStr)}
+                </Text>
+              ) : null}
             </Animated.View>
 
-            {/* Mensagem exclusiva (conquistada) OU requisito (bloqueada) */}
-            <Animated.View
-              entering={FadeInDown.delay(240).duration(360)}
-              style={{
-                alignSelf: 'stretch',
-                marginTop: space.xl,
-                padding: space.lg,
-                borderRadius: radius.lg,
-                backgroundColor: t.surface,
-                borderLeftWidth: 3,
-                borderLeftColor: unlocked ? t.primary : t.border,
-                ...shadows.sm,
-              }}
-            >
-              {unlocked ? (
-                <Text style={[typography.headingSm, { color: t.text, lineHeight: 22 }]}>
-                  {content.message}
+            {/* Espaço reservado à NARRATIVA futura (exclusiva por medalha). Só
+                aparece quando o texto existir — nada genérico por enquanto. */}
+            {meta.story ? (
+              <Animated.View
+                entering={FadeInDown.delay(240).duration(360)}
+                style={{
+                  alignSelf: 'stretch',
+                  marginTop: space['2xl'],
+                  padding: space.lg,
+                  borderRadius: radius.lg,
+                  backgroundColor: t.surface,
+                }}
+              >
+                <Text style={[typography.bodyMd, { color: t.textSecondary, lineHeight: 22 }]}>
+                  {meta.story}
                 </Text>
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-                  <Lock size={16} color={t.textMuted} />
-                  <Text style={[typography.bodyMd, { color: t.textSecondary, flex: 1 }]}>
-                    Como desbloquear: {badge.hint}
-                  </Text>
-                </View>
-              )}
-            </Animated.View>
+              </Animated.View>
+            ) : null}
           </ScrollView>
 
           <Animated.View
             entering={FadeIn.delay(360)}
             style={{ paddingHorizontal: space['3xl'], paddingBottom: space.xl }}
           >
-            <Button
-              label="Fechar"
-              onPress={onDismiss}
-              fullWidth
-              variant={unlocked ? 'primary' : 'secondary'}
-            />
+            <Button label="Fechar" onPress={onDismiss} fullWidth />
           </Animated.View>
         </SafeAreaView>
       </AuroraBackground>

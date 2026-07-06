@@ -4,8 +4,9 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-aud
 //  Efeitos sonoros de gamificação (espelha src/lib/haptics.ts)
 //  Fire-and-forget: NUNCA lança (web/dispositivo sem áudio → no-op).
 //  Players ficam em cache p/ baixa latência e sincronia com a animação.
-//  Respeita o botão de silêncio do device — a celebração não "fura" o mudo.
-//  Assets em assets/audio/.
+//  A celebração É audível mesmo com o device no silencioso/vibrar (é uma
+//  recompensa deliberada); mixWithOthers p/ não cortar o áudio que o usuário já
+//  toca. Assets em assets/audio/.
 // ══════════════════════════════════════════════════════
 
 const SOURCES = {
@@ -27,8 +28,14 @@ let audioModeReady = false
 function ensureAudioMode() {
   if (audioModeReady) return
   audioModeReady = true
-  // playsInSilentMode:false → respeita o mudo do usuário (iOS). Sem background.
-  setAudioModeAsync({ playsInSilentMode: false, shouldPlayInBackground: false }).catch(() => {})
+  // playsInSilentMode:true → o som toca mesmo com o device no silencioso/vibrar.
+  // Com false, Android E iOS SUPRIMEM o efeito nesse estado (motivo de "não
+  // funcionar"). mixWithOthers → não interrompe música/áudio já em reprodução.
+  setAudioModeAsync({
+    playsInSilentMode: true,
+    shouldPlayInBackground: false,
+    interruptionMode: 'mixWithOthers',
+  }).catch(() => {})
 }
 
 function getPlayer(key: SoundKey): AudioPlayer {

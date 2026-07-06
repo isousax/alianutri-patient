@@ -1,76 +1,85 @@
-// Copy BESPOKE por conquista (tela de contemplação). Nada genérico: cada medalha
-// carrega uma descrição do que representa e uma mensagem exclusiva — pensada para
-// transmitir orgulho, progresso e reconhecimento. Chaveado por id do Badge
-// (ver src/lib/gamification.ts). Mantido separado da lógica para facilitar revisão
-// de texto sem tocar em regras.
+// Metadados de cada medalha para a GALERIA de conquistas. Mantido separado da
+// lógica pura (src/lib/gamification.ts) para facilitar revisão de texto e evoluir
+// sem tocar em regras.
+//
+//  • category → agrupa a conquista (contemplação + futura filtragem).
+//  • about    → descrição curta do que a conquista representa. Usada na medalha
+//               BLOQUEADA (LockedMedalSheet) para dar contexto — SEM entregar a
+//               recompensa visual, que fica reservada ao desbloqueio real.
+//  • story    → NARRATIVA exclusiva por medalha (um momento da jornada). Ainda
+//               não escrita: quando existir, a contemplação a renderiza sozinha.
+//               NÃO preencher com texto genérico.
 
-export interface MedalContent {
-  description: string
-  message: string
+export type MedalCategory =
+  | 'Sequência'
+  | 'Registro'
+  | 'Metas'
+  | 'Hábitos'
+  | 'Diário'
+  | 'Vínculo'
+
+export interface MedalMeta {
+  category: MedalCategory
+  about: string
+  story?: string
 }
 
-export const MEDAL_CONTENT: Record<string, MedalContent> = {
+export const MEDAL_META: Record<string, MedalMeta> = {
   streak3: {
-    description:
-      'Os três primeiros dias são os mais difíceis — e você atravessou. É aqui que nasce o hábito que muda tudo.',
-    message: 'Todo grande resultado começa com uma decisão pequena, repetida. Você deu o primeiro passo.',
+    category: 'Sequência',
+    about: 'Os três primeiros dias são os mais difíceis — é aqui que o hábito começa a nascer.',
   },
   streak7: {
-    description:
-      'Uma semana inteira sem quebrar a sequência. Cuidar de você já virou parte natural do seu dia.',
-    message: 'Sete dias seguidos não são sorte — são compromisso. Continue alimentando essa chama.',
+    category: 'Sequência',
+    about: 'Uma semana inteira sem quebrar a sequência. Cuidar de você já faz parte do seu dia.',
   },
   streak30: {
-    description:
-      'Trinta dias de constância. O que antes era esforço agora é rotina — e a rotina é o seu superpoder.',
-    message: 'Um mês inteiro cuidando de você. Poucas pessoas chegam até aqui. Você é uma delas.',
+    category: 'Sequência',
+    about: 'Trinta dias de constância. O que antes era esforço agora é rotina.',
   },
   streak100: {
-    description: 'Cem dias seguidos. Isso deixou de ser um hábito: virou parte de quem você é.',
-    message: 'Cem dias. Uma história de disciplina que fala por si. Você é, oficialmente, uma lenda.',
+    category: 'Sequência',
+    about: 'Cem dias seguidos. Deixou de ser um hábito: virou parte de quem você é.',
   },
   logged7: {
-    description:
-      'Sete dias registrando suas refeições. Consciência é o primeiro ingrediente de qualquer mudança.',
-    message: 'Quem registra, enxerga. Quem enxerga, evolui. Sua fidelidade ao diário está valendo a pena.',
+    category: 'Registro',
+    about: 'Sete dias registrando refeições. Consciência é o primeiro passo de qualquer mudança.',
   },
   logged30: {
-    description:
-      'Trinta dias de registros. Você construiu uma base sólida — daqui pra frente, tudo fica mais leve.',
-    message: 'Rotina forte, resultados fortes. Você transformou o ato de registrar em algo natural.',
+    category: 'Registro',
+    about: 'Trinta dias de registros. Uma base sólida que deixa todo o resto mais leve.',
   },
   firstGoal: {
-    description: 'Você definiu sua primeira meta. Ter um destino claro muda completamente a jornada.',
-    message: 'Foco é escolher para onde ir. Você escolheu — e isso já é metade do caminho.',
+    category: 'Metas',
+    about: 'Sua primeira meta definida. Ter um destino claro muda toda a jornada.',
   },
   goalDone: {
-    description: 'Uma meta definida, uma meta concluída. Você provou a si mesmo do que é capaz.',
-    message: 'Do plano à conquista. Guarde essa sensação: ela é o combustível da próxima meta.',
+    category: 'Metas',
+    about: 'Uma meta definida e concluída. A prova de que você é capaz.',
   },
   habit: {
-    description: 'Dez check-ins de hábito. Pequenas ações, repetidas, constroem grandes transformações.',
-    message: 'A constância vence a intensidade. Você descobriu o segredo de quem chega longe.',
+    category: 'Hábitos',
+    about: 'Dez check-ins de hábito. Pequenas ações repetidas constroem grandes mudanças.',
   },
   photographer: {
-    description: 'Trinta fotos de refeição. Cada registro visual é um presente para o seu acompanhamento.',
-    message: 'Você documenta sua jornada com cuidado. Seu nutri agradece — e seus resultados também.',
+    category: 'Diário',
+    about: 'Trinta fotos de refeição. Cada registro é um presente para o seu acompanhamento.',
   },
   diarist: {
-    description: 'Dez momentos compartilhados no diário. Sua história de cuidado ganhou voz.',
-    message: 'Registrar como você se sente é um ato de autoconhecimento. Continue escrevendo sua jornada.',
+    category: 'Diário',
+    about: 'Dez momentos compartilhados no diário. Sua história de cuidado ganhou voz.',
   },
   nutriFav: {
-    description: 'Vinte curtidas do seu nutricionista. Seu esforço está sendo visto e reconhecido.',
-    message:
-      'Quando quem entende do assunto reconhece o seu empenho, é porque você está no caminho certo.',
+    category: 'Vínculo',
+    about: 'Vinte curtidas do seu nutricionista. Seu esforço está sendo visto e reconhecido.',
   },
 }
 
-const FALLBACK: MedalContent = {
-  description: 'Uma conquista na sua jornada de cuidado com você.',
-  message: 'Cada passo conta. Continue — você está indo muito bem.',
+const FALLBACK: MedalMeta = {
+  category: 'Sequência',
+  about: 'Uma conquista na sua jornada de cuidado com você.',
 }
 
-export function getMedalContent(id: string): MedalContent {
-  return MEDAL_CONTENT[id] ?? FALLBACK
+export function getMedalMeta(id: string): MedalMeta {
+  return MEDAL_META[id] ?? FALLBACK
 }

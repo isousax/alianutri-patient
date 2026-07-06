@@ -24,6 +24,7 @@ export interface Badge {
   hint: string;
   medalha: MedalhaKey;
   unlocked: boolean;
+  progress?: { current: number; target: number };
 }
 
 export interface GamificationState {
@@ -132,51 +133,35 @@ export function computeGamification(params: {
     label: string,
     hint: string,
     medalha: MedalhaKey,
-    unlocked: boolean,
+    current: number,
+    target: number,
   ): Badge => ({
     id,
     label,
     hint,
     medalha,
-    unlocked,
+    unlocked: current >= target,
+    progress: { current: Math.max(0, current), target },
   });
 
   const badges: Badge[] = [
-    b("streak3", "Começou!", "3 dias seguidos de registro", "comecou", streak >= 3),
-    b("streak7", "Em chamas", "7 dias seguidos", "em_chamas", streak >= 7),
-    b("streak30", "Imparável", "30 dias seguidos", "imparavel", streak >= 30),
-    b("streak100", "Lenda", "100 dias seguidos", "lenda", streak >= 100),
+    b("streak3", "Começou!", "3 dias seguidos de registro", "comecou", streak, 3),
+    b("streak7", "Em chamas", "7 dias seguidos", "em_chamas", streak, 7),
+    b("streak30", "Imparável", "30 dias seguidos", "imparavel", streak, 30),
+    b("streak100", "Lenda", "100 dias seguidos", "lenda", streak, 100),
 
-    b("logged7", "Diário fiel", "7 dias registrados", "diario_fiel", loggedDays >= 7),
-    b("logged30", "Rotina forte", "30 dias registrados", "rotina_forte", loggedDays >= 30),
+    b("logged7", "Diário fiel", "7 dias registrados", "diario_fiel", loggedDays, 7),
+    b("logged30", "Rotina forte", "30 dias registrados", "rotina_forte", loggedDays, 30),
 
-    b(
-      "firstGoal",
-      "Com foco",
-      "1ª meta definida",
-      "com_foco",
-      goalsActive + goalsCompleted >= 1,
-    ),
-    b(
-      "goalDone",
-      "Missão cumprida",
-      "Concluiu uma meta",
-      "missao_cumprida",
-      goalsCompleted >= 1,
-    ),
+    b("firstGoal", "Com foco", "1ª meta definida", "com_foco", goalsActive + goalsCompleted, 1),
+    b("goalDone", "Missão cumprida", "Concluiu uma meta", "missao_cumprida", goalsCompleted, 1),
 
-    b("habit", "Constância", "10 check-ins de hábito", "constancia", habitCheckins >= 10),
+    b("habit", "Constância", "10 check-ins de hábito", "constancia", habitCheckins, 10),
 
-    b("photographer", "Fotógrafo", "30 fotos de refeição", "fotografo", mealPhotoCount >= 30),
-    b("diarist", "Diarista", "10 momentos no diário", "diarista", diaryPostCount >= 10),
+    b("photographer", "Fotógrafo", "30 fotos de refeição", "fotografo", mealPhotoCount, 30),
+    b("diarist", "Diarista", "10 momentos no diário", "diarista", diaryPostCount, 10),
 
-    b(
-      "nutriFav",
-      "Favorito do Nutri",
-      "20 curtidas do seu nutri",
-      "favorito_da_nutri",
-      nutriLikeCount >= 20,
-    ),
+    b("nutriFav", "Favorito do Nutri", "20 curtidas do seu nutri", "favorito_da_nutri", nutriLikeCount, 20),
   ];
 
   return {

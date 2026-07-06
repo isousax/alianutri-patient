@@ -21,8 +21,8 @@ import { MedalhasIcon } from './Medalhas'
 //  PHYSICAL MEDAL — a medalha como OBJETO físico (2.5D)
 //  • tilt 3D ao arrastar o dedo sobre ela (perspective rotateX/Y)
 //  • brilho especular que varre a superfície conforme a inclinação
-//  • profundidade: disco "cunhado" + sombra colorida (glow) fixa no
-//    chão, então a medalha parece flutuar acima da superfície
+//  • profundidade: sombra colorida (glow) fixa no wrapper estático — a medalha
+//    parece flutuar. SEM card/círculo atrás: ela é o próprio objeto.
 //  • idle discreto: respira/inclina de leve para captar a luz
 //  Sem 3D real (three.js): só reanimated + gesture-handler +
 //  expo-linear-gradient. Reutilizável (contemplação, celebração…).
@@ -50,9 +50,8 @@ export function PhysicalMedal({
   idle?: boolean
 }) {
   const t = useThemeColors()
-  const disc = Math.round(size * 1.32) // diâmetro do disco/pedestal
-  const SHEEN = disc * 1.7 // faixa de luz maior que o disco p/ varrer
-  const sheenOffset = -(SHEEN - disc) / 2
+  const SHEEN = size * 1.6 // faixa de luz especular que varre a superfície
+  const sheenOffset = -(SHEEN - size) / 2
 
   const liveIdle = idle && !locked
   const liveSheen = !locked
@@ -114,10 +113,10 @@ export function PhysicalMedal({
     const ry = ay.value + idleY
     // o brilho corre na direção OPOSTA à inclinação (como luz real)
     return {
-      opacity: 0.26 + engaged.value * 0.32,
+      opacity: 0.22 + engaged.value * 0.3,
       transform: [
-        { translateX: interpolate(ry, [-MAX_TILT, MAX_TILT], [disc * 0.55, -disc * 0.55]) },
-        { translateY: interpolate(rx, [-MAX_TILT, MAX_TILT], [-disc * 0.55, disc * 0.55]) },
+        { translateX: interpolate(ry, [-MAX_TILT, MAX_TILT], [size * 0.55, -size * 0.55]) },
+        { translateY: interpolate(rx, [-MAX_TILT, MAX_TILT], [-size * 0.55, size * 0.55]) },
       ],
     }
   })
@@ -126,12 +125,11 @@ export function PhysicalMedal({
     <Animated.View
       style={[
         {
-          width: disc,
-          height: disc,
-          borderRadius: disc / 2,
+          width: size,
+          height: size,
+          borderRadius: size / 2,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: locked ? t.surfaceSecondary : t.primaryLight,
           overflow: 'hidden',
         },
         cardStyle,
@@ -171,15 +169,15 @@ export function PhysicalMedal({
   return (
     <View
       style={{
-        width: disc,
-        height: disc,
+        width: size,
+        height: size,
         alignItems: 'center',
         justifyContent: 'center',
-        ...(locked ? shadows.md : shadows.glow(t.primary)),
+        ...(locked ? {} : shadows.glow(t.primary)),
       }}
     >
       {interactive ? (
-        <GestureHandlerRootView style={{ width: disc, height: disc }}>
+        <GestureHandlerRootView style={{ width: size, height: size }}>
           <GestureDetector gesture={pan}>{discView}</GestureDetector>
         </GestureHandlerRootView>
       ) : (

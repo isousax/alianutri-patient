@@ -75,9 +75,9 @@ import type {
   DiaryTimelineMeal,
   PortalHome,
 } from "../../src/types/portal";
-import { computeGamification, type Badge } from "../../src/lib/gamification";
+import { computeGamification } from "../../src/lib/gamification";
 import { useDevGamification } from "../../src/hooks/useGamification";
-import { AchievementDetailModal } from "../../src/components/home/AchievementDetailModal";
+import { MedalGallery } from "../../src/components/gamification/MedalGallery";
 import { openMeetingLink, openAddressInMaps } from "../../src/lib/appointment";
 import { getTipOfTheDay } from "../../src/data/dailyTips";
 import { useDailyTipStore } from "../../src/stores/dailyTip";
@@ -100,7 +100,6 @@ import { MiniPostCard } from "../../src/components/home/MiniPostCard";
 import { GoalsPreview } from "../../src/components/home/GoalsPreview";
 import { LevelUpCelebration, CelebrationModal } from "../../src/components/home/LevelUpCelebration";
 import { AliaAvatar } from "../../src/components/ui/AliaAvatar";
-import { MedalhasIcon } from "../../src/components/ui/Medalhas";
 import { PhysicalMedal } from "../../src/components/ui/PhysicalMedal";
 import { QuickActionTile } from "../../src/components/ui/QuickActionTile";
 import {
@@ -919,7 +918,6 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
     nutriCommentCount: charts?.counts?.nutri_comments,
   });
   const gam = useDevGamification(gamRaw);
-  const [detailBadge, setDetailBadge] = useState<Badge | null>(null);
   const pct = Math.round((gam.xpInLevel / gam.xpPerLevel) * 100);
 
   return (
@@ -997,64 +995,9 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
         <Text style={[typography.caption, { color: t.textMuted, marginBottom: space.sm }]}>
           Conquistas · {gam.unlockedCount}/{gam.badges.length}
         </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4 }}>
-          {gam.badges.map((badge) => {
-            return (
-              <Pressable
-                key={badge.id}
-                onPress={() => {
-                  haptics.light();
-                  setDetailBadge(badge);
-                }}
-                style={({ pressed }) => ({
-                  width: "33.33%",
-                  paddingHorizontal: 4,
-                  marginBottom: space.sm,
-                  alignItems: "center",
-                  opacity: pressed ? 0.6 : 1,
-                })}
-              >
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: radius.sm,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: badge.unlocked
-                      ? t.primaryLight
-                      : t.surfaceSecondary,
-                    opacity: badge.unlocked ? 1 : 0.45,
-                  }}
-                >
-                  <MedalhasIcon medalha={badge.medalha} size={34} />
-                </View>
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    typography.caption,
-                    {
-                      color: badge.unlocked ? t.text : t.textMuted,
-                      marginTop: 4,
-                      textAlign: "center",
-                    },
-                  ]}
-                >
-                  {badge.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <MedalGallery badges={gam.badges} />
         </AuroraBackground>
       </Card>
-
-      {detailBadge && (
-        <AchievementDetailModal
-          badge={detailBadge}
-          onDismiss={() => setDetailBadge(null)}
-        />
-      )}
     </Animated.View>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { Badge } from '../lib/gamification'
+import { recordBadgeDates, clearBadgeDates } from '../lib/badgeDates'
 
 const KEY = 'alianutri_seen_badges'
 
@@ -47,6 +48,7 @@ export function useAchievementUnlock(badges: Badge[]) {
   }, [sig])
 
   const dismiss = () => {
+    if (newBadge) recordBadgeDates([newBadge.id])
     AsyncStorage.setItem(KEY, JSON.stringify(unlockedIds)).catch(() => {})
     setNewBadge(null)
   }
@@ -65,6 +67,7 @@ export async function markBadgesSeen(ids: string[]) {
     }
     const merged = Array.from(new Set([...seen, ...ids]))
     await AsyncStorage.setItem(KEY, JSON.stringify(merged))
+    recordBadgeDates(ids)
   } catch {}
 }
 
@@ -72,5 +75,6 @@ export async function markBadgesSeen(ids: string[]) {
 export async function resetSeenBadges() {
   try {
     await AsyncStorage.removeItem(KEY)
+    clearBadgeDates()
   } catch {}
 }

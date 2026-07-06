@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { View, Text, ScrollView, Dimensions, Pressable } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useThemeColors } from "../../stores/theme";
 import {
@@ -13,17 +12,14 @@ import {
   computeWeeklyChallenges,
   levelTitle,
   MAX_LEVEL,
-  type Badge,
 } from "../../lib/gamification";
 import { Card, ProgressBar } from "../ui";
 import { typography, space, SCREEN_PADDING } from "../../theme/tokens";
 import { FireAnimation } from "../ui/FireAnimation";
-import { MedalhasIcon } from "../ui/Medalhas";
 import { Utensils, Droplets, Flame, Star } from "lucide-react-native";
 import { useDevGamification } from "../../hooks/useGamification";
 import { DevGamPanel } from "./DevGamPanel";
-import { haptics } from "../../lib/haptics";
-import { AchievementDetailModal } from "../home/AchievementDetailModal";
+import { MedalGallery } from "../gamification/MedalGallery";
 
 const CHALLENGE_ICON = {
   utensils: Utensils,
@@ -59,7 +55,6 @@ export function Conquistas({
     nutriCommentCount: counts?.nutri_comments ?? 0,
   });
   const gam = useDevGamification(gamRaw);
-  const [detailBadge, setDetailBadge] = useState<Badge | null>(null);
 
   const challenges = computeWeeklyChallenges({
     loggedDaysThisWeek: (adherence?.days ?? []).filter((d) => d.logged > 0)
@@ -78,8 +73,6 @@ export function Conquistas({
         0,
         Math.min(1, gam.xpPerLevel > 0 ? gam.xpInLevel / gam.xpPerLevel : 0),
       );
-  const cellW =
-    (Dimensions.get("window").width - SCREEN_PADDING * 2 - space.sm * 2) / 3;
 
   return (
     <ScrollView
@@ -260,69 +253,9 @@ export function Conquistas({
       >
         Medalhas · {gam.unlockedCount}/{gam.badges.length}
       </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-        {gam.badges.map((badge) => {
-          return (
-            <Pressable
-              key={badge.id}
-              onPress={() => {
-                haptics.light();
-                setDetailBadge(badge);
-              }}
-              style={({ pressed }) => ({
-                width: cellW,
-                alignItems: "center",
-                opacity: pressed ? 0.6 : badge.unlocked ? 1 : 0.4,
-              })}
-              accessibilityRole="button"
-              accessibilityLabel={`${badge.label}: ${badge.hint}. ${badge.unlocked ? "Conquistado" : "Bloqueado"}. Toque para ver os detalhes.`}
-            >
-              <View
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 26,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: badge.unlocked
-                    ? t.primaryLight
-                    : t.surfaceSecondary,
-                  marginBottom: space.xs,
-                }}
-              >
-                <MedalhasIcon medalha={badge.medalha} size={40} />
-              </View>
-              <Text
-                style={[
-                  typography.labelSm,
-                  { color: t.text, textAlign: "center" },
-                ]}
-                numberOfLines={1}
-              >
-                {badge.label}
-              </Text>
-              <Text
-                style={[
-                  typography.caption,
-                  { color: t.textMuted, textAlign: "center" },
-                ]}
-                numberOfLines={2}
-              >
-                {badge.hint}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <MedalGallery badges={gam.badges} />
 
       {__DEV__ && <DevGamPanel gam={gam} />}
-
-      {detailBadge && (
-        <AchievementDetailModal
-          badge={detailBadge}
-          onDismiss={() => setDetailBadge(null)}
-        />
-      )}
     </ScrollView>
   );
 }
