@@ -71,6 +71,8 @@ import { typography, space, radius } from "../src/theme/tokens";
 import { todayStr, shiftDate } from "../src/lib/date";
 import { portalImageSource } from "../src/lib/diaryPhoto";
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 // ── helpers ──
 
 // Registro retroativo: feito claramente depois do dia referente (gap >= 2 dias).
@@ -938,6 +940,82 @@ function CompletionCard({
   );
 }
 
+// ── Photo action button (tonal "smart" affordance + single sheen sweep) ──
+
+function PhotoActionButton({
+  onPress,
+  disabled,
+  t,
+}: {
+  onPress: () => void;
+  disabled: boolean;
+  t: ThemeColors;
+}) {
+  const scale = useSharedValue(1);
+  const sheenX = useSharedValue(-120);
+
+  // Um único passe de brilho especular ao focar a Refeição (o card remonta por meal).
+  useEffect(() => {
+    sheenX.value = withSequence(
+      withTiming(-120, { duration: 280 }), // pausa curta
+      withTiming(180, { duration: 820 }), // varredura
+    );
+  }, []);
+
+  const btnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const sheenStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: sheenX.value }, { rotate: "18deg" }],
+  }));
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={() => {
+        scale.value = withTiming(0.97, { duration: 90 });
+      }}
+      onPressOut={() => {
+        scale.value = withTiming(1, { duration: 140 });
+      }}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel="Registrar Refeição com foto"
+      className="flex-1 flex-row items-center justify-center py-3 rounded-xl overflow-hidden"
+      style={[
+        {
+          backgroundColor: t.accentLight,
+          borderWidth: 1,
+          borderColor: t.accent + "26", // ~15% — hairline indigo, calmo
+        },
+        btnStyle,
+      ]}
+    >
+      {/* Sheen especular — clipado pelo overflow-hidden, passa 1x */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: "absolute",
+            top: -8,
+            bottom: -8,
+            width: 22,
+            backgroundColor: "rgba(255,255,255,0.45)",
+          },
+          sheenStyle,
+        ]}
+      />
+      <Camera size={16} color={t.accent} />
+      <Text
+        style={{ color: t.accent }}
+        className="text-sm font-sans-semibold ml-2"
+      >
+        Foto
+      </Text>
+    </AnimatedPressable>
+  );
+}
+
 // ── Hero meal card (the focused/next meal) ──
 
 const HERO_MAX_FOODS = 5;
@@ -966,6 +1044,10 @@ function HeroMealCard({
   t: ThemeColors;
 }) {
   const [showAllFoods, setShowAllFoods] = useState(false);
+  const followScale = useSharedValue(1);
+  const followBtnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: followScale.value }],
+  }));
   const hasManyFoods = meal.foods.length > HERO_MAX_FOODS;
   const visibleFoods = showAllFoods
     ? meal.foods
@@ -1088,35 +1170,24 @@ function HeroMealCard({
       {/* Action buttons */}
       {canWrite && (
         <View className="px-4 pb-4">
-          <View className="flex-row gap-2">
-            <Pressable
-              onPress={onPhoto}
-              disabled={isLogging}
-              accessibilityRole="button"
-              accessibilityLabel="Registrar Refeição com foto"
-              className="flex-row items-center justify-center py-3 rounded-xl flex-1"
-              style={{
-                backgroundColor: t.surfacePressed,
-                borderWidth: 1,
-                borderColor: t.borderLight,
-              }}
-            >
-              <Camera size={16} color={t.textSecondary} />
-              <Text
-                style={{ color: t.textSecondary }}
-                className="text-sm font-sans-semibold ml-2"
-              >
-                Foto
-              </Text>
-            </Pressable>
-            <Pressable
+          <View className="flex-row" style={{ gap: 10 }}>
+            {/* Foto — par tonal (indigo = "toque inteligente"), com brilho único */}
+            <PhotoActionButton onPress={onPhoto} disabled={isLogging} t={t} />
+            {/* Segui — ação primária inequívoca (único fill sólido + bold) */}
+            <AnimatedPressable
               onPress={onFollow}
+              onPressIn={() => {
+                followScale.value = withTiming(0.97, { duration: 90 });
+              }}
+              onPressOut={() => {
+                followScale.value = withTiming(1, { duration: 140 });
+              }}
               disabled={isLogging}
               accessibilityRole="button"
               accessibilityLabel="Marcar como seguida"
               accessibilityState={{ disabled: isLogging, busy: isLogging }}
-              className="flex-row items-center justify-center py-3 rounded-xl flex-[1.4]"
-              style={{ backgroundColor: t.primary }}
+              className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
+              style={[{ backgroundColor: t.primary }, followBtnStyle]}
             >
               <Check size={16} color={t.primaryFg} />
               <Text
@@ -1125,14 +1196,14 @@ function HeroMealCard({
               >
                 Segui
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
           <Pressable
             onPress={onPartial}
             disabled={isLogging}
             accessibilityRole="button"
             accessibilityLabel="Marcar que segui parcialmente"
-            className="mt-2 flex-row items-center justify-center py-2"
+            className="mt-2.5 flex-row items-center justify-center py-1.5"
           >
             <Text
               style={{ color: t.textMuted }}

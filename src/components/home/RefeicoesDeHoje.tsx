@@ -184,8 +184,8 @@ export function RefeicoesDeHoje({ meals }: RefeicoesDeHojeProps) {
                     alignItems: 'center',
                     paddingHorizontal: space.sm + 2,
                     paddingVertical: 5,
-                    borderRadius: radius.full,
-                    backgroundColor: t.primaryLight,
+                    //borderRadius: radius.full,
+                    //backgroundColor: t.primaryLight,
                   }}
                 >
                   <Plus size={12} color={t.primary} />
