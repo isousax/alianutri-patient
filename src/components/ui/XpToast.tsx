@@ -8,6 +8,7 @@ import { Sparkles } from 'lucide-react-native'
 import { useThemeColors } from '../../stores/theme'
 import { typography, radius, space, shadows } from '../../theme/tokens'
 import { useXpToast } from '../../stores/xpToast'
+import {XPUpIcon} from './XPUpIcon'
 
 /**
  * Overlay global de recompensa: mostra "+N XP" flutuando pra cima e sumindo.
@@ -56,7 +57,7 @@ export function XpToast() {
           style,
         ]}
       >
-        <Sparkles size={16} color={t.primaryFg} />
+        <XPUpIcon size={35} />
         <Text style={[typography.headingSm, { color: t.primaryFg }]}>+{amount} XP</Text>
       </Animated.View>
     </View>

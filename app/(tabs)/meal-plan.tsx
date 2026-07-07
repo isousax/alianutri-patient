@@ -20,7 +20,6 @@ import {
   FileText,
   Check,
   Undo2,
-  Camera,
 } from "lucide-react-native";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -64,6 +63,11 @@ import type {
   QualMeal,
 } from "../../src/types/portal";
 import {NutritionPlan} from "../../src/components/ui/NutritionPlan";
+import {
+  PhotoActionButton,
+  FollowActionButton,
+  PartialActionLink,
+} from "../../src/components/ui/MealActionButtons";
 
 const asArray = <T,>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : []);
 
@@ -705,38 +709,30 @@ export default function MealPlanScreen() {
                           style={{
                             marginLeft: 28 + space.sm,
                             marginTop: space.md,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: space.sm,
                           }}
                         >
-                          <Pressable
-                            onPress={() =>
-                              handleFollow(
-                                idx,
-                                meal.name || `Refeição ${idx + 1}`,
-                              )
-                            }
-                            disabled={busy}
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 6,
-                              paddingVertical: space.sm + 1,
-                              paddingHorizontal: space.lg,
-                              borderRadius: radius.lg,
-                              backgroundColor: dm.color,
-                            }}
-                          >
-                            <Check size={15} color="#fff" />
-                            <Text
-                              style={[typography.labelMd, { color: "#fff" }]}
-                            >
-                              Segui
-                            </Text>
-                          </Pressable>
-                          <Pressable
+                          {/* Foto (tonal indigo) + Segui (sólido) — largura igual, como no diário */}
+                          <View style={{ flexDirection: "row", gap: 10 }}>
+                            <PhotoActionButton
+                              onPress={() => {
+                                haptics.light();
+                                router.push("/post-compose?type=meal" as never);
+                              }}
+                              disabled={busy}
+                              index={idx}
+                            />
+                            <FollowActionButton
+                              onPress={() =>
+                                handleFollow(
+                                  idx,
+                                  meal.name || `Refeição ${idx + 1}`,
+                                )
+                              }
+                              disabled={busy}
+                              color={dm.color}
+                            />
+                          </View>
+                          <PartialActionLink
                             onPress={() =>
                               handlePartial(
                                 idx,
@@ -744,40 +740,7 @@ export default function MealPlanScreen() {
                               )
                             }
                             disabled={busy}
-                            style={{
-                              paddingVertical: space.sm + 1,
-                              paddingHorizontal: space.md,
-                              borderRadius: radius.lg,
-                              backgroundColor: t.surfaceSecondary,
-                            }}
-                          >
-                            <Text
-                              style={[
-                                typography.labelMd,
-                                { color: t.textSecondary },
-                              ]}
-                            >
-                              Parcial
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => {
-                              haptics.light();
-                              router.push("/post-compose?type=meal" as never);
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel="Registrar esta refeição com foto"
-                            style={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: radius.lg,
-                              alignItems: "center",
-                              justifyContent: "center",
-                              backgroundColor: t.surfaceSecondary,
-                            }}
-                          >
-                            <Camera size={16} color={t.textSecondary} />
-                          </Pressable>
+                          />
                         </View>
                       ) : null)}
                   </Card>

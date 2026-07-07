@@ -43,14 +43,6 @@ import Animated, {
   FadeInUp,
   ZoomIn,
   FadeInDown,
-  SlideInDown,
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  withDelay,
-  runOnJS,
-  Easing,
 } from "react-native-reanimated";
 import { useThemeColors } from "../../src/stores/theme";
 import { useFeaturesStore } from "../../src/stores/features";
@@ -84,7 +76,6 @@ import { useDailyTipStore } from "../../src/stores/dailyTip";
 import { useSmartWaterGoal } from "../../src/hooks/useSmartWaterGoal";
 import { haptics } from "../../src/lib/haptics";
 import {
-  ProgressRing,
   Card,
   EmptyState,
   ErrorState,
@@ -109,6 +100,7 @@ import {
   todayStr,
   radius,
 } from "../../src/theme/tokens";
+import {FireAnimation} from "../../src/components/ui/FireAnimation";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -953,7 +945,8 @@ function ProgressHubCard({ home }: { home: PortalHome }) {
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Flame size={16} color={t.warning} />
+            <FireAnimation size={24} loop={true} />
+            {/*<Flame size={16} color={t.warning} />*/}
             <Text style={[typography.captionBold, { color: t.warning, marginLeft: 3 }]}>
               {gam.streak} {gam.streak === 1 ? "dia" : "dias"}
             </Text>
