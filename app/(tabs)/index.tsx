@@ -33,7 +33,9 @@ import {
   CalendarPlus,
   Trophy,
   Pill,
+  Ruler,
   FileText,
+  FlaskConical,
   X,
 } from "lucide-react-native";
 import Svg, { Rect as SvgRect } from "react-native-svg";
@@ -407,6 +409,8 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
       { icon: <ClipboardList size={22} color={t.info} />, label: "Quest.", bg: t.infoLight, route: "/questionnaires", tint: t.info },
       { icon: <FileText size={22} color={t.accent} />, label: "Docs.", bg: t.accentLight, route: "/documents", tint: t.accent },
       { icon: <FileText size={22} color={t.warning} />, label: "Orientações", bg: t.warningLight, route: "/guidelines", tint: t.warning },
+      { icon: <Ruler size={22} color={t.success} />, label: "Composição", bg: t.successLight, route: "/anthropometry", tint: t.success },
+      { icon: <FlaskConical size={22} color={t.info} />, label: "Exames", bg: t.infoLight, route: "/lab-exams", tint: t.info },
     ],
     [t],
   );

@@ -44,6 +44,9 @@ import type {
   DiaryFeedResponse,
   DiaryPostType,
   ChartsSummary,
+  PortalLabExamsResponse,
+  PortalLabExamDetailResponse,
+  PortalBiomarkerEvolutionResponse,
 } from '../types/portal'
 
 export function usePortalHome() {
@@ -877,6 +880,66 @@ export function useUploadProgressPhoto() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['portal', 'progress-photos'] })
+    },
+  })
+}
+
+// ==========================================
+// Lab Exams (Fase 3: resultados curados / Fase 4: envio de documentos)
+// ==========================================
+
+export function useLabExams() {
+  return useQuery({
+    queryKey: ['portal', 'lab-exams'],
+    queryFn: () => portalApi.get<PortalLabExamsResponse>('/lab-exams'),
+  })
+}
+
+export function useLabExamDetail(requestId: string) {
+  return useQuery({
+    queryKey: ['portal', 'lab-exams', requestId],
+    queryFn: () => portalApi.get<PortalLabExamDetailResponse>(`/lab-exams/${requestId}`),
+    enabled: !!requestId,
+  })
+}
+
+export function useBiomarkerEvolution(biomarkerKey: string | null) {
+  return useQuery({
+    queryKey: ['portal', 'lab-exams', 'biomarker', biomarkerKey],
+    queryFn: () => portalApi.get<PortalBiomarkerEvolutionResponse>(`/lab-exams/biomarkers/${biomarkerKey}/evolution`),
+    enabled: !!biomarkerKey,
+  })
+}
+
+export function useUploadLabExamAttachment(requestId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { uri: string; mimeType: string; name: string }) => {
+      // Imagens são comprimidas para JPEG; PDFs sobem intactos.
+      const isImage = input.mimeType.startsWith('image/')
+      const uri = isImage ? await compressImage(input.uri) : input.uri
+      const fd = new FormData()
+      fd.append('file', {
+        uri,
+        type: isImage ? 'image/jpeg' : input.mimeType,
+        name: isImage ? 'exame.jpg' : input.name,
+      } as unknown as Blob)
+      return portalApi.upload<{ id: string; message: string }>(`/lab-exams/${requestId}/attachments`, fd)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'lab-exams', requestId] })
+      qc.invalidateQueries({ queryKey: ['portal', 'lab-exams'] })
+    },
+  })
+}
+
+export function useDeleteLabExamAttachment(requestId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (attachmentId: string) =>
+      portalApi.delete<{ message: string }>(`/lab-exams/${requestId}/attachments/${attachmentId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal', 'lab-exams', requestId] })
     },
   })
 }

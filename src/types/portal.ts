@@ -470,6 +470,28 @@ export interface PortalEvolution {
   body_fat_pct: number | null
   lean_mass_kg: number | null
   fat_mass_kg: number | null
+  neck_cm: number | null
+  chest_cm: number | null
+  abdomen_cm: number | null
+  arm_right_cm: number | null
+  arm_left_cm: number | null
+  forearm_right_cm: number | null
+  forearm_left_cm: number | null
+  thigh_right_cm: number | null
+  thigh_left_cm: number | null
+  calf_right_cm: number | null
+  calf_left_cm: number | null
+  skinfold_triceps: number | null
+  skinfold_biceps: number | null
+  skinfold_subscapular: number | null
+  skinfold_suprailiac: number | null
+  skinfold_abdominal: number | null
+  skinfold_thigh: number | null
+  skinfold_calf: number | null
+  skinfold_chest: number | null
+  skinfold_midaxillary: number | null
+  protocol: string | null
+  notes: string | null
   created_at: string
 }
 
@@ -535,4 +557,71 @@ export interface ChartsSummary {
   water: Array<{ date: string; total_ml: number }>
   wellness: Array<{ date: string; energy: number }>
   counts: { meal_photos: number; diary_posts: number; nutri_reactions: number; nutri_comments: number }
+}
+
+// ==========================================
+// Lab Exams — GET /p/:code/lab-exams (Fase 3: resultados / Fase 4: envio)
+// Enquadramento neutro: a interpretação é sempre com o nutricionista.
+// ==========================================
+
+export type PortalLabExamStatus = 'requested' | 'collected' | 'resulted' | 'canceled'
+export type LabRangeStatus = 'within' | 'outside' | 'unknown'
+
+export interface PortalLabExamSummary {
+  id: string
+  title: string
+  status: PortalLabExamStatus
+  requested_date: string
+  result_date: string | null
+}
+
+export interface PortalLabExamsResponse {
+  exams: PortalLabExamSummary[]
+}
+
+export interface PortalLabResult {
+  id: string
+  biomarker_key: string
+  biomarker_name: string
+  value: number
+  unit: string
+  reference_min: number | null
+  reference_max: number | null
+  range_status: LabRangeStatus
+}
+
+export interface PortalLabAttachment {
+  id: string
+  original_name: string | null
+  mime_type: string
+  size_bytes: number
+  uploaded_by_patient: boolean
+  /** caminho relativo servido pela rota autenticada do portal (com header de sessão) */
+  url: string
+  created_at: string
+}
+
+export interface PortalLabExamDetail {
+  id: string
+  title: string
+  status: PortalLabExamStatus
+  requested_date: string
+  result_date: string | null
+  results: PortalLabResult[]
+  attachments: PortalLabAttachment[]
+}
+
+export interface PortalLabExamDetailResponse {
+  exam: PortalLabExamDetail
+}
+
+export interface PortalBiomarkerPoint {
+  value: number
+  unit: string
+  range_status: LabRangeStatus
+  requested_date: string
+}
+
+export interface PortalBiomarkerEvolutionResponse {
+  points: PortalBiomarkerPoint[]
 }

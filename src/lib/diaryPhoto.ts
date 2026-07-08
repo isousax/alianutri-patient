@@ -31,6 +31,16 @@ function withSession(uri: string, sessionToken: string | null): ImageSource {
 }
 
 /**
+ * URL absoluta de um arquivo servido pela rota autenticada do portal
+ * (`/p/:code/...`) — para download com header de sessão (anexo de exame:
+ * imagem ou PDF). O header `X-Patient-Session` deve ser enviado pelo chamador
+ * (o download nativo não passa pelo `api.ts`).
+ */
+export function portalFileUrl(accessCode: string | null, path: string): string {
+  return `${API_BASE}/p/${accessCode}${path}`
+}
+
+/**
  * Source do `expo-image` para QUALQUER imagem servida por proxy autenticado do
  * portal (`/p/:code/...`) — post do diário, foto de refeição, foto de progresso.
  * NÃO é necessário para URLs absolutas de R2 (ex.: `profile_photo_url`).

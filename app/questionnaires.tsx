@@ -95,6 +95,8 @@ export default function QuestionnairesScreen() {
           alia
           title="Sem questionários"
           description="Quando o nutricionista enviar um questionário, ele aparecerá aqui."
+          actionLabel="Atualizar"
+          onAction={() => refetch()}
         />
       ) : (
         <ScrollView

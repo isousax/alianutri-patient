@@ -716,7 +716,9 @@ export default function MealPlanScreen() {
                             <PhotoActionButton
                               onPress={() => {
                                 haptics.light();
-                                router.push("/post-compose?type=meal" as never);
+                                router.push(
+                                  `/post-compose?type=meal&meal_plan_id=${encodeURIComponent(planId)}&meal_index=${idx}&meal_name=${encodeURIComponent(meal.name || `Refeição ${idx + 1}`)}` as never,
+                                );
                               }}
                               disabled={busy}
                               index={idx}

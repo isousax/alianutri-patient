@@ -66,6 +66,8 @@ export default function GoalsScreen() {
           icon={<Target size={28} color={t.primary} />}
           title="Sem metas"
           description="Quando o nutricionista definir metas, elas aparecerão aqui."
+          actionLabel="Atualizar"
+          onAction={() => refetch()}
         />
       </SafeAreaView>
     )
