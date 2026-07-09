@@ -38,7 +38,7 @@ const CLINICAL_RESOURCES = new Set([
   'home', 'profile', 'diary-posts', 'diary-post', 'diary-today', 'diary-streak',
   'food-diary', 'weight-history', 'water', 'symptoms', 'evolution',
   'meal-plans', 'progress-photos', 'chat', 'weekly-adherence',
-  'lab-reports',
+  'lab-reports', 'lab-orders',
 ])
 
 const persistOptions = {

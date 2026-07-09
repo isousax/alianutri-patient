@@ -62,6 +62,7 @@ import {
 } from "../../src/hooks/usePortal";
 import { useLevelUp } from "../../src/hooks/useLevelUp";
 import { useAchievementUnlock } from "../../src/hooks/useAchievementUnlock";
+import { useLabOrders } from "../../src/hooks/useLabOrders";
 import type {
   PortalGoal,
   PortalEvolution,
@@ -305,6 +306,9 @@ export default function HomeScreen() {
 
         {/* ═══════ QUICK ACTIONS — 4-column icon grid + folder ═══════ */}
         <QuickActionsGrid canWrite={canWrite} />
+
+        {/* ═══════ EXAMES SOLICITADOS — aparece só quando há pedidos ═══════ */}
+        <ExamesSolicitadosCard />
         
         {/* ═══════ NEXT APPOINTMENT ═══════ */}
         {apt && <AppointmentCard apt={apt} />}
@@ -385,6 +389,32 @@ type ActionDef = {
   route: string;
   tint?: string;
 };
+
+function ExamesSolicitadosCard() {
+  const t = useThemeColors();
+  const { data } = useLabOrders();
+  const orders = data?.orders ?? [];
+  if (orders.length === 0) return null;
+  const totalExams = orders.reduce((sum, o) => sum + o.items.length, 0);
+  return (
+    <Animated.View entering={FadeInDown.duration(350).delay(120)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
+      <Card onPress={() => router.push("/lab-orders" as never)} accessibilityLabel="Exames solicitados pelo nutricionista">
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <View style={{ width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: t.infoLight, marginRight: space.md }}>
+            <FlaskConical size={20} color={t.info} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[typography.labelLg, { color: t.text }]}>Exames solicitados</Text>
+            <Text style={[typography.caption, { color: t.textMuted, marginTop: 3 }]}>
+              Seu nutri pediu {totalExams} exame{totalExams === 1 ? "" : "s"}. Toque para ver e enviar o resultado.
+            </Text>
+          </View>
+          <ChevronRight size={18} color={t.textMuted} />
+        </View>
+      </Card>
+    </Animated.View>
+  );
+}
 
 function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
   const t = useThemeColors();

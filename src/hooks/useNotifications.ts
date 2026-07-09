@@ -83,6 +83,8 @@ export function useNotifications() {
     let cancelled = false
     let sub: { remove: () => void } | undefined
     const openFromData = (data: unknown) => {
+      const type = (data as { type?: unknown } | null)?.type
+      if (type === 'lab_order') { router.push('/lab-orders' as never); return }
       const postId = (data as { postId?: unknown } | null)?.postId
       if (typeof postId === 'string') { router.push(`/post/${postId}` as never); return }
       const screen = (data as { screen?: unknown } | null)?.screen
