@@ -410,7 +410,7 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
       { icon: <FileText size={22} color={t.accent} />, label: "Docs.", bg: t.accentLight, route: "/documents", tint: t.accent },
       { icon: <FileText size={22} color={t.warning} />, label: "Orientações", bg: t.warningLight, route: "/guidelines", tint: t.warning },
       { icon: <Ruler size={22} color={t.success} />, label: "Composição", bg: t.successLight, route: "/anthropometry", tint: t.success },
-      { icon: <FlaskConical size={22} color={t.info} />, label: "Exames", bg: t.infoLight, route: "/lab-exams", tint: t.info },
+      { icon: <FlaskConical size={22} color={t.info} />, label: "Exames", bg: t.infoLight, route: "/lab-reports", tint: t.info },
     ],
     [t],
   );

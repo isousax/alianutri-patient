@@ -560,68 +560,7 @@ export interface ChartsSummary {
 }
 
 // ==========================================
-// Lab Exams — GET /p/:code/lab-exams (Fase 3: resultados / Fase 4: envio)
-// Enquadramento neutro: a interpretação é sempre com o nutricionista.
+// Lab — status de faixa (compartilhado pelos laudos)
 // ==========================================
 
-export type PortalLabExamStatus = 'requested' | 'collected' | 'resulted' | 'canceled'
 export type LabRangeStatus = 'within' | 'outside' | 'unknown'
-
-export interface PortalLabExamSummary {
-  id: string
-  title: string
-  status: PortalLabExamStatus
-  requested_date: string
-  result_date: string | null
-}
-
-export interface PortalLabExamsResponse {
-  exams: PortalLabExamSummary[]
-}
-
-export interface PortalLabResult {
-  id: string
-  biomarker_key: string
-  biomarker_name: string
-  value: number
-  unit: string
-  reference_min: number | null
-  reference_max: number | null
-  range_status: LabRangeStatus
-}
-
-export interface PortalLabAttachment {
-  id: string
-  original_name: string | null
-  mime_type: string
-  size_bytes: number
-  uploaded_by_patient: boolean
-  /** caminho relativo servido pela rota autenticada do portal (com header de sessão) */
-  url: string
-  created_at: string
-}
-
-export interface PortalLabExamDetail {
-  id: string
-  title: string
-  status: PortalLabExamStatus
-  requested_date: string
-  result_date: string | null
-  results: PortalLabResult[]
-  attachments: PortalLabAttachment[]
-}
-
-export interface PortalLabExamDetailResponse {
-  exam: PortalLabExamDetail
-}
-
-export interface PortalBiomarkerPoint {
-  value: number
-  unit: string
-  range_status: LabRangeStatus
-  requested_date: string
-}
-
-export interface PortalBiomarkerEvolutionResponse {
-  points: PortalBiomarkerPoint[]
-}
