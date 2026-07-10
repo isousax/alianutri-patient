@@ -85,6 +85,7 @@ import {
   LoadingScreen,
   AuroraBackground,
   Button,
+  AlertDot,
 } from "../../src/components/ui";
 import { HomeHeader } from "../../src/components/home/HomeHeader";
 import { AnelDoDia } from "../../src/components/home/AnelDoDia";
@@ -307,9 +308,6 @@ export default function HomeScreen() {
         {/* ═══════ QUICK ACTIONS — 4-column icon grid + folder ═══════ */}
         <QuickActionsGrid canWrite={canWrite} />
 
-        {/* ═══════ EXAMES SOLICITADOS — aparece só quando há pedidos ═══════ */}
-        <ExamesSolicitadosCard />
-        
         {/* ═══════ NEXT APPOINTMENT ═══════ */}
         {apt && <AppointmentCard apt={apt} />}
 
@@ -390,35 +388,11 @@ type ActionDef = {
   tint?: string;
 };
 
-function ExamesSolicitadosCard() {
-  const t = useThemeColors();
-  const { data } = useLabOrders();
-  const orders = data?.orders ?? [];
-  if (orders.length === 0) return null;
-  const totalExams = orders.reduce((sum, o) => sum + o.items.length, 0);
-  return (
-    <Animated.View entering={FadeInDown.duration(350).delay(120)} style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
-      <Card onPress={() => router.push("/lab-orders" as never)} accessibilityLabel="Exames solicitados pelo nutricionista">
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View style={{ width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: t.infoLight, marginRight: space.md }}>
-            <FlaskConical size={20} color={t.info} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[typography.labelLg, { color: t.text }]}>Exames solicitados</Text>
-            <Text style={[typography.caption, { color: t.textMuted, marginTop: 3 }]}>
-              Seu nutri pediu {totalExams} exame{totalExams === 1 ? "" : "s"}. Toque para ver e enviar o resultado.
-            </Text>
-          </View>
-          <ChevronRight size={18} color={t.textMuted} />
-        </View>
-      </Card>
-    </Animated.View>
-  );
-}
-
 function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
   const t = useThemeColors();
   const [folderOpen, setFolderOpen] = useState(false);
+  const { data: labOrders } = useLabOrders();
+  const hasPendingOrders = (labOrders?.orders?.length ?? 0) > 0;
 
   // Ações principais da grade, cada uma com hue próprio (sem repetir cor lado a
   // lado). "Progresso" (foto) e "Evolução" (gráficos) coexistem por terem intents
@@ -505,6 +479,11 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
                 style={{ width: 9, height: 9, borderRadius: 3, backgroundColor: a.tint ?? t.textMuted }}
               />
             ))}
+            {hasPendingOrders ? (
+              <View style={{ position: "absolute", top: -3, right: -3 }}>
+                <AlertDot ringColor={t.background} />
+              </View>
+            ) : null}
           </View>
           <View style={{ alignSelf: "center", height: 30, justifyContent: "center", marginTop: space.xs + 2 }}>
             <Text
@@ -594,6 +573,11 @@ function QuickActionsGrid({ canWrite }: { canWrite: boolean }) {
                         }}
                       >
                         {a.icon}
+                        {hasPendingOrders && a.route === "/lab-reports" ? (
+                          <View style={{ position: "absolute", top: -3, right: -3 }}>
+                            <AlertDot ringColor={t.surface} />
+                          </View>
+                        ) : null}
                       </View>
                       <Text
                         style={[typography.captionBold, { color: t.text, textAlign: "center", fontSize: 11, lineHeight: 14 }]}

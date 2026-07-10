@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { View, Text, ScrollView, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { FlaskConical, ChevronRight, FileText, CheckCircle2, Clock, Upload, Camera, Image as ImageIcon } from 'lucide-react-native'
+import { FlaskConical, ChevronRight, FileText, CheckCircle2, Clock, Upload, Camera, Image as ImageIcon, CalendarDays, Info } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { router } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
@@ -10,6 +10,8 @@ import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { useLabReports, useUploadLabReport } from '../src/hooks/useLabReports'
 import type { PortalLabReportStatus, PortalLabReportSummary } from '../src/types/labReport'
+import { useLabOrders } from '../src/hooks/useLabOrders'
+import type { PortalLabOrder } from '../src/types/labOrder'
 import { Card, ScreenHeader, EmptyState, ErrorState, SkeletonList, PillBadge, Button, ReadOnlyBanner } from '../src/components/ui'
 import { typography, space, radius, SCREEN_PADDING } from '../src/theme/tokens'
 import { haptics } from '../src/lib/haptics'
@@ -34,6 +36,8 @@ export default function LabReportsScreen() {
   const canWrite = useFeaturesStore((s) => s.canWrite)
   const { data, isLoading, isError, refetch, isRefetching } = useLabReports()
   const { mutateAsync: upload, isPending: isUploading } = useUploadLabReport()
+  const { data: ordersData } = useLabOrders()
+  const orders: PortalLabOrder[] = ordersData?.orders ?? []
 
   const doUpload = useCallback(
     async (input: { uri: string; mimeType: string; name: string }) => {
@@ -115,6 +119,59 @@ export default function LabReportsScreen() {
         ) : (
           <View style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.lg }}>
             <ReadOnlyBanner />
+          </View>
+        )}
+
+        {orders.length > 0 && (
+          <View style={{ marginBottom: space.md }}>
+            <Text style={[typography.labelLg, { color: t.text, paddingHorizontal: SCREEN_PADDING }]}>
+              Solicitados pelo seu nutri
+            </Text>
+            <Text style={[typography.caption, { color: t.textMuted, paddingHorizontal: SCREEN_PADDING, marginTop: 2, marginBottom: space.sm }]}>
+              Faça estes exames e envie o resultado abaixo.
+            </Text>
+            {orders.map((o, idx) => (
+              <Animated.View
+                key={o.id}
+                entering={FadeInDown.duration(320).delay(Math.min(idx * 60, 300))}
+                style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space.md }}
+              >
+                <Card accessibilityLabel={`Pedido com ${o.items.length} exames`}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.sm }}>
+                    <View style={{ width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: t.infoLight, marginRight: space.sm }}>
+                      <FlaskConical size={18} color={t.info} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.labelLg, { color: t.text }]}>
+                        {o.items.length} exame{o.items.length === 1 ? '' : 's'}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                        <CalendarDays size={12} color={t.textMuted} />
+                        <Text style={[typography.caption, { color: t.textMuted }]}>
+                          Solicitado em {fmtDate(o.requested_date)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {o.items.map((it, i) => (
+                      <View key={`${o.id}-${i}`} style={{ backgroundColor: t.borderLight, borderRadius: radius.md, paddingHorizontal: 10, paddingVertical: 5 }}>
+                        <Text style={[typography.caption, { color: t.text }]}>{it.display_name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {o.notes ? (
+                    <View style={{ flexDirection: 'row', gap: 6, marginTop: space.sm, alignItems: 'flex-start' }}>
+                      <Info size={13} color={t.textMuted} style={{ marginTop: 2 }} />
+                      <Text style={[typography.caption, { color: t.textMuted, flex: 1 }]}>{o.notes}</Text>
+                    </View>
+                  ) : null}
+                </Card>
+              </Animated.View>
+            ))}
+            <Text style={[typography.labelLg, { color: t.text, paddingHorizontal: SCREEN_PADDING, marginTop: space.sm }]}>
+              Meus laudos enviados
+            </Text>
           </View>
         )}
 
