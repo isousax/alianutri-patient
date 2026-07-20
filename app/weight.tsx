@@ -12,13 +12,14 @@ import { useThemeColors } from '../src/stores/theme'
 import { useFeaturesStore } from '../src/stores/features'
 import { toast } from '../src/stores/toast'
 import { confirm } from '../src/stores/confirm'
-import { useLogWeight, useWeightHistory, useDeleteWeight, useGoals, usePortalProfile } from '../src/hooks/usePortal'
+import { useLogWeight, useWeightHistory, useDeleteWeight, useGoals, usePortalProfile, usePortalHome } from '../src/hooks/usePortal'
 import type { WeightLogEntry } from '../src/types/portal'
 import { LineChart, type LineChartPoint } from '../src/components/charts/LineChart'
 import { movingAverage, weeklyRate, weeksToTarget } from '../src/lib/weightStats'
 import { ScreenHeader, Card, SectionLabel, KeyboardAvoidingWrapper, CalendarSheet } from '../src/components/ui'
 import { ReadOnlyBanner } from '../src/components/ui/ReadOnlyBanner'
 import { shadows, radius, space, typography, SCREEN_PADDING, todayStr } from '../src/theme/tokens'
+import { interpretWeightChange, weightToneColor } from '../src/domain/objectiveProfiles'
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   const t = useThemeColors()
@@ -51,6 +52,18 @@ export default function WeightScreen() {
   const { mutateAsync: deleteWeight } = useDeleteWeight()
   const { data: goals } = useGoals()
   const { data: profile } = usePortalProfile()
+  const { data: home } = usePortalHome()
+
+  // F5: com objetivo definido, a semântica de peso (server-authoritative, do payload)
+  // dita o TOM da variação de peso — objetivo é SSOT. `de_emphasized` → neutro
+  // (peso nunca em vermelho). Sem objetivo, mantém faixa saudável/meta/perda=verde.
+  const weightSemantics = home?.objective_profile?.objective ? home.objective_profile.weight_semantics : null
+  const objectiveToneColor = (d: number) =>
+    weightToneColor(interpretWeightChange(weightSemantics, d).tone, {
+      positive: t.success,
+      negative: t.warning,
+      neutral: t.textMuted,
+    })
 
   const entries: WeightLogEntry[] = data?.entries ?? []
   const existingForDate = entries.find((e) => e.entry_date === date && e.source === 'patient')
@@ -71,11 +84,17 @@ export default function WeightScreen() {
       await logWeight({ date, weight_kg: kg })
       setValue('')
       setDate(todayStr())
-      toast.success(`${kg.toFixed(1).replace('.', ',')} kg registrado!`)
+      // F5: objetivos que de-enfatizam o peso (reeducação/transição) celebram o
+      // ATO de registrar, não o número da balança.
+      toast.success(
+        weightSemantics === 'de_emphasized'
+          ? 'Registro salvo! Constância é o que importa.'
+          : `${kg.toFixed(1).replace('.', ',')} kg registrado!`,
+      )
     } catch {
       toast.error('Não foi possível salvar.')
     }
-  }, [value, date, logWeight, canWrite])
+  }, [value, date, logWeight, canWrite, weightSemantics])
 
   const startEdit = useCallback((entry: WeightLogEntry) => {
     setDate(entry.entry_date)
@@ -130,6 +149,7 @@ export default function WeightScreen() {
     // do nutri (se há); senão, perda de peso = verde.
     const distBand = (v: number) => (band ? (v < band.from ? band.from - v : v > band.to ? v - band.to : 0) : null)
     const trendColor = (() => {
+      if (weightSemantics) return objectiveToneColor(diff)
       if (band) {
         const dc = distBand(last)!; const df = distBand(first)!
         return dc < df - 0.05 ? t.success : dc > df + 0.05 ? t.warning : t.textMuted
@@ -316,7 +336,7 @@ export default function WeightScreen() {
                     <View style={{ flex: 1 }} />
                     {diff !== 0 && (
                       <Text
-                        style={[typography.captionBold, { color: diff < 0 ? t.success : t.warning, marginRight: space.sm }]}
+                        style={[typography.captionBold, { color: weightSemantics ? objectiveToneColor(diff) : diff < 0 ? t.success : t.warning, marginRight: space.sm }]}
                       >
                         {diff > 0 ? '+' : ''}{diff.toFixed(1).replace('.', ',')}
                       </Text>

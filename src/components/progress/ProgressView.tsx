@@ -8,6 +8,7 @@ import { Card, EmptyState, MacrosBar } from '../ui'
 import { LineChart, type LineChartPoint } from '../charts/LineChart'
 import { typography, space, radius, SCREEN_PADDING } from '../../theme/tokens'
 import { todayBRT } from '../../lib/date'
+import { interpretWeightChange, weightToneColor } from '../../domain/objectiveProfiles'
 
 // Conteúdo de "Progresso" (gráficos de evolução), reusado pela rota /evolution
 // e pelo segmento Progresso do Diário (P1). Renderiza só a área rolável — quem
@@ -167,9 +168,21 @@ export function ProgressView({ bottomPadding = 40 }: { bottomPadding?: number })
   const decreasing = delta != null && delta < -0.05
   const increasing = delta != null && delta > 0.05
   const DeltaIcon = decreasing ? TrendingDown : increasing ? TrendingUp : Minus
+  // F5: com objetivo definido, a semântica de peso (server-authoritative, vinda do
+  // payload) dita o TOM de peso/IMC — o objetivo é SSOT. `de_emphasized`
+  // (reeducação/transição) → neutro (peso nunca em vermelho). Sem objetivo, cai no
+  // heurístico de "aproximar-se da faixa saudável".
+  const weightSemantics = home?.objective_profile?.objective ? home.objective_profile.weight_semantics : null
   // Cor da tendência = aproximar-se da meta clínica, não "descer = verde".
   // Peso/IMC: bom quando se move para a faixa saudável. %Gordura: menor. Demais: maior.
   const deltaColor = (() => {
+    if ((metric === 'weight' || metric === 'bmi') && weightSemantics) {
+      return weightToneColor(interpretWeightChange(weightSemantics, delta).tone, {
+        positive: t.success,
+        negative: t.warning,
+        neutral: t.textMuted,
+      })
+    }
     if (healthyBand) {
       const dCur = distToBand(current, healthyBand)
       const dFirst = distToBand(first, healthyBand)

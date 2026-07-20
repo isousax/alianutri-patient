@@ -1,3 +1,5 @@
+import type { ObjectiveProfilePayload } from '../domain/objectiveProfiles'
+
 // ==========================================
 // Home — GET /p/:code/home
 // ==========================================
@@ -37,6 +39,8 @@ export interface PortalHome {
     can_write: boolean
     ai_meal_analysis?: { limit: number; used: number; period: 'day' }
   }
+  /** Perfil de Acompanhamento (F5): objetivo efetivo + semântica de peso concreta. */
+  objective_profile?: ObjectiveProfilePayload | null
 }
 
 // ==========================================

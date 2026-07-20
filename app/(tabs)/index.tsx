@@ -70,6 +70,7 @@ import type {
   DiaryTimelineMeal,
   PortalHome,
 } from "../../src/types/portal";
+import { getObjectiveTone } from "../../src/domain/objectiveProfiles";
 import { computeGamification } from "../../src/lib/gamification";
 import { useDevGamification } from "../../src/hooks/useGamification";
 import { MedalGallery } from "../../src/components/gamification/MedalGallery";
@@ -226,6 +227,8 @@ export default function HomeScreen() {
 
   // ── Derived data ──
   const displayName = data.patient.name?.split(" ")[0] || "Paciente";
+  // Perfil de Acompanhamento (F5): tom (framing/ícone) do objetivo efetivo.
+  const objectiveTone = getObjectiveTone(data.objective_profile?.objective ?? null);
   const streak = streakData?.streak ?? 0;
   const meals = diaryToday?.meals ?? [];
   const loggedCount = meals.filter((m: DiaryTimelineMeal) => m.entry !== null).length;
@@ -265,6 +268,7 @@ export default function HomeScreen() {
           streak={streak}
           chatUnread={chatUnread}
           photoUrl={data.patient.photo_url}
+          objective={objectiveTone ? { framing: objectiveTone.framing, icon: objectiveTone.icon } : null}
           onTipPress={() => {
             haptics.light();
             setTipManual(true);

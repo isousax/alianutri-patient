@@ -15,6 +15,7 @@ import { useThemeColors } from "../../stores/theme";
 import { typography, space, radius, SCREEN_PADDING } from "../../theme/tokens";
 import { AuroraBackground, Avatar } from "../ui";
 import { FireAnimation } from "../ui/FireAnimation";
+import { ObjectiveIcon } from "./ObjectiveIcon";
 
 function getGreeting(): { text: string; Icon: typeof Sun } {
   const h = new Date().getHours();
@@ -31,6 +32,8 @@ interface HomeHeaderProps {
   chatUnread: number;
   photoUrl?: string | null;
   onTipPress?: () => void;
+  /** Perfil de Acompanhamento (F5): enquadramento acolhedor + ícone do objetivo. */
+  objective?: { framing: string; icon: string } | null;
 }
 
 export function HomeHeader({
@@ -41,6 +44,7 @@ export function HomeHeader({
   chatUnread,
   photoUrl,
   onTipPress,
+  objective,
 }: HomeHeaderProps) {
   const t = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -157,6 +161,24 @@ export function HomeHeader({
                 >
                   com {nutritionistName}
                 </Text>
+              )}
+              {objective && (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 5,
+                    marginTop: 6,
+                  }}
+                >
+                  <ObjectiveIcon name={objective.icon} size={13} color={t.primary} />
+                  <Text
+                    style={[typography.caption, { color: t.textSecondary, flex: 1 }]}
+                    numberOfLines={1}
+                  >
+                    {objective.framing}
+                  </Text>
+                </View>
               )}
             </View>
           </View>
